@@ -2,7 +2,7 @@
 
 import os
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
 DATA_DIR = os.path.join(ROOT_DIR, "data/")
 RESOURCES_DIR = os.path.join(DATA_DIR, "resources/")
 CACHE_DIR = os.path.join(DATA_DIR, "runtime/cache/")

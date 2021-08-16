@@ -24,7 +24,7 @@ def _download_rvk_xml() -> None:
     os.makedirs(os.path.dirname(RVK_XML_FILE_PATH), exist_ok=True)
     if not os.path.exists(RVK_XML_FILE_PATH):
         logger.debug("download RVK classes to %s", RVK_XML_FILE_PATH)
-        with urllib.request.urlopen(RVK_XML_URL) as f_src, open(RVK_XML_FILE_PATH, "wb") as f_dst:
+        with urllib.request.urlopen(RVK_XML_URL) as f_src, open(RVK_XML_FILE_PATH, "wb") as f_dst:  # nosec
             shutil.copyfileobj(f_src, f_dst)
 
 
