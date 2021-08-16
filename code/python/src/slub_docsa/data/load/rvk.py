@@ -9,7 +9,7 @@ import io
 import logging
 
 from typing import Iterable, Dict, Any
-from lxml import etree
+from lxml import etree  # nosec
 from slub_docsa.common import RESOURCES_DIR, CACHE_DIR
 
 logger = logging.getLogger(__name__)

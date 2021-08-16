@@ -6,7 +6,7 @@ ENV PATH="/home/slub/.venv/bin:$PATH"
 RUN python3 -m pip install --upgrade pip
 
 # install development requirements
-RUN pip install --no-cache-dir pylint flake8 pytest
+RUN pip install --no-cache-dir pylint flake8 pytest bandit
 
 # install python requirements
 COPY code/python/requirements.txt /requirements.txt
