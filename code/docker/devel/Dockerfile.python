@@ -6,12 +6,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # setup python virtual environment
-RUN python3 -m venv /opt/env
-ENV PATH="/opt/env/bin:$PATH"
+RUN python3 -m venv /home/slub/.venv
+ENV PATH="/home/slub/.venv/bin:$PATH"
 RUN python3 -m pip install --upgrade pip
 
 # install development requirements
-RUN pip install --no-cache-dir pylint flake8
+RUN pip install --no-cache-dir pylint flake8 pytest
 
 # pre-install python requirements
 COPY code/python/requirements.txt /requirements.txt
@@ -27,6 +27,8 @@ USER slub
 COPY code/docker/devel/screenrc /home/slub/.screenrc
 
 WORKDIR /home/slub/workspace
+
+ENV PYTHONPATH=/home/slub/workspace/code/python/src
 
 ENTRYPOINT ["/bin/bash"]
 

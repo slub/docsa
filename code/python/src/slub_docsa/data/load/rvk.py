@@ -10,7 +10,7 @@ import logging
 
 from typing import Iterable, Dict, Any
 from lxml import etree
-from common import RESOURCES_DIR, CACHE_DIR
+from slub_docsa.common import RESOURCES_DIR, CACHE_DIR
 
 logger = logging.getLogger(__name__)
 
