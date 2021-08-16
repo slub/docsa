@@ -5,6 +5,4 @@ include:
   - template: Jobs/Build.gitlab-ci.yml
 
 build:
-  variables:
-    DOCKERFILE_PATH: "code/docker/ci/Dockerfile.python"
   image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image/kaniko:stable"
