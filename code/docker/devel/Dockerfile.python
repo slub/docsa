@@ -1,0 +1,32 @@
+FROM python:3.6-slim
+
+# install development basics
+RUN apt-get update && \
+    apt-get install -y git vim screen wget && \
+    rm -rf /var/lib/apt/lists/*
+
+# setup python virtual environment
+RUN python3 -m venv /opt/env
+ENV PATH="/opt/env/bin:$PATH"
+RUN python3 -m pip install --upgrade pip
+
+# install development requirements
+RUN pip install --no-cache-dir pylint flake8
+
+# pre-install python requirements
+COPY code/python/requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# add unprivilged user
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g $GID slub && useradd --uid $UID --gid $GID --create-home --home-dir /home/slub -s /bin/bash slub
+USER slub
+
+# copy custom screenrc for convenience
+COPY code/docker/devel/screenrc /home/slub/.screenrc
+
+WORKDIR /home/slub/workspace
+
+ENTRYPOINT ["/bin/bash"]
+

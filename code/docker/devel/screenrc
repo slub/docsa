@@ -1,0 +1,24 @@
+shell "/bin/bash"
+
+# status line
+hardstatus alwayslastline
+hardstatus string '%{= kG}[%{G}%H%? %1`%?%{g}][%= %{= kw}%-w%{+b yk} %n*%t%?(%u)%? %{-}%+w %=%{g}][%{B}%m/%d %{W}%C%A%{g}]'
+
+# huge scrollback buffer
+defscrollback 5000
+
+# disable visual bell
+vbell off
+bell_msg ""
+
+# no welcome message
+startup_message off
+
+# 256 colors
+term xterm-256color
+
+# start with window 1 instead of 0
+bind c screen 1
+bind ^c screen 1
+bind 0 select 10
+screen 1
