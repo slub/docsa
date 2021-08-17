@@ -13,7 +13,7 @@ services:
         - ../../../:/home/slub/workspace:Z
 
   annif:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.annif
       args:
@@ -24,4 +24,5 @@ services:
     volumes:
       - ../../../data/runtime/annif:/annif-projects:Z
       - ../../../data/resources/annif-corpora:/annif-corpora:Z
-    
+      - ../../../data/runtime/cache:/docsa-cache:Z
+

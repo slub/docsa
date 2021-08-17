@@ -41,13 +41,25 @@ def _get_label_breadcrumb(element: Any) -> str:
     return label
 
 
+def rvk_notation_to_uri(notation: str) -> str:
+    """Converts a rvk notation to an URI"""
+    notation_encoded = urllib.parse.quote(notation)
+    return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
+
+
 def read_rvk_classes(depth: int = None) -> Iterable[Dict[str, str]]:
-    """Reads classes and their labels from the official RVK xml"""
+    """Downloads and reads RVK classes and their labels"""
 
     # make sure file is available and download if necessary
     _download_rvk_xml()
 
-    with zipfile.ZipFile(RVK_XML_FILE_PATH, "r") as f_zip:
+    return read_rvk_classes_from_file(RVK_XML_FILE_PATH, depth)
+
+
+def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[Dict[str, str]]:
+    """Reads classes and their labels from the official RVK xml zip archive file"""
+
+    with zipfile.ZipFile(filepath, "r") as f_zip:
         for filename in f_zip.namelist():
 
             # read and parse xml file
@@ -62,17 +74,25 @@ def read_rvk_classes(depth: int = None) -> Iterable[Dict[str, str]]:
                 elif event == "end":
                     if depth is None or level <= depth:
                         notation = node.get("notation")
-                        notation_encoded = urllib.parse.quote(notation)
                         label = node.get("benennung")
                         breadcrumb = _get_label_breadcrumb(node)
 
                         yield {
-                            "uri": f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}",
+                            "uri": rvk_notation_to_uri(notation),
                             "notation": notation,
                             "label": label,
                             "breadcrumb": breadcrumb,
                         }
                     level -= 1
+
+
+def load_rvk_classes_indexed_by_notation():
+    """Stores all RVK classes in a dictionary indexed by notation"""
+    index = {}
+    for rvk_cls in read_rvk_classes():
+        index[rvk_cls["notation"]] = rvk_cls
+
+    return index
 
 
 def convert_rvk_classes_to_annif_tsv():
