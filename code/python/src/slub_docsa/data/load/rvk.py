@@ -8,7 +8,8 @@ import zipfile
 import io
 import logging
 
-from typing import Iterable, Dict, Any
+from typing import Iterable, Any, List, Dict
+from typing_extensions import TypedDict
 from lxml import etree  # nosec
 from slub_docsa.common import RESOURCES_DIR, CACHE_DIR
 
@@ -17,6 +18,15 @@ logger = logging.getLogger(__name__)
 RVK_XML_URL = "https://rvk.uni-regensburg.de/downloads/rvko_xml.zip"
 RVK_XML_FILE_PATH = os.path.join(RESOURCES_DIR, "rvk/rvko_xml.zip")
 RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
+
+
+class RvkClass(TypedDict):
+    """Represents an RVK class"""
+
+    uri: str
+    notation: str
+    label: str
+    ancestors: List["RvkClass"]
 
 
 def _download_rvk_xml() -> None:
@@ -28,26 +38,37 @@ def _download_rvk_xml() -> None:
             shutil.copyfileobj(f_src, f_dst)
 
 
-def _get_label_breadcrumb(element: Any) -> str:
-    """Combines labels of all parent classes into a single breadcrumb label"""
-
-    label = element.get("benennung")
-    next_element = element.getparent()
-    while next_element is not None:
-        if next_element.tag == "node":
-            label = next_element.get("benennung") + " | " + label
-        next_element = next_element.getparent()
-
-    return label
-
-
 def rvk_notation_to_uri(notation: str) -> str:
     """Converts a rvk notation to an URI"""
     notation_encoded = urllib.parse.quote(notation)
     return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
 
 
-def read_rvk_classes(depth: int = None) -> Iterable[Dict[str, str]]:
+def _get_ancestors(element: Any) -> List[RvkClass]:
+    """Collects labels and notations from all parent classes"""
+
+    ancestors: List[RvkClass] = []
+    next_element = element.getparent()
+    while next_element is not None:
+        if next_element.tag == "node":
+            notation = next_element.get("notation")
+            label = next_element.get("benennung")
+            ancestors.insert(0, {
+                "uri": rvk_notation_to_uri(notation),
+                "label": label,
+                "notation": notation,
+                "ancestors": []
+            })
+        next_element = next_element.getparent()
+
+    return ancestors
+
+
+def _get_breadcrumb_label(rvk_cls: RvkClass) -> str:
+    return " | ".join(map(lambda c: c["label"], rvk_cls["ancestors"] + [rvk_cls]))
+
+
+def read_rvk_classes(depth: int = None) -> Iterable[RvkClass]:
     """Downloads and reads RVK classes and their labels"""
 
     # make sure file is available and download if necessary
@@ -56,7 +77,7 @@ def read_rvk_classes(depth: int = None) -> Iterable[Dict[str, str]]:
     return read_rvk_classes_from_file(RVK_XML_FILE_PATH, depth)
 
 
-def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[Dict[str, str]]:
+def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[RvkClass]:
     """Reads classes and their labels from the official RVK xml zip archive file"""
 
     with zipfile.ZipFile(filepath, "r") as f_zip:
@@ -75,18 +96,20 @@ def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[Dic
                     if depth is None or level <= depth:
                         notation = node.get("notation")
                         label = node.get("benennung")
-                        breadcrumb = _get_label_breadcrumb(node)
+                        ancestors = _get_ancestors(node)
 
-                        yield {
+                        rvk_class: RvkClass = {
                             "uri": rvk_notation_to_uri(notation),
                             "notation": notation,
                             "label": label,
-                            "breadcrumb": breadcrumb,
+                            "ancestors": ancestors,
                         }
+
+                        yield rvk_class
                     level -= 1
 
 
-def load_rvk_classes_indexed_by_notation():
+def load_rvk_classes_indexed_by_notation() -> Dict[str, RvkClass]:
     """Stores all RVK classes in a dictionary indexed by notation"""
     index = {}
     for rvk_cls in read_rvk_classes():
@@ -104,7 +127,7 @@ def convert_rvk_classes_to_annif_tsv():
         with open(RVK_ANNIF_TSV_FILE_PATH, "w") as f_tsv:
             for rvk_cls in read_rvk_classes():
                 uri = rvk_cls["uri"]
-                breadcrumb = rvk_cls["breadcrumb"]
+                breadcrumb = _get_breadcrumb_label(rvk_cls)
                 f_tsv.write(f"<{uri}>\t{breadcrumb}\n")
 
 

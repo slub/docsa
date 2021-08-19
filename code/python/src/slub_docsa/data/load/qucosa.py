@@ -44,7 +44,7 @@ def get_document_title_from_qucosa_metadata(doc: Mapping[str, Any]) -> str:
     return doc["title"]["text"]
 
 
-def read_qucosa_simple_rvk_traing_data():
+def read_qucosa_simple_rvk_training_data():
     """Reads qucosa documents and returns only document title and rvk uri labels"""
 
     logger.debug("load rvk classes and index them by notation")
@@ -63,7 +63,7 @@ def read_qucosa_simple_rvk_traing_data():
             }
 
 
-def save_qucosa_simple_rvk_traing_data_as_annif_tsv():
+def save_qucosa_simple_rvk_training_data_as_annif_tsv():
     """Saves qucosa simple RVK training data as annif tsv file"""
 
     # make sure directory exists
@@ -71,7 +71,7 @@ def save_qucosa_simple_rvk_traing_data_as_annif_tsv():
 
     if not os.path.exists(QUCOSA_SIMPLE_TRAINING_DATA_TSV):
         with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w") as f_tsv:
-            for doc in read_qucosa_simple_rvk_traing_data():
+            for doc in read_qucosa_simple_rvk_training_data():
                 text = doc["text"]
                 labels_list = doc["labels"]
                 labels_str = " ".join(map(lambda l: f"<{l}>", labels_list))
@@ -82,4 +82,4 @@ def save_qucosa_simple_rvk_traing_data_as_annif_tsv():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    save_qucosa_simple_rvk_traing_data_as_annif_tsv()
+    save_qucosa_simple_rvk_training_data_as_annif_tsv()
