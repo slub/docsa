@@ -31,7 +31,7 @@ Docker images for development can be found in the `code/docker/devel` directory.
 
 ## Continuous Integration
 
-Continuous integration pipeline can be triggered by building the docker image `code/docker/ci/Dockerfile` (**note**: currently moved root directory due to gitlab AutoDevOps issue), which runs automated tests using [pytest](https://pytest.org/), ensures code guidelines by using [pylint](https://www.pylint.org/) and [pep8](https://pypi.org/project/pep8/), and checks for common security issues using [bandit](https://github.com/PyCQA/bandit).
+The CI pipeline can be triggered by building the docker image `code/docker/ci/Dockerfile` (**note**: currently moved to the root directory due to gitlab AutoDevOps issue), which runs automated tests using [pytest](https://pytest.org/), ensures code guidelines by using [pylint](https://www.pylint.org/) and [pep8](https://pypi.org/project/pep8/), and checks for common security issues using [bandit](https://github.com/PyCQA/bandit).
 
 
 
