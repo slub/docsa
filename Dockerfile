@@ -1,4 +1,4 @@
-FROM python:3.6-slim
+FROM python:3.7-slim
 
 # setup python virtual environment
 RUN python3 -m venv /home/slub/.venv
