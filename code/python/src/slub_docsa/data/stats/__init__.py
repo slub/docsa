@@ -1,1 +1,1 @@
-"""Various statistical analysis methods"""
+"""Various statistical analysis methods."""

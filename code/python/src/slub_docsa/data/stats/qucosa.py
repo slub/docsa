@@ -1,4 +1,4 @@
-"""Generates various statistics and figures of Qucosa as part of an exploratory data analysis"""
+"""Generates various statistics and figures of Qucosa as part of an exploratory data analysis."""
 
 import os
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def _load_extended_rvk_classes():
-    """Loads RVK classes indexed by notation and adds two artificial classes for visualization purposes"""
+    """Load RVK classes indexed by notation and adds two artificial classes for visualization purposes."""
     rvk_classes = load_rvk_classes_indexed_by_notation()
 
     # add artificial not found class
@@ -38,8 +38,7 @@ def _load_extended_rvk_classes():
 
 
 def generate_qucosa_rvk_sunburst():
-    """Generates a sunburst chart for qucosa visualizing the RVK class distribution"""
-
+    """Generate a sunburst chart for qucosa visualizing the RVK class distribution."""
     logger.debug("load rvk classes by notation")
     rvk_indexed_by_notation = _load_extended_rvk_classes()
 

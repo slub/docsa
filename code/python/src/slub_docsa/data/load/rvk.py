@@ -1,4 +1,4 @@
-"""Reads and processes RVK classes loaded from the official xml"""
+"""Reads and processes RVK classes loaded from the official xml."""
 
 import os
 import urllib.parse
@@ -21,7 +21,7 @@ RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
 
 
 class RvkClass(TypedDict):
-    """Represents an RVK class"""
+    """Represents an RVK class."""
 
     uri: str
     notation: str
@@ -30,7 +30,7 @@ class RvkClass(TypedDict):
 
 
 def _download_rvk_xml() -> None:
-    """Downloads the RVK xml file from rvk.uni-regensburg.de"""
+    """Download the RVK xml file from rvk.uni-regensburg.de."""
     os.makedirs(os.path.dirname(RVK_XML_FILE_PATH), exist_ok=True)
     if not os.path.exists(RVK_XML_FILE_PATH):
         logger.debug("download RVK classes to %s", RVK_XML_FILE_PATH)
@@ -39,14 +39,13 @@ def _download_rvk_xml() -> None:
 
 
 def rvk_notation_to_uri(notation: str) -> str:
-    """Converts a rvk notation to an URI"""
+    """Convert a rvk notation to an URI."""
     notation_encoded = urllib.parse.quote(notation)
     return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
 
 
 def _get_ancestors(element: Any) -> List[RvkClass]:
-    """Collects labels and notations from all parent classes"""
-
+    """Collect labels and notations from all parent classes."""
     ancestors: List[RvkClass] = []
     next_element = element.getparent()
     while next_element is not None:
@@ -69,17 +68,14 @@ def _get_breadcrumb_label(rvk_cls: RvkClass) -> str:
 
 
 def read_rvk_classes(depth: int = None) -> Iterable[RvkClass]:
-    """Downloads and reads RVK classes and their labels"""
-
+    """Download and read RVK classes and their labels."""
     # make sure file is available and download if necessary
     _download_rvk_xml()
-
     return read_rvk_classes_from_file(RVK_XML_FILE_PATH, depth)
 
 
 def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[RvkClass]:
-    """Reads classes and their labels from the official RVK xml zip archive file"""
-
+    """Read classes and their labels from the official RVK xml zip archive file."""
     with zipfile.ZipFile(filepath, "r") as f_zip:
         for filename in f_zip.namelist():
 
@@ -110,7 +106,7 @@ def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[Rvk
 
 
 def load_rvk_classes_indexed_by_notation() -> Dict[str, RvkClass]:
-    """Stores all RVK classes in a dictionary indexed by notation"""
+    """Store all RVK classes in a dictionary indexed by notation."""
     index = {}
     for rvk_cls in read_rvk_classes():
         index[rvk_cls["notation"]] = rvk_cls
@@ -119,7 +115,7 @@ def load_rvk_classes_indexed_by_notation() -> Dict[str, RvkClass]:
 
 
 def convert_rvk_classes_to_annif_tsv():
-    """Converts RVK classes to Tab-separated Values files required by Annif"""
+    """Convert RVK classes to Tab-separated Values files required by Annif."""
     if not os.path.exists(RVK_ANNIF_TSV_FILE_PATH):
         os.makedirs(os.path.dirname(RVK_ANNIF_TSV_FILE_PATH), exist_ok=True)
 

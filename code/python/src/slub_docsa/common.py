@@ -1,4 +1,4 @@
-"""Common package properties"""
+"""Contains common definitions."""
 
 import os
 

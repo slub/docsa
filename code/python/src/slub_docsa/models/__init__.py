@@ -1,1 +1,1 @@
-"""Classification models and similarity metrics"""
+"""Classification models and similarity metrics."""

@@ -1,4 +1,4 @@
-"""Reads qucosa metadata from jsonl files"""
+"""Reads qucosa metadata from jsonl files."""
 
 import os
 import gzip
@@ -19,7 +19,7 @@ ClassifcationType = List[ClassificationElementType]
 
 
 def read_qucosa_metadata():
-    """Reads qucosa metadata from gzip compressed jsonl files"""
+    """Read qucosa metadata from gzip compressed jsonl files."""
     for entry in os.scandir(QUCOSA_FULLTEXT_MAPPING_DIR):
         if entry.is_file():
             with gzip.open(entry.path, "r") as f_jsonl:
@@ -28,7 +28,7 @@ def read_qucosa_metadata():
 
 
 def get_rvk_notations_from_qucosa_metadata(doc: Mapping[str, Any]) -> List[str]:
-    """Returns list of RVK notations from qucosa metadata object"""
+    """Return list of RVK notations from qucosa metadata object."""
     classification: ClassifcationType = doc["metadata"]["classification"]
     rvk_dict = list(filter(lambda d: d["type"] == "rvk", classification))[0]
     keys = rvk_dict["keys"]
@@ -40,13 +40,12 @@ def get_rvk_notations_from_qucosa_metadata(doc: Mapping[str, Any]) -> List[str]:
 
 
 def get_document_title_from_qucosa_metadata(doc: Mapping[str, Any]) -> str:
-    """Returns the document title from a qucosa metadata object"""
+    """Return the document title from a qucosa metadata object."""
     return doc["title"]["text"]
 
 
 def read_qucosa_simple_rvk_training_data():
-    """Reads qucosa documents and returns only document title and rvk uri labels"""
-
+    """Read qucosa documents and return only document title and rvk uri labels."""
     logger.debug("load rvk classes and index them by notation")
     rvk_classes_index = load_rvk_classes_indexed_by_notation()
 
@@ -64,8 +63,7 @@ def read_qucosa_simple_rvk_training_data():
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv():
-    """Saves qucosa simple RVK training data as annif tsv file"""
-
+    """Save qucosa simple RVK training data as annif tsv file."""
     # make sure directory exists
     os.makedirs(os.path.dirname(QUCOSA_SIMPLE_TRAINING_DATA_TSV), exist_ok=True)
 
