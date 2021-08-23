@@ -70,7 +70,7 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv():
     os.makedirs(os.path.dirname(QUCOSA_SIMPLE_TRAINING_DATA_TSV), exist_ok=True)
 
     if not os.path.exists(QUCOSA_SIMPLE_TRAINING_DATA_TSV):
-        with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w") as f_tsv:
+        with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w", encoding="utf8") as f_tsv:
             for doc in read_qucosa_simple_rvk_training_data():
                 text = doc["text"]
                 labels_list = doc["labels"]

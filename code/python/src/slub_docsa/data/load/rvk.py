@@ -124,7 +124,7 @@ def convert_rvk_classes_to_annif_tsv():
         os.makedirs(os.path.dirname(RVK_ANNIF_TSV_FILE_PATH), exist_ok=True)
 
         logger.debug("convert RVK classes to annif tsv format")
-        with open(RVK_ANNIF_TSV_FILE_PATH, "w") as f_tsv:
+        with open(RVK_ANNIF_TSV_FILE_PATH, "w", encoding="utf8") as f_tsv:
             for rvk_cls in read_rvk_classes():
                 uri = rvk_cls["uri"]
                 breadcrumb = _get_breadcrumb_label(rvk_cls)
