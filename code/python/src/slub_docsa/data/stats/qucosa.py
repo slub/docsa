@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def _load_extended_rvk_classes():
-    """Loads RVK classes indexed by notation and adds to artificial classes for visualization purposes"""
+    """Loads RVK classes indexed by notation and adds two artificial classes for visualization purposes"""
     rvk_classes = load_rvk_classes_indexed_by_notation()
 
     # add artificial not found class
@@ -83,8 +83,6 @@ def generate_qucosa_rvk_sunburst():
                     "count": 0,
                     "label": ancestor["label"]
                 })
-                if sunburst_by_notation[ancestor["notation"]]["parent"] != parent_notation:
-                    print("WHATHAT")
                 sunburst_by_notation[ancestor["notation"]]["count"] += count
 
     sunburst_list = list(sunburst_by_notation.values())
