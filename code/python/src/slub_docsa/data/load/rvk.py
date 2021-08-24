@@ -1,5 +1,7 @@
 """Reads and processes RVK classes loaded from the official xml."""
 
+# pylint: disable=too-few-public-methods
+
 import os
 import urllib.parse
 import urllib.request
@@ -8,25 +10,31 @@ import zipfile
 import io
 import logging
 
-from typing import Iterable, Any, List, Dict
-from typing_extensions import TypedDict
+from typing import Iterable, Any, Optional
 from lxml import etree  # nosec
 from slub_docsa.common import RESOURCES_DIR, CACHE_DIR
+from slub_docsa.data.common.subject import SubjectHierarchyType, SubjectNode
+from slub_docsa.data.store.subject import SubjectHierarchyDbmStore, get_subject_label_breadcrumb
 
 logger = logging.getLogger(__name__)
 
 RVK_XML_URL = "https://rvk.uni-regensburg.de/downloads/rvko_xml.zip"
 RVK_XML_FILE_PATH = os.path.join(RESOURCES_DIR, "rvk/rvko_xml.zip")
+RVK_SUBJECT_STORE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_store.dbm")
 RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
 
 
-class RvkClass(TypedDict):
-    """Represents an RVK class."""
+class RvkSubjectNode(SubjectNode):
+    """Extends subject with RVK notation string."""
 
-    uri: str
+    __slots__ = ("uri", "label", "notation", "parent_uri")
+
     notation: str
-    label: str
-    ancestors: List["RvkClass"]
+
+    def __init__(self, uri: str, label: str, notation: str, parent_uri: Optional[str]):
+        """Initialize RVK subject."""
+        super().__init__(uri, label, parent_uri)
+        self.notation = notation
 
 
 def _download_rvk_xml() -> None:
@@ -38,43 +46,29 @@ def _download_rvk_xml() -> None:
             shutil.copyfileobj(f_src, f_dst)
 
 
+def _get_parent_notation(element: Any) -> Optional[str]:
+    """Find notation of parent RVK class."""
+    next_element = element.getparent()
+    while next_element is not None:
+        if next_element.tag == "node":
+            return next_element.get("notation")
+        next_element = next_element.getparent()
+
+
 def rvk_notation_to_uri(notation: str) -> str:
     """Convert a rvk notation to an URI."""
     notation_encoded = urllib.parse.quote(notation)
     return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
 
 
-def _get_ancestors(element: Any) -> List[RvkClass]:
-    """Collect labels and notations from all parent classes."""
-    ancestors: List[RvkClass] = []
-    next_element = element.getparent()
-    while next_element is not None:
-        if next_element.tag == "node":
-            notation = next_element.get("notation")
-            label = next_element.get("benennung")
-            ancestors.insert(0, {
-                "uri": rvk_notation_to_uri(notation),
-                "label": label,
-                "notation": notation,
-                "ancestors": []
-            })
-        next_element = next_element.getparent()
-
-    return ancestors
-
-
-def _get_breadcrumb_label(rvk_cls: RvkClass) -> str:
-    return " | ".join(map(lambda c: c["label"], rvk_cls["ancestors"] + [rvk_cls]))
-
-
-def read_rvk_classes(depth: int = None) -> Iterable[RvkClass]:
+def read_rvk_subjects(depth: int = None) -> Iterable[RvkSubjectNode]:
     """Download and read RVK classes and their labels."""
     # make sure file is available and download if necessary
     _download_rvk_xml()
-    return read_rvk_classes_from_file(RVK_XML_FILE_PATH, depth)
+    return read_rvk_subjects_from_file(RVK_XML_FILE_PATH, depth)
 
 
-def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[RvkClass]:
+def read_rvk_subjects_from_file(filepath: str, depth: int = None) -> Iterable[RvkSubjectNode]:
     """Read classes and their labels from the official RVK xml zip archive file."""
     with zipfile.ZipFile(filepath, "r") as f_zip:
         for filename in f_zip.namelist():
@@ -91,27 +85,29 @@ def read_rvk_classes_from_file(filepath: str, depth: int = None) -> Iterable[Rvk
                 elif event == "end":
                     if depth is None or level <= depth:
                         notation = node.get("notation")
+                        uri = rvk_notation_to_uri(notation)
                         label = node.get("benennung")
-                        ancestors = _get_ancestors(node)
+                        parent_notation = _get_parent_notation(node)
+                        parent_uri = None if parent_notation is None else rvk_notation_to_uri(parent_notation)
 
-                        rvk_class: RvkClass = {
-                            "uri": rvk_notation_to_uri(notation),
-                            "notation": notation,
-                            "label": label,
-                            "ancestors": ancestors,
-                        }
-
-                        yield rvk_class
+                        yield RvkSubjectNode(uri, label, notation, parent_uri)
                     level -= 1
 
 
-def load_rvk_classes_indexed_by_notation() -> Dict[str, RvkClass]:
+def get_rvk_subject_store() -> SubjectHierarchyType[RvkSubjectNode]:
     """Store all RVK classes in a dictionary indexed by notation."""
-    index = {}
-    for rvk_cls in read_rvk_classes():
-        index[rvk_cls["notation"]] = rvk_cls
+    if os.path.exists(RVK_SUBJECT_STORE_PATH):
+        return SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH)
 
-    return index
+    logger.debug("create and fill RVK subject store (may take some time)")
+    store = SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH)
+
+    for i, rvk_subject in enumerate(read_rvk_subjects()):
+        store[rvk_subject.uri] = rvk_subject
+        if i % 10000 == 0:
+            logger.debug("Added %d RVK subjects to store so far", i)
+
+    return store
 
 
 def convert_rvk_classes_to_annif_tsv():
@@ -119,18 +115,17 @@ def convert_rvk_classes_to_annif_tsv():
     if not os.path.exists(RVK_ANNIF_TSV_FILE_PATH):
         os.makedirs(os.path.dirname(RVK_ANNIF_TSV_FILE_PATH), exist_ok=True)
 
+        rvk_subject_hierarchy = get_rvk_subject_store()
+
         logger.debug("convert RVK classes to annif tsv format")
         with open(RVK_ANNIF_TSV_FILE_PATH, "w", encoding="utf8") as f_tsv:
-            for rvk_cls in read_rvk_classes():
-                uri = rvk_cls["uri"]
-                breadcrumb = _get_breadcrumb_label(rvk_cls)
+            for uri, rvk_subject in rvk_subject_hierarchy.items():
+                breadcrumb = get_subject_label_breadcrumb(rvk_subject_hierarchy, rvk_subject)
                 f_tsv.write(f"<{uri}>\t{breadcrumb}\n")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    # convert_rvk_classes_to_annif_tsv()
-
-    for cls in read_rvk_classes(depth=None):
-        print(cls)
+    rvk_store = get_rvk_subject_store()
+    print("RVK has %d subjects" % len(rvk_store))

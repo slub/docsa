@@ -6,7 +6,7 @@ import json
 import logging
 
 from typing import Mapping, List, Any
-from slub_docsa.data.load.rvk import load_rvk_classes_indexed_by_notation, rvk_notation_to_uri
+from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common import CACHE_DIR, RESOURCES_DIR
 
 logger = logging.getLogger(__name__)
@@ -47,12 +47,12 @@ def get_document_title_from_qucosa_metadata(doc: Mapping[str, Any]) -> str:
 def read_qucosa_simple_rvk_training_data():
     """Read qucosa documents and return only document title and rvk uri labels."""
     logger.debug("load rvk classes and index them by notation")
-    rvk_classes_index = load_rvk_classes_indexed_by_notation()
+    rvk_subject_store = get_rvk_subject_store()
 
     logger.debug("iterate over qucosa documents")
     for doc in read_qucosa_metadata():
         notations = get_rvk_notations_from_qucosa_metadata(doc)
-        notations_filtered = list(filter(lambda n: n in rvk_classes_index, notations))
+        notations_filtered = list(filter(lambda n: rvk_notation_to_uri(n) in rvk_subject_store, notations))
 
         if notations_filtered:
 
