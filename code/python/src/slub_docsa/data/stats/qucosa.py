@@ -22,30 +22,42 @@ def _get_parent_notation_from_subject(
     return ""
 
 
-def generate_qucosa_rvk_sunburst():
-    """Generate a sunburst chart for qucosa visualizing the RVK class distribution."""
-    rvk_subject_store = get_rvk_subject_store()
-
+def qucosa_number_of_documents_by_rvk_subjects(rvk_subject_store: SubjectHierarchyType[RvkSubjectNode]):
+    """Count the number of Qucosa documents for each RVK subject."""
     logger.debug("count rvk subject occurances in Qucosa")
-    qucosa_rvk_notations = {}
+    qucosa_rvk_subjects = {}
     for doc in read_qucosa_metadata():
         notations = get_rvk_notations_from_qucosa_metadata(doc)
         for notation in notations:
             subject_uri = rvk_notation_to_uri(notation)
+            fraction = 1.0 / len(notations)
             if subject_uri in rvk_subject_store:
-                qucosa_rvk_notations[notation] = qucosa_rvk_notations.get(notation, 0) + 1.0 / len(notations)
+                qucosa_rvk_subjects[subject_uri] = qucosa_rvk_subjects.get(notation, 0) + fraction
             else:
-                qucosa_rvk_notations["not found"] = qucosa_rvk_notations.get("not found", 0) + 1.0 / len(notations)
+                qucosa_rvk_subjects["uri://not_found"] = qucosa_rvk_subjects.get("uri://not_found", 0) + fraction
         if not notations:
-            qucosa_rvk_notations["no value"] = qucosa_rvk_notations.get("no value", 0) + 1
+            qucosa_rvk_subjects["uri://no_value"] = qucosa_rvk_subjects.get("uri://no_value", 0) + 1
+
+    return qucosa_rvk_subjects
+
+
+def generate_qucosa_rvk_sunburst():
+    """Generate a sunburst chart for qucosa visualizing the RVK class distribution."""
+    rvk_subject_store = get_rvk_subject_store()
+    qucosa_rvk_subjects = qucosa_number_of_documents_by_rvk_subjects(rvk_subject_store)
+
+    custom_notations = {
+        "uri://no_value": "no value",
+        "uri://not_found": "not found"
+    }
 
     logger.debug("apply counts to all ancestor subjects")
     sunburst_by_notation = {}
-    for notation, count in qucosa_rvk_notations.items():
-        subject_uri = rvk_notation_to_uri(notation)
+    for subject_uri, count in qucosa_rvk_subjects.items():
 
         # in case notation is no value or not found
-        if notation in ("no value", "not found"):
+        if subject_uri in custom_notations:
+            notation = custom_notations[subject_uri]
             sunburst_by_notation[notation] = sunburst_by_notation.get(notation, {
                 "notation": notation,
                 "parent": "",
@@ -92,8 +104,20 @@ def generate_qucosa_rvk_sunburst():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     from slub_docsa.common import FIGURES_DIR
+
+    rvk_store = get_rvk_subject_store()
+    rvk_subjects = qucosa_number_of_documents_by_rvk_subjects(rvk_store)
+    qucosa_doc_count = sum(1 for x in read_qucosa_metadata())
+
+    count_no_value = rvk_subjects["uri://no_value"]
+    count_not_found = rvk_subjects["uri://not_found"]
+
+    print(f"qucosa has {qucosa_doc_count} documents")
+    print(f"qucosa uses only {len(rvk_subjects) - 2} of in total {len(rvk_store)} unique RVK subjects")
+    print(f"qucosa has {count_no_value} documents containing no RVK subject annotation")
+    print(f"qucosa has {count_not_found} documents with invalid RVK annotations")
 
     generate_qucosa_rvk_sunburst().write_html(os.path.join(FIGURES_DIR, "qucosa_rvk_distribution.html"))
