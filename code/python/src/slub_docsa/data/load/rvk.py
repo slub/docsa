@@ -96,18 +96,18 @@ def read_rvk_subjects_from_file(filepath: str, depth: int = None) -> Iterable[Rv
 
 def get_rvk_subject_store() -> SubjectHierarchyType[RvkSubjectNode]:
     """Store all RVK classes in a dictionary indexed by notation."""
-    if os.path.exists(RVK_SUBJECT_STORE_PATH):
-        return SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH)
+    if not os.path.exists(RVK_SUBJECT_STORE_PATH):
+        logger.debug("create and fill RVK subject store (may take some time)")
+        store = SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH, read_only=False)
 
-    logger.debug("create and fill RVK subject store (may take some time)")
-    store = SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH)
+        for i, rvk_subject in enumerate(read_rvk_subjects()):
+            store[rvk_subject.uri] = rvk_subject
+            if i % 10000 == 0:
+                logger.debug("Added %d RVK subjects to store so far", i)
 
-    for i, rvk_subject in enumerate(read_rvk_subjects()):
-        store[rvk_subject.uri] = rvk_subject
-        if i % 10000 == 0:
-            logger.debug("Added %d RVK subjects to store so far", i)
+        store.close()
 
-    return store
+    return SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH, read_only=True)
 
 
 def convert_rvk_classes_to_annif_tsv():

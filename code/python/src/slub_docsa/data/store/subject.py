@@ -12,9 +12,10 @@ from slub_docsa.data.common.subject import get_subject_label_breadcrumb
 class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
     """Stores a subject hierarchy in a python dbm database."""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, read_only=True):
         """Initialize store with a filepath."""
-        self.store = dbm.open(filepath, "c")
+        flag = "r" if read_only else "c"
+        self.store = dbm.open(filepath, flag)
 
     # pylint: disable=no-self-use
     def subject_node_to_bytes(self, subject_node: SubjectNodeType) -> bytes:
@@ -42,6 +43,12 @@ class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[Su
     def __len__(self):
         """Return number of subject nodes in dbm database."""
         return self.store.__len__()
+
+    def close(self):
+        """Close dbm database."""
+        if self.store:
+            self.store.close()
+            self.store = None
 
 
 if __name__ == "__main__":
