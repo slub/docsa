@@ -25,7 +25,7 @@ RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
 
 
 class RvkSubjectNode(SubjectNode):
-    """Extends subject with RVK notation string."""
+    """Extends the base subject with an RVK notation string."""
 
     __slots__ = ("uri", "label", "notation", "parent_uri")
 
@@ -56,13 +56,39 @@ def _get_parent_notation(element: Any) -> Optional[str]:
 
 
 def rvk_notation_to_uri(notation: str) -> str:
-    """Convert a rvk notation to an URI."""
+    """Convert a RVK notation to an URI.
+
+    Parameters
+    ----------
+    notation: str
+        The notation that references the RVK subject, e.g., "AA 10600"
+
+    Returns
+    -------
+    str
+        An URI as string representing the RVK subject referenced by the notation, e.g.,
+        "https://rvk.uni-regensburg.de/api/xml/node/AA%2010600"
+    """
     notation_encoded = urllib.parse.quote(notation)
     return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
 
 
 def read_rvk_subjects(depth: int = None) -> Iterable[RvkSubjectNode]:
-    """Download and read RVK classes and their labels."""
+    """Download and read RVK subjects and their labels.
+
+    Subjects are directly read from the xml file, and not cached. Use `get_rvk_subject_store()` for random cached
+    access of RVK subjects.
+
+    Parameters
+    ----------
+    depth : int
+            The maximum hieararchy level at which subjects are iterated.
+
+    Returns
+    -------
+    Iterable[RvkSubjectNode]
+        A generator of RvkSubjectNodes as parsed from the xml file downloaded via `_download_rvk_xml()`.
+    """
     # make sure file is available and download if necessary
     _download_rvk_xml()
     return read_rvk_subjects_from_file(RVK_XML_FILE_PATH, depth)
