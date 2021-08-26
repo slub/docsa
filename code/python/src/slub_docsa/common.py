@@ -7,6 +7,7 @@ DATA_DIR = os.path.join(ROOT_DIR, "data/")
 RESOURCES_DIR = os.path.join(DATA_DIR, "resources/")
 CACHE_DIR = os.path.join(DATA_DIR, "runtime/cache/")
 FIGURES_DIR = os.path.join(DATA_DIR, "runtime/figures/")
+ANNIF_DIR = os.path.join(DATA_DIR, "runtime/container/annif/data")
 
 if __name__ == "__main__":
     print(f"root dir: {ROOT_DIR}")
