@@ -2,7 +2,7 @@
 
 # pylint: disable=too-few-public-methods
 
-from typing import Mapping, TypeVar, List, Optional
+from typing import Iterable, Mapping, List, TypeVar, Optional
 
 
 class Subject:
@@ -41,6 +41,9 @@ SubjectNodeType = TypeVar('SubjectNodeType', bound=SubjectNode)
 
 SubjectHierarchyType = Mapping[str, SubjectNodeType]
 """A dictionary mapping a subject uri to its subject node."""
+
+SubjectUriList = Iterable[str]
+"""A subject list of subjects uris."""
 
 
 def get_subject_ancestors_list(
