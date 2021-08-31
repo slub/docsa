@@ -12,7 +12,7 @@ from annif.analyzer.analyzer import Analyzer
 from annif.analyzer.snowball import SnowballAnalyzer
 
 from slub_docsa.data.load.nltk import download_nltk
-from slub_docsa.common import ANNIF_DIR
+from slub_docsa.common.paths import ANNIF_DIR
 
 logger = logging.getLogger(__name__)
 
