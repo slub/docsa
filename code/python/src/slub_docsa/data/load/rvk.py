@@ -12,9 +12,9 @@ import logging
 
 from typing import Iterable, Any, Optional
 from lxml import etree  # nosec
-from slub_docsa.common import RESOURCES_DIR, CACHE_DIR
-from slub_docsa.data.common.subject import SubjectHierarchyType, SubjectNode
-from slub_docsa.data.store.subject import SubjectHierarchyDbmStore, get_subject_label_breadcrumb
+from slub_docsa.common.paths import RESOURCES_DIR, CACHE_DIR
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, get_subject_label_breadcrumb
+from slub_docsa.data.store.subject import SubjectHierarchyDbmStore
 
 logger = logging.getLogger(__name__)
 

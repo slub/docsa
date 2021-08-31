@@ -2,9 +2,10 @@
 
 import os
 import logging
+from typing import Mapping
 
 import plotly.express as px
-from slub_docsa.data.common.subject import SubjectHierarchyType, get_subject_ancestors_list
+from slub_docsa.common.subject import SubjectHierarchyType, get_subject_ancestors_list
 
 from slub_docsa.data.load.qucosa import get_rvk_notations_from_qucosa_metadata, read_qucosa_metadata
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store, rvk_notation_to_uri
@@ -22,17 +23,19 @@ def _get_parent_notation_from_subject(
     return ""
 
 
-def qucosa_number_of_documents_by_rvk_subjects(rvk_subject_store: SubjectHierarchyType[RvkSubjectNode]):
+def qucosa_number_of_documents_by_rvk_subjects(
+    rvk_subject_store: SubjectHierarchyType[RvkSubjectNode]
+) -> Mapping[str, float]:
     """Count the number of Qucosa documents for each RVK subject."""
     logger.debug("count rvk subject occurances in Qucosa")
-    qucosa_rvk_subjects = {}
+    qucosa_rvk_subjects: Mapping[str, float] = {}
     for doc in read_qucosa_metadata():
         notations = get_rvk_notations_from_qucosa_metadata(doc)
         for notation in notations:
             subject_uri = rvk_notation_to_uri(notation)
             fraction = 1.0 / len(notations)
             if subject_uri in rvk_subject_store:
-                qucosa_rvk_subjects[subject_uri] = qucosa_rvk_subjects.get(notation, 0) + fraction
+                qucosa_rvk_subjects[subject_uri] = qucosa_rvk_subjects.get(subject_uri, 0) + fraction
             else:
                 qucosa_rvk_subjects["uri://not_found"] = qucosa_rvk_subjects.get("uri://not_found", 0) + fraction
         if not notations:
@@ -104,9 +107,9 @@ def generate_qucosa_rvk_sunburst():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
-    from slub_docsa.common import FIGURES_DIR
+    from slub_docsa.common.paths import FIGURES_DIR
 
     rvk_store = get_rvk_subject_store()
     rvk_subjects = qucosa_number_of_documents_by_rvk_subjects(rvk_store)
@@ -120,4 +123,7 @@ if __name__ == "__main__":
     print(f"qucosa has {count_no_value} documents containing no RVK subject annotation")
     print(f"qucosa has {count_not_found} documents with invalid RVK annotations")
 
-    generate_qucosa_rvk_sunburst().write_html(os.path.join(FIGURES_DIR, "qucosa_rvk_distribution.html"))
+    generate_qucosa_rvk_sunburst().write_html(
+        os.path.join(FIGURES_DIR, "qucosa_rvk_distribution.html"),
+        include_plotlyjs="cdn",
+    )

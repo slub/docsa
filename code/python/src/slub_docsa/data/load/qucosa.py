@@ -7,7 +7,7 @@ import logging
 
 from typing import Mapping, List, Any
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
-from slub_docsa.common import CACHE_DIR, RESOURCES_DIR
+from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
 
 logger = logging.getLogger(__name__)
 

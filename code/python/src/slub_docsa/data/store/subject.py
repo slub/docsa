@@ -5,8 +5,8 @@ import pickle  # nosec
 
 from typing import Generic
 
-from slub_docsa.data.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
-from slub_docsa.data.common.subject import get_subject_label_breadcrumb
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
+from slub_docsa.common.subject import get_subject_label_breadcrumb
 
 
 class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
@@ -29,19 +29,27 @@ class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[Su
 
     def __getitem__(self, uri: str) -> SubjectNodeType:
         """Retrieve subject node from dbm database."""
+        if self.store is None:
+            raise RuntimeError("dbm store already closed")
         return self.bytes_to_subject_node(self.store.__getitem__(uri))
 
     def __setitem__(self, uri: str, subject_node: SubjectNodeType):
         """Save subject node to dbm database."""
-        return self.store.__setitem__(uri, self.subject_node_to_bytes(subject_node))
+        if self.store is None:
+            raise RuntimeError("dbm store already closed")
+        self.store.__setitem__(uri, self.subject_node_to_bytes(subject_node))
 
     def __iter__(self):
         """Iterate over all subject nodes in dbm database."""
+        if self.store is None:
+            raise RuntimeError("dbm store already closed")
         for uri in self.store.keys():
             yield uri
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return number of subject nodes in dbm database."""
+        if self.store is None:
+            raise RuntimeError("dbm store already closed")
         return self.store.__len__()
 
     def close(self):
