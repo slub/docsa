@@ -1,6 +1,6 @@
 """Common Tests."""
 
-from slub_docsa.common import DATA_DIR
+from slub_docsa.common.paths import DATA_DIR
 
 
 def test_trivial():
