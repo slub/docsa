@@ -5,6 +5,17 @@ include:
   - template: Jobs/Build.gitlab-ci.yml
 
 build:
-  # dind: "registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image:v1.0.0"
-  # kaniko: "registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image/kaniko:stable"
-  image: "$BUILD_IMAGE"
+  # only run AutoDevOps build job if kubernetes is available
+  image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image/kaniko:stable"
+  rules:
+    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH) && $FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY == "true"'
+
+
+build_dind:
+  # only run Docker-in-Docker build job if kubernetes is unavailable
+  stage: build
+  image: docker:dind
+  script:
+    - docker build -t slub_docsa:ci .
+  rules:
+    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH) && $FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY != "true"'
