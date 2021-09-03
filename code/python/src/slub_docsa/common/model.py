@@ -1,7 +1,8 @@
 """Base class describing a model."""
 
+from typing import Sequence
 
-from typing import Sequence, Iterable
+import numpy as np
 
 from slub_docsa.common.document import Document
 
@@ -13,15 +14,16 @@ class Model:
     instead of raw vectorized feaures.
     """
 
-    def fit(self, train_documents: Sequence[Document], train_targets: Sequence[Iterable[str]]):
+    def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
         """Train a model to fit the training data.
 
         Parameters
         ----------
         train_documents: Sequence[Document]
             The sequence of documents that is used for training a model.
-        train_targets: Sequence[Iterable[str]]
-            The sequence of subject URIs for each document of `train_documents`.
+        train_targets: numpy.ndarray
+            The incidence matrix describing which document of `train_documents` belongs to which subjects. The matrix
+            has to have a shape of (n_docs, n_subjects).
 
         Returns
         -------
@@ -30,8 +32,8 @@ class Model:
         """
         raise NotImplementedError()
 
-    def predict(self, test_documents: Sequence[Document]) -> Sequence[Iterable[str]]:
-        """Return hard predictions without probabilities as incidence matrix.
+    def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
+        """Return predicted subject probabilities as a matrix.
 
         Parameters
         ----------
@@ -40,7 +42,8 @@ class Model:
 
         Returns
         -------
-        Sequence[Iterable[str]]
-            The list of subject URIs predicted for each test document.
+        numpy.ndarray
+            The matrix of subject probabilities with a shape of (n_docs, n_subjects). The column order has to match
+            the order that was provided as `train_targets` to the `fit` method.
         """
         raise NotImplementedError()

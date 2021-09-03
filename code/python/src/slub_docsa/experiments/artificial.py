@@ -12,7 +12,7 @@ from slub_docsa.experiments.default import default_named_models, default_named_s
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     # setup dataset
     dataset = generate_random_dbpedia_dataset("english", 1000, 5)

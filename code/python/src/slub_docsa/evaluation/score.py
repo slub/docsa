@@ -1,30 +1,31 @@
 """Defines various scores that can be used to judge the performance of models."""
 
-from typing import Sequence, Callable
-from slub_docsa.common.subject import SubjectUriList
+from typing import Callable
 
-from slub_docsa.evaluation.incidence import unique_subject_list, subject_incidence_matrix_from_list
+import numpy as np
+
+from slub_docsa.common.score import IncidenceDecisionFunctionType
 
 
-def scikit_metric(
+def scikit_incidence_metric(
+    incidence_decision_function: IncidenceDecisionFunctionType,
     metric_function,
     **kwargs
-) -> Callable[[Sequence[SubjectUriList], Sequence[SubjectUriList]], float]:
+) -> Callable[[np.ndarray, np.ndarray], float]:
     """Return a scikit-learn metric transformed to score lists of subject URIs."""
 
     def _metric(
-        true_subject_list: Sequence[SubjectUriList],
-        predicted_subject_list: Sequence[SubjectUriList],
+        true_subject_incidence: np.ndarray,
+        predicted_subject_probabitlies: np.ndarray,
     ) -> float:
 
-        subject_order = unique_subject_list(true_subject_list)
-        true_incidence = subject_incidence_matrix_from_list(true_subject_list, subject_order)
-        predicted_incidence = subject_incidence_matrix_from_list(predicted_subject_list, subject_order)
+        predicted_subject_incidence = incidence_decision_function(predicted_subject_probabitlies)
 
-        score = metric_function(true_incidence, predicted_incidence, **kwargs)
-        if isinstance(score, float):
-            return score
+        score = metric_function(true_subject_incidence, predicted_subject_incidence, **kwargs)
 
-        raise RuntimeError("sklearn metric output is not a float")
+        if not isinstance(score, float):
+            raise RuntimeError("sklearn metric output is not a float")
+
+        return score
 
     return _metric

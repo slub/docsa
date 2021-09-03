@@ -1,5 +1,6 @@
 """Provides common defaults for experimentation."""
 
+import os
 from typing import List, Tuple, cast
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -14,11 +15,17 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.svm import LinearSVC
-from slub_docsa.common.score import ScoreFunctionType
 
-from slub_docsa.evaluation.score import scikit_metric
+from slub_docsa.common.paths import ANNIF_DIR
+from slub_docsa.common.score import ScoreFunctionType
+from slub_docsa.evaluation.incidence import threshold_incidence_decision, top_k_incidence_decision
+from slub_docsa.evaluation.score import scikit_incidence_metric
+from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.scikit import ScikitTfidfClassifier
 from slub_docsa.common.model import Model
+
+
+ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 
 
 def default_named_models() -> Tuple[List[str], List[Model]]:
@@ -66,6 +73,18 @@ def default_named_models() -> Tuple[List[str], List[Model]]:
                 estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
             ))
         ),
+        (
+            "annif tfidf",
+            AnnifModel(model_type="tfidf")
+        ),
+        (
+            "annif svc",
+            AnnifModel(model_type="svc")
+        ),
+        (
+            "annif fasttext",
+            AnnifModel(model_type="fasttext")
+        )
     ]
 
     model_names, model_classes = list(zip(*models))
@@ -78,10 +97,50 @@ def default_named_models() -> Tuple[List[str], List[Model]]:
 def default_named_scores() -> Tuple[List[str], List[ScoreFunctionType]]:
     """Return a list of default score functions for evaluation."""
     scores = [
-        ("accuracy", scikit_metric(accuracy_score)),
-        ("f1_score micro", scikit_metric(f1_score, average="micro", zero_division=0)),
-        ("precision micro", scikit_metric(precision_score, average="micro", zero_division=0)),
-        ("recall micro", scikit_metric(recall_score, average="micro", zero_division=0)),
+        ("t=0.5 accuracy", scikit_incidence_metric(
+            threshold_incidence_decision(0.5),
+            accuracy_score
+        )),
+        ("top3 accuracy", scikit_incidence_metric(
+            top_k_incidence_decision(3),
+            accuracy_score
+        )),
+        ("t=0.5 f1_score micro", scikit_incidence_metric(
+            threshold_incidence_decision(0.5),
+            f1_score,
+            average="micro",
+            zero_division=0
+        )),
+        ("top3 f1_score micro", scikit_incidence_metric(
+            top_k_incidence_decision(3),
+            f1_score,
+            average="micro",
+            zero_division=0
+        )),
+        ("t=0.5 precision micro", scikit_incidence_metric(
+            threshold_incidence_decision(0.5),
+            precision_score,
+            average="micro",
+            zero_division=0
+        )),
+        ("top3 precision micro", scikit_incidence_metric(
+            top_k_incidence_decision(3),
+            precision_score,
+            average="micro",
+            zero_division=0
+        )),
+        ("t=0.5 recall micro", scikit_incidence_metric(
+            threshold_incidence_decision(0.5),
+            recall_score,
+            average="micro",
+            zero_division=0
+        )),
+        ("top3 recall micro", scikit_incidence_metric(
+            top_k_incidence_decision(3),
+            recall_score,
+            average="micro",
+            zero_division=0
+        )),
     ]
 
     score_names, score_functions = list(zip(*scores))
