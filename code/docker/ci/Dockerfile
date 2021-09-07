@@ -17,14 +17,9 @@ RUN make deps-test
 # copy all python src files
 COPY code/python /home/slub/workspace/code/python
 
-# set up python path
-ENV PYTHONPATH=/home/slub/workspace/code/python/src
-
-# create .cache dir required by pylint
-RUN mkdir /home/slub/.cache
-
 # run linting & tests
-RUN make test
+RUN make lint
+RUN make coverage
 
 # generate python documentation
 RUN make docs

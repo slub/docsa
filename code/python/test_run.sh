@@ -1,3 +1,5 @@
 #!/bin/bash
 
-(cd src && pytest ../tests)
+export PYTHONPATH="./src"
+
+pytest ./tests

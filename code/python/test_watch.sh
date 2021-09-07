@@ -1,3 +1,5 @@
 #!/bin/bash
 
-(cd ./src && ptw ../tests)
+export PYTHONPATH="./src"
+
+ptw ./tests
