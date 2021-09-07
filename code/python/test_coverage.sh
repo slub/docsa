@@ -1,4 +1,4 @@
 #!/bin/bash
 
-coverage run -m --source=./src pytest
-coverage report -m
+(cd ./src && coverage run -m --source=. pytest ../tests)
+(cd ./src && coverage report -m)

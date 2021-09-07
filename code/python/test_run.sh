@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pytest
+(cd src && pytest ../tests)

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-ptw
+(cd ./src && ptw ../tests)
