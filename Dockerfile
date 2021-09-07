@@ -24,7 +24,7 @@ RUN mkdir /home/slub/.cache
 
 # run linting & tests
 RUN cd code/python && sh ./lint.sh
-RUN cd code/python && sh ./test.sh
+RUN cd code/python && sh ./test_run.sh
 
 # generate python documentation
 RUN cd code/python && sh ./docs.sh
