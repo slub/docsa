@@ -10,8 +10,8 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     volumes:
-        - ../../../:/home/slub/workspace:Z
-        - ../../../data/runtime/container/python/.bash_history:/home/slub/.bash_history:Z
+        - ../../../:/home/slub/workspace:z
+        - ../../../data/runtime/container/python/.bash_history:/home/slub/.bash_history:z
 
   annif:
     build:
@@ -23,7 +23,7 @@ services:
     ports:
       - "127.0.0.1:5000:5000/tcp" # annif development server
     volumes:
-      - ../../../data/runtime/container/annif:/annif-projects:Z
-      - ../../../data/resources/annif-corpora:/annif-corpora:Z
-      - ../../../data/runtime/cache:/docsa-cache:Z
+      - ../../../data/runtime/container/annif:/annif-projects:z
+      - ../../../data/resources/annif-corpora:/annif-corpora:z
+      - ../../../data/runtime/cache:/docsa-cache:z
 
