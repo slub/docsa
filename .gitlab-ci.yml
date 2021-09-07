@@ -10,6 +10,3 @@ build:
     - make deps-test
     - make lint
     - make coverage
-  artifacts:
-    reports:
-      cobertura: code/python/.coverage.xml
