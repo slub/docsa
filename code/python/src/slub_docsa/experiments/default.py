@@ -31,60 +31,21 @@ ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 def default_named_models() -> Tuple[List[str], List[Model]]:
     """Return a list of default models to use for evaluating model performance."""
     models = [
-        (
-            "random",
-            ScikitTfidfClassifier(predictor=DummyClassifier(strategy="uniform")),
-        ),
-        (
-            "stratified",
-            ScikitTfidfClassifier(predictor=DummyClassifier(strategy="stratified")),
-        ),
-        (
-            "knn k=1",
-            ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=1))
-        ),
-        (
-            "knn k=3",
-            ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=3)),
-        ),
-        (
-            "dtree",
-            ScikitTfidfClassifier(predictor=DecisionTreeClassifier()),
-        ),
-        (
-            "rforest",
-            ScikitTfidfClassifier(predictor=RandomForestClassifier()),
-        ),
-        (
-            "mlp",
-            ScikitTfidfClassifier(predictor=MLPClassifier()),
-        ),
-        (
-            "log_reg",
-            ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=LogisticRegression())),
-        ),
-        (
-            "nbayes",
-            ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=GaussianNB())),
-        ),
-        (
-            "svc",
-            ScikitTfidfClassifier(predictor=MultiOutputClassifier(
-                estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
-            ))
-        ),
-        (
-            "annif tfidf",
-            AnnifModel(model_type="tfidf")
-        ),
-        (
-            "annif svc",
-            AnnifModel(model_type="svc")
-        ),
-        (
-            "annif fasttext",
-            AnnifModel(model_type="fasttext")
-        )
+        ("random", ScikitTfidfClassifier(predictor=DummyClassifier(strategy="uniform"))),
+        ("stratified", ScikitTfidfClassifier(predictor=DummyClassifier(strategy="stratified"))),
+        ("knn k=1", ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=1))),
+        ("knn k=3", ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=3))),
+        ("dtree", ScikitTfidfClassifier(predictor=DecisionTreeClassifier(max_depth=5))),
+        ("rforest", ScikitTfidfClassifier(predictor=RandomForestClassifier(n_jobs=-1, max_depth=4))),
+        ("mlp", ScikitTfidfClassifier(predictor=MLPClassifier())),
+        ("log_reg", ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=LogisticRegression()))),
+        ("nbayes", ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=GaussianNB()))),
+        ("svc", ScikitTfidfClassifier(predictor=MultiOutputClassifier(
+            estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
+        ))),
+        ("annif tfidf", AnnifModel(model_type="tfidf")),
+        ("annif svc", AnnifModel(model_type="svc")),
+        ("annif fasttext", AnnifModel(model_type="fasttext"))
     ]
 
     model_names, model_classes = list(zip(*models))

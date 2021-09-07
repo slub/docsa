@@ -6,6 +6,8 @@ import json
 import logging
 
 from typing import Mapping, List, Any
+from slub_docsa.common.document import Document
+from slub_docsa.common.dataset import Dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
 
@@ -41,25 +43,47 @@ def get_rvk_notations_from_qucosa_metadata(doc: Mapping[str, Any]) -> List[str]:
 
 def get_document_title_from_qucosa_metadata(doc: Mapping[str, Any]) -> str:
     """Return the document title from a qucosa metadata object."""
+    if isinstance(doc["title"]["text"], list):
+        return doc["title"]["text"][0]
     return doc["title"]["text"]
 
 
-def read_qucosa_simple_rvk_training_data():
-    """Read qucosa documents and return only document title and rvk uri labels."""
+def get_document_id_from_qucosa_metadate(doc: Mapping[str, Any]) -> str:
+    """Return the document id from a qucosa metadata object."""
+    return doc["id"]
+
+
+def read_qucosa_simple_rvk_training_dataset() -> Dataset:
+    """Read qucosa documents and return full training data."""
     logger.debug("load rvk classes and index them by notation")
     rvk_subject_store = get_rvk_subject_store()
 
-    logger.debug("iterate over qucosa documents")
+    documents = []
+    subjects = []
+    logger.debug("read qucosa meta data json")
     for doc in read_qucosa_metadata():
         notations = get_rvk_notations_from_qucosa_metadata(doc)
         notations_filtered = list(filter(lambda n: rvk_notation_to_uri(n) in rvk_subject_store, notations))
+        subject_uris_filtered = list(map(rvk_notation_to_uri, notations_filtered))
+        doc_uri = "uri://" + get_document_id_from_qucosa_metadate(doc)
+        doc_title = get_document_title_from_qucosa_metadata(doc)
 
-        if notations_filtered:
+        if len(doc_title) < 10:
+            logger.warning("qucosa document with short title '%s': %s", doc_title, doc_uri)
+            continue
 
-            yield {
-                "text": get_document_title_from_qucosa_metadata(doc),
-                "labels": list(map(rvk_notation_to_uri, notations_filtered)),
-            }
+        if len(subject_uris_filtered) < 1:
+            logger.debug("qucosa document with not rvk subjects: %s", doc_uri)
+            continue
+
+        documents.append(
+            Document(uri=doc_uri, title=doc_title)
+        )
+        subjects.append(
+            subject_uris_filtered
+        )
+
+    return Dataset(documents=documents, subjects=subjects)
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv():
@@ -69,9 +93,10 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv():
 
     if not os.path.exists(QUCOSA_SIMPLE_TRAINING_DATA_TSV):
         with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w", encoding="utf8") as f_tsv:
-            for doc in read_qucosa_simple_rvk_training_data():
-                text = doc["text"]
-                labels_list = doc["labels"]
+            dataset = read_qucosa_simple_rvk_training_dataset()
+            for i, doc in enumerate(dataset.documents):
+                text = doc.title
+                labels_list = dataset.subjects[i]
                 labels_str = " ".join(map(lambda l: f"<{l}>", labels_list))
 
                 f_tsv.write(f"{text}\t{labels_str}\n")
