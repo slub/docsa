@@ -1,6 +1,6 @@
 """Test script to use Annif backend model via import."""
 
-# pylint: disable=too-few-public-methods, consider-using-with
+# pylint: disable=too-few-public-methods, consider-using-with, too-many-instance-attributes
 
 import os
 import logging
@@ -93,7 +93,7 @@ class _CustomAnnifDocumentCorpus:
 class AnnifModel(Model):
     """Interfaces with Annif to train various models and allow predictions."""
 
-    def __init__(self, model_type: str, data_dir: str = None):
+    def __init__(self, model_type: str, language: str, data_dir: str = None):
         """Initialize model with a Annif model type identifier and data directory.
 
         Parameters
@@ -105,6 +105,7 @@ class AnnifModel(Model):
             If it is None, a temporary directory is created and deleted as soon as the model instance is deleted.
         """
         self.model_type = model_type
+        self.language = language
         self.data_dir = data_dir
         self.temporary_directory = None
         self.analyzer = None
@@ -117,7 +118,7 @@ class AnnifModel(Model):
 
     def _init_analyzer(self):
         download_nltk("punkt")
-        self.analyzer = SnowballAnalyzer("english")
+        self.analyzer = SnowballAnalyzer(self.language)
 
     def _init_data_dir(self):
         if self.data_dir is None:
@@ -175,7 +176,7 @@ class AnnifModel(Model):
         )
 
         logger.debug("annif: call train on model")
-        self.model.train(document_corpus, params={"language": "english"})
+        self.model.train(document_corpus, params={"language": self.language})
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> Iterable[Iterable[str]]:
@@ -223,7 +224,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     dataset = get_static_mini_dataset()
-    model = AnnifModel("tfidf")
+    model = AnnifModel("tfidf", "english")
 
     subject_order = unique_subject_list(dataset.subjects)
     incidence_matrix = subject_incidence_matrix_from_list(dataset.subjects, subject_order)

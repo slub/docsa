@@ -41,7 +41,7 @@ class IndexedSequence(Sequence[SequenceType]):
         return self.sequence[self.idx[i]]
 
 
-def cross_validation_split(n_splits: int, dataset: Dataset, random_state=0) -> Iterable[Tuple[Dataset, Dataset]]:
+def cross_validation_split(n_splits: int, dataset: Dataset, random_state=None) -> Iterable[Tuple[Dataset, Dataset]]:
     """Split dataset into `n_splits` many training and test datasets."""
     virtual_features = np.zeros((len(dataset.documents), 1))
     virtual_targets = np.random.randint(n_splits, size=(len(dataset.documents), 1))
@@ -61,3 +61,9 @@ def cross_validation_split(n_splits: int, dataset: Dataset, random_state=0) -> I
         )
 
         yield train_dataset, test_dataset
+
+
+def train_test_split(ratio: float, dataset: Dataset, random_state=None) -> Tuple[Dataset, Dataset]:
+    """Return a single training and test split with a rough ratio of samples."""
+    n_splits = round(1 / (1 - ratio))
+    return next(iter(cross_validation_split(n_splits, dataset, random_state=random_state)))

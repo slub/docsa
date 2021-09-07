@@ -46,9 +46,9 @@ def default_named_models() -> Tuple[List[str], List[Model]]:
         ("svc", ScikitTfidfClassifier(predictor=MultiOutputClassifier(
             estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
         ))),
-        ("annif tfidf", AnnifModel(model_type="tfidf")),
-        ("annif svc", AnnifModel(model_type="svc")),
-        ("annif fasttext", AnnifModel(model_type="fasttext"))
+        ("annif tfidf", AnnifModel(model_type="tfidf", language="english")),
+        ("annif svc", AnnifModel(model_type="svc", language="english")),
+        ("annif fasttext", AnnifModel(model_type="fasttext", language="english"))
     ]
 
     model_names, model_classes = list(zip(*models))

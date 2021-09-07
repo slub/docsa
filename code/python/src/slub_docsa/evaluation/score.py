@@ -1,6 +1,6 @@
 """Defines various scores that can be used to judge the performance of models."""
 
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 
@@ -29,3 +29,16 @@ def scikit_incidence_metric(
         return score
 
     return _metric
+
+
+def absolute_confusion_from_incidence(true_incidence, predicted_incidence) -> Tuple[float, float, float, float]:
+    """Return the absolute number of true positives, true negatives, false positives and false negatives."""
+    bool_true_incidence = true_incidence > 0.0
+    bool_predicted_incidence = predicted_incidence > 0.0
+
+    true_positives = (bool_true_incidence & bool_predicted_incidence)
+    true_negatives = (~bool_true_incidence & ~bool_predicted_incidence)
+    false_positives = (~bool_true_incidence & bool_predicted_incidence)
+    false_negatives = (bool_true_incidence & ~bool_predicted_incidence)
+
+    return np.sum(true_positives), np.sum(true_negatives), np.sum(false_positives), np.sum(false_negatives)

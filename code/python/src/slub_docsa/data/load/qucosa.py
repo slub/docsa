@@ -69,7 +69,7 @@ def read_qucosa_simple_rvk_training_dataset() -> Dataset:
         doc_title = get_document_title_from_qucosa_metadata(doc)
 
         if len(doc_title) < 10:
-            logger.warning("qucosa document with short title '%s': %s", doc_title, doc_uri)
+            logger.debug("qucosa document with short title '%s': %s", doc_title, doc_uri)
             continue
 
         if len(subject_uris_filtered) < 1:
