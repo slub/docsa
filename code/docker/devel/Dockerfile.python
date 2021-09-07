@@ -7,7 +7,7 @@ RUN groupadd -g $GID slub && useradd --uid $UID --gid $GID --create-home --home-
 
 # install development basics
 RUN apt-get update && \
-    apt-get install -y git vim screen wget && \
+    apt-get install -y git vim screen wget make && \
     rm -rf /var/lib/apt/lists/*
 
 # setup python virtual environment
