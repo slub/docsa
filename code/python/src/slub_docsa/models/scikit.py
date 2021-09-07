@@ -61,9 +61,12 @@ class ScikitTfidfClassifier(Model):
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict subject probabilities for test documents."""
         features = self._vectorize(test_documents)
-        probability_matrix = np.array(self.predictor.predict_proba(features))
-        if len(probability_matrix.shape) == 3:
-            probability_matrix = np.transpose(probability_matrix[:, :, 1])
+        probability_list = self.predictor.predict_proba(features)
+        if len(probability_list[0].shape) > 1:
+            probability_matrix = np.stack(list(map(lambda p: p[:, -1], probability_list)), axis=0)
+        else:
+            probability_matrix = np.stack(probability_list, axis=1)
+        probability_matrix = np.transpose(probability_matrix)
         return probability_matrix
 
     def __str__(self):
