@@ -19,10 +19,13 @@ from sklearn.svm import LinearSVC
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.common.score import ScoreFunctionType
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, top_k_incidence_decision
+from slub_docsa.evaluation.plotting import score_matrix_box_plot
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.scikit import ScikitTfidfClassifier
 from slub_docsa.common.model import Model
+from slub_docsa.common.dataset import Dataset
+from slub_docsa.evaluation.pipeline import evaluate_dataset
 
 
 ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
@@ -109,3 +112,31 @@ def default_named_scores() -> Tuple[List[str], List[ScoreFunctionType]]:
     score_functions = cast(List[ScoreFunctionType], score_functions)
 
     return score_names, score_functions
+
+
+def do_default_box_plot_evaluation(dataset: Dataset, box_plot_filepath: str):
+    """Do 10-fold cross validation for default models and scores and save box plot."""
+    # setup models and scores
+    model_names, model_classes = default_named_models()
+    score_names, score_functions = default_named_scores()
+
+    # do evaluate
+    score_matrix = evaluate_dataset(
+        n_splits=10,
+        dataset=dataset,
+        models=model_classes,
+        score_functions=score_functions,
+        random_state=0
+    )
+
+    # generate figure
+    score_matrix_box_plot(
+        score_matrix,
+        model_names,
+        score_names,
+        columns=2
+    ).write_html(
+        box_plot_filepath,
+        include_plotlyjs="cdn",
+        # default_height=f"{len(score_names) * 500}px"
+    )
