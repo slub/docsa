@@ -2,8 +2,9 @@ stages:
   - build
 
 build:
+  stage: build
   image: python:3.7-slim
-  steps:
+  script:
     - apt-get update && apt-get install -y make
     - make deps
     - make deps-test
