@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_simple_rvk_training_dataset
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_list_as_annif_tsv
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_list, top_k_incidence_decision
+from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_list, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_list
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
 from slub_docsa.evaluation.split import train_test_split
@@ -60,14 +60,14 @@ if __name__ == "__main__":
 
     logger.info("fit Annif model with training data")
     model = AnnifModel(MODEL_TYPE, LANGUAGE)
-    train_incidence_matrix = subject_incidence_matrix_from_list(dataset.subjects, subject_list)
-    model.fit(dataset.documents, train_incidence_matrix)
+    train_incidence_matrix = subject_incidence_matrix_from_list(training_dataset.subjects, subject_list)
+    model.fit(training_dataset.documents, train_incidence_matrix)
 
     logger.info("evaluate Annif model with test data")
     probabilties = model.predict_proba(test_dataset.documents)
 
     logger.info("score results")
-    predicted_incidence_matrix = top_k_incidence_decision(LIMIT)(probabilties)
+    predicted_incidence_matrix = positive_top_k_incidence_decision(LIMIT)(probabilties)
     test_incidence_matrix = subject_incidence_matrix_from_list(test_dataset.subjects, subject_list)
 
     # predicted_incidence_matrix = csr_matrix(predicted_incidence_matrix)
@@ -110,10 +110,11 @@ if __name__ == "__main__":
                 zero_division=0
             )
         )
+    print("...")
 
     confusion = absolute_confusion_from_incidence(test_incidence_matrix, predicted_incidence_matrix)
-    print("True posities:\t\t\t", confusion[0])
-    print("False posities:\t\t\t", confusion[2])
+    print("True positives:\t\t\t", confusion[0])
+    print("False positives:\t\t", confusion[2])
     print("False negatives:\t\t", confusion[3])
 
     print("Documents evaluated:\t\t", len(test_dataset.documents))

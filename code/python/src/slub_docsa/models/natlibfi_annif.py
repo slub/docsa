@@ -143,6 +143,11 @@ class AnnifModel(Model):
         Model
             self
         """
+        if len(train_documents) != train_targets.shape[0]:
+            raise ValueError("train documents size %d does not match incidence matrix shape %s" % (
+                len(train_documents), str(train_targets.shape)
+            ))
+
         self.n_unique_subject = int(train_targets.shape[1])
         logger.debug("there are %d unique subjects", self.n_unique_subject)
 
@@ -179,7 +184,7 @@ class AnnifModel(Model):
         self.model.train(document_corpus, params={"language": self.language})
         return self
 
-    def predict_proba(self, test_documents: Sequence[Document]) -> Iterable[Iterable[str]]:
+    def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict subject probabilities using a trained Annif model.
 
         Parameters
@@ -207,6 +212,15 @@ class AnnifModel(Model):
             for j in range(self.n_unique_subject):
                 idx = int(self.project.subjects[j][0])
                 probabilities[i, idx] = annif_score_vector[j]
+
+        if np.min(probabilities) < 0.0:
+            raise RuntimeError("some probabilities below 0.0")
+
+        if np.max(probabilities) > 1.0:
+            raise RuntimeError("some probabilities above 1.0")
+
+        if np.isnan(np.sum(probabilities)):
+            raise RuntimeError("some probabilities are nan")
 
         return probabilities
 
