@@ -9,9 +9,9 @@ from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_simple_rvk_training_dataset
-from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_list_as_annif_tsv
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_list, positive_top_k_incidence_decision
-from slub_docsa.evaluation.incidence import unique_subject_list
+from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
+from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
+from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
 from slub_docsa.evaluation.split import train_test_split
 from slub_docsa.models.natlibfi_annif import AnnifModel
@@ -30,22 +30,26 @@ if __name__ == "__main__":
     dataset = read_qucosa_simple_rvk_training_dataset()
 
     # calculate subject list on whole dataset
-    subject_list = unique_subject_list(dataset.subjects)
+    subject_order = unique_subject_order(dataset.subjects)
 
     # create experiment directory
     os.makedirs(os.path.join(ANNIF_DIR, "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")
-    save_subject_list_as_annif_tsv(
-        subject_list,
+    save_subject_targets_as_annif_tsv(
+        subject_order,
         os.path.join(ANNIF_DIR, "comparison_experiment/subjects.tsv"),
     )
 
     # split data to fixed train and test set
     training_dataset, test_dataset = train_test_split(0.8, dataset, random_state=5)
 
-    test_subject_list = unique_subject_list(test_dataset.subjects)
-    logger.info("test data only contains %d of in total %d unique subjects", len(test_subject_list), len(subject_list))
+    test_subject_order = unique_subject_order(test_dataset.subjects)
+    logger.info(
+        "test data only contains %d of in total %d unique subjects",
+        len(test_subject_order),
+        len(subject_order)
+    )
 
     logger.info("save training data as Annif TSV file")
     save_dataset_as_annif_tsv(
@@ -60,7 +64,7 @@ if __name__ == "__main__":
 
     logger.info("fit Annif model with training data")
     model = AnnifModel(MODEL_TYPE, LANGUAGE)
-    train_incidence_matrix = subject_incidence_matrix_from_list(training_dataset.subjects, subject_list)
+    train_incidence_matrix = subject_incidence_matrix_from_targets(training_dataset.subjects, subject_order)
     model.fit(training_dataset.documents, train_incidence_matrix)
 
     logger.info("evaluate Annif model with test data")
@@ -68,7 +72,7 @@ if __name__ == "__main__":
 
     logger.info("score results")
     predicted_incidence_matrix = positive_top_k_incidence_decision(LIMIT)(probabilties)
-    test_incidence_matrix = subject_incidence_matrix_from_list(test_dataset.subjects, subject_list)
+    test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
     # predicted_incidence_matrix = csr_matrix(predicted_incidence_matrix)
     predicted_incidence_matrix_binary = predicted_incidence_matrix > 0.0

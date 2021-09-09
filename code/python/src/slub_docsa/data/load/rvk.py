@@ -13,8 +13,9 @@ import logging
 from typing import Iterable, Any, Optional
 from lxml import etree  # nosec
 from slub_docsa.common.paths import RESOURCES_DIR, CACHE_DIR
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, get_subject_label_breadcrumb
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
 from slub_docsa.data.store.subject import SubjectHierarchyDbmStore
+from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +146,8 @@ def convert_rvk_classes_to_annif_tsv():
 
         logger.debug("convert RVK classes to annif tsv format")
         with open(RVK_ANNIF_TSV_FILE_PATH, "w", encoding="utf8") as f_tsv:
-            for uri, rvk_subject in rvk_subject_hierarchy.items():
-                breadcrumb = get_subject_label_breadcrumb(rvk_subject_hierarchy, rvk_subject)
+            for uri, rvk_subject_node in rvk_subject_hierarchy.items():
+                breadcrumb = subject_label_breadcrumb(rvk_subject_node, rvk_subject_hierarchy)
                 f_tsv.write(f"<{uri}>\t{breadcrumb}\n")
 
 

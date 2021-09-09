@@ -10,8 +10,9 @@ import numpy as np
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.model import Model
 from slub_docsa.common.score import ScoreFunctionType
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_list, unique_subject_list
+from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 from slub_docsa.evaluation.split import cross_validation_split
+from slub_docsa.models.oracle import OracleModel
 
 logger = logging.getLogger(__name__)
 
@@ -27,20 +28,26 @@ def evaluate_dataset(
     score_matrix = np.empty((len(models), len(score_functions), n_splits))
     score_matrix[:, :, :] = np.NaN
 
-    subject_list = unique_subject_list(dataset.subjects)
+    subject_order = unique_subject_order(dataset.subjects)
 
     logger.info("prepare cross validation splits")
     for i, split in enumerate(cross_validation_split(n_splits, dataset, random_state=random_state)):
         train_dataset, test_dataset = split
-        train_incidence_matrix = subject_incidence_matrix_from_list(train_dataset.subjects, subject_list)
-        test_incidence_matrix = subject_incidence_matrix_from_list(test_dataset.subjects, subject_list)
+        train_incidence_matrix = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
+        test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
         for j, model in enumerate(models):
             logger.info("evaluate model %s for %d-th split", str(model), i + 1)
+
             logger.info("do training")
             model.fit(train_dataset.documents, train_incidence_matrix)
+
             logger.info("do prediction")
+            if isinstance(model, OracleModel):
+                # provide predictions to oracle model
+                model.set_test_targets(test_incidence_matrix)
             predicted_subject_probabilities = model.predict_proba(test_dataset.documents)
+
             logger.info("do scoring")
             for k, score_function in enumerate(score_functions):
                 score_matrix[j, k, i] = score_function(test_incidence_matrix, predicted_subject_probabilities)

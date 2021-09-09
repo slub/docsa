@@ -10,7 +10,7 @@ from sklearn.naive_bayes import GaussianNB
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import Model
-from slub_docsa.evaluation.incidence import subject_list_from_incidence_matrix
+from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 
 class ScikitTfidfClassifier(Model):
@@ -23,7 +23,7 @@ class ScikitTfidfClassifier(Model):
         """Initialize meta classifier with scikit-learn predictor class."""
         self.predictor = predictor
         self.vectorizer = None
-        self.subject_list = None
+        self.subject_order = None
 
     def _build_vectorizer(self, documents: Collection[Document]):
         self.vectorizer = TfidfVectorizer()
@@ -50,13 +50,13 @@ class ScikitTfidfClassifier(Model):
 
     def _predict(self, test_documents: Sequence[Document]) -> Iterable[Iterable[str]]:
         """Predict subjects of test documents."""
-        if not self.subject_list:
+        if not self.subject_order:
             raise RuntimeError("subject list not initialized, execute fit before predict!")
 
         features = self._vectorize(test_documents)
         incidence_matrix = self.predictor.predict(features)
-        subject_list = subject_list_from_incidence_matrix(incidence_matrix, self.subject_list)
-        return subject_list
+        predictions = subject_targets_from_incidence_matrix(incidence_matrix, self.subject_order)
+        return predictions
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict subject probabilities for test documents."""

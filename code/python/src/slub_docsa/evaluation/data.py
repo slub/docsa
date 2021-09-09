@@ -67,7 +67,7 @@ def generate_random_dbpedia_dataset(language: str, n_docs: int, n_subjects: int)
 
     subject_count_array = np.random.default_rng().integers(
         low=1,
-        high=3,
+        high=4,
         size=n_docs
     )
 

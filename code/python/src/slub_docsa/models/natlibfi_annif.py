@@ -19,7 +19,7 @@ from annif.analyzer.snowball import SnowballAnalyzer
 from slub_docsa.common.model import Model
 from slub_docsa.common.document import Document
 from slub_docsa.data.load.nltk import download_nltk
-from slub_docsa.evaluation.incidence import subject_list_from_incidence_matrix
+from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class AnnifModel(Model):
 
         # define subjects
         numbered_subjects = [str(i) for i in range(self.n_unique_subject)]
-        train_subject_list = subject_list_from_incidence_matrix(train_targets, numbered_subjects)
+        train_subject_targets = subject_targets_from_incidence_matrix(train_targets, numbered_subjects)
         annif_subject_list = [
             AnnifSubject(uri=uri, label=uri, notation=None, text=None) for uri in numbered_subjects
         ]
@@ -161,7 +161,12 @@ class AnnifModel(Model):
 
         # define corpus
         annif_document_list = [
-            AnnifDocument(text=d.title, uris=train_subject_list[i], labels=None) for i, d in enumerate(train_documents)
+            AnnifDocument(
+                text=d.title,
+                uris=train_subject_targets[i],
+                labels=None
+            )
+            for i, d in enumerate(train_documents)
         ]
         document_corpus = _CustomAnnifDocumentCorpus(annif_document_list)
 
@@ -233,15 +238,15 @@ class AnnifModel(Model):
 if __name__ == "__main__":
 
     from slub_docsa.evaluation.data import get_static_mini_dataset
-    from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_list, unique_subject_list
+    from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
     logging.basicConfig(level=logging.DEBUG)
 
     dataset = get_static_mini_dataset()
     model = AnnifModel("tfidf", "english")
 
-    subject_order = unique_subject_list(dataset.subjects)
-    incidence_matrix = subject_incidence_matrix_from_list(dataset.subjects, subject_order)
+    subject_order = unique_subject_order(dataset.subjects)
+    incidence_matrix = subject_incidence_matrix_from_targets(dataset.subjects, subject_order)
     model.fit(dataset.documents, incidence_matrix)
 
     probabilties = model.predict_proba([Document(uri="test", title="boring document title")])

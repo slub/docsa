@@ -20,11 +20,11 @@ def save_dataset_as_annif_tsv(
             f_tsv.write(f"{text}\t{labels_str}\n")
 
 
-def save_subject_list_as_annif_tsv(
-    subject_list: Iterable[str],
+def save_subject_targets_as_annif_tsv(
+    subject_target_list: Iterable[str],
     subject_tsv_filepath: str,
 ):
-    """Write subject list to Annif tsv file."""
+    """Write subject targets to Annif tsv file."""
     with open(subject_tsv_filepath, "w", encoding="utf8") as f_tsv:
-        for sub in subject_list:
+        for sub in subject_target_list:
             f_tsv.write(f"<{sub}>\t{sub}\n")

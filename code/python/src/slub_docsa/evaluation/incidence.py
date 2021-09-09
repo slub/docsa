@@ -6,12 +6,12 @@ from typing import Sequence
 import numpy as np
 from slub_docsa.common.score import IncidenceDecisionFunctionType
 
-from slub_docsa.common.subject import SubjectUriList
+from slub_docsa.common.subject import SubjectTargets, SubjectUriList
 
 logger = logging.getLogger(__name__)
 
 
-def unique_subject_list(targets: Sequence[SubjectUriList]) -> Sequence[str]:
+def unique_subject_order(targets: Sequence[SubjectUriList]) -> Sequence[str]:
     """Return the list of unique subjects found in `targets`.
 
     Parameters
@@ -32,14 +32,14 @@ def unique_subject_list(targets: Sequence[SubjectUriList]) -> Sequence[str]:
     ...     ["subject1", "subject2"]
     ...     ["subject1", "subject3"]
     ... ]
-    >>> unique_subject_list(targets)
+    >>> unique_subject_order(targets)
     ["subject3", "subject1", "subject2"]
     """
     subject_set = {uri for uri_list in targets for uri in uri_list}
     return list(subject_set)
 
 
-def subject_incidence_matrix_from_list(
+def subject_incidence_matrix_from_targets(
     targets: Sequence[SubjectUriList],
     subject_order: Sequence[str]
 ) -> np.ndarray:
@@ -50,7 +50,7 @@ def subject_incidence_matrix_from_list(
     targets: Sequence[Iterable[str]]
         an ordered list of subjects lists, each representing the subjects that associated with a document
     subject_order: Sequence[str]
-        an ordered list of subjects without duplicates, e.g., generated via `unique_subject_list`
+        an ordered list of subjects without duplicates, e.g., generated via `unique_subject_order`
 
     Returns
     -------
@@ -69,10 +69,10 @@ def subject_incidence_matrix_from_list(
     return incidence_matrix
 
 
-def subject_list_from_incidence_matrix(
+def subject_targets_from_incidence_matrix(
     incidence_matrix: np.ndarray,
     subject_order: Sequence[str]
-) -> Sequence[SubjectUriList]:
+) -> SubjectTargets:
     """Return subject lists for an incidence matrix given a subject ordering.
 
     Parameters

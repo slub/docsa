@@ -6,7 +6,7 @@ import pickle  # nosec
 from typing import Generic
 
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
-from slub_docsa.common.subject import get_subject_label_breadcrumb
+from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
 
 
 class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
@@ -72,4 +72,4 @@ if __name__ == "__main__":
         store[subject1.uri] = subject1
         store[subject2.uri] = subject2
 
-        print(get_subject_label_breadcrumb(store, store[subject2.uri]))
+        print(subject_label_breadcrumb(store[subject2.uri], store))

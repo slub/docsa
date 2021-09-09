@@ -2,7 +2,7 @@
 
 # pylint: disable=too-few-public-methods, too-many-arguments
 
-from typing import Iterable, Any, Optional
+from typing import Iterable, Any, Optional, Sequence
 
 
 class Document:
@@ -30,3 +30,7 @@ class Document:
         self.authors = authors if authors is not None else list([])
         self.abstract = abstract
         self.fulltext = fulltext
+
+
+DocumentList = Sequence[Document]
+"""An ordered list of documents"""

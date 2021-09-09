@@ -5,7 +5,8 @@ import logging
 from typing import Mapping
 
 import plotly.express as px
-from slub_docsa.common.subject import SubjectHierarchyType, get_subject_ancestors_list
+from slub_docsa.common.subject import SubjectHierarchyType
+from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
 from slub_docsa.data.load.qucosa import get_rvk_notations_from_qucosa_metadata, read_qucosa_metadata
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store, rvk_notation_to_uri
@@ -69,8 +70,8 @@ def generate_qucosa_rvk_sunburst():
             })
             sunburst_by_notation[notation]["count"] += count
         elif subject_uri in rvk_subject_store:
-            rvk_subject = rvk_subject_store[subject_uri]
-            ancestors = get_subject_ancestors_list(rvk_subject_store, rvk_subject)
+            rvk_subject_node = rvk_subject_store[subject_uri]
+            ancestors = subject_ancestors_list(rvk_subject_node, rvk_subject_store)
 
             # iterate through ancestors, but not subject itself
             for ancestor in ancestors:
