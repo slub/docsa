@@ -3,7 +3,8 @@
 import os
 from typing import Iterable, List, Tuple, cast
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, log_loss
+from sklearn.metrics import mean_squared_error
 
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -18,7 +19,7 @@ from sklearn.svm import LinearSVC
 
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.common.score import ScoreFunctionType
-from slub_docsa.evaluation.incidence import threshold_incidence_decision, top_k_incidence_decision
+from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.plotting import score_matrix_box_plot
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from slub_docsa.models.natlibfi_annif import AnnifModel
@@ -63,65 +64,69 @@ def default_named_models(model_name_subset: Iterable[str] = None) -> Tuple[List[
     return model_names, model_classes
 
 
-def default_named_scores(score_name_subset: Iterable[str] = None) -> Tuple[List[str], List[ScoreFunctionType]]:
+def default_named_scores(
+    score_name_subset: Iterable[str] = None
+) -> Tuple[List[str], List[Tuple[float, float]], List[ScoreFunctionType]]:
     """Return a list of default score functions for evaluation."""
     scores = [
-        ("t=0.5 accuracy", scikit_incidence_metric(
+        ("t=0.5 accuracy", [0, 1], scikit_incidence_metric(
             threshold_incidence_decision(0.5),
             accuracy_score
         )),
-        ("top3 accuracy", scikit_incidence_metric(
-            top_k_incidence_decision(3),
+        ("top3 accuracy", [0, 1], scikit_incidence_metric(
+            positive_top_k_incidence_decision(3),
             accuracy_score
         )),
-        ("t=0.5 f1_score micro", scikit_incidence_metric(
+        ("t=0.5 f1_score micro", [0, 1], scikit_incidence_metric(
             threshold_incidence_decision(0.5),
             f1_score,
             average="micro",
             zero_division=0
         )),
-        ("top3 f1_score micro", scikit_incidence_metric(
-            top_k_incidence_decision(3),
+        ("top3 f1_score micro", [0, 1], scikit_incidence_metric(
+            positive_top_k_incidence_decision(3),
             f1_score,
             average="micro",
             zero_division=0
         )),
-        ("t=0.5 precision micro", scikit_incidence_metric(
+        ("t=0.5 precision micro", [0, 1], scikit_incidence_metric(
             threshold_incidence_decision(0.5),
             precision_score,
             average="micro",
             zero_division=0
         )),
-        ("top3 precision micro", scikit_incidence_metric(
-            top_k_incidence_decision(3),
+        ("top3 precision micro", [0, 1], scikit_incidence_metric(
+            positive_top_k_incidence_decision(3),
             precision_score,
             average="micro",
             zero_division=0
         )),
-        ("t=0.5 recall micro", scikit_incidence_metric(
+        ("t=0.5 recall micro", [0, 1], scikit_incidence_metric(
             threshold_incidence_decision(0.5),
             recall_score,
             average="micro",
             zero_division=0
         )),
-        ("top3 recall micro", scikit_incidence_metric(
-            top_k_incidence_decision(3),
+        ("top3 recall micro", [0, 1], scikit_incidence_metric(
+            positive_top_k_incidence_decision(3),
             recall_score,
             average="micro",
             zero_division=0
         )),
-        ("roc auc micro", lambda t, p: roc_auc_score(t, p, average="micro")),
-        ("roc auc macro", lambda t, p: roc_auc_score(t, p, average="macro")),
+        ("roc auc micro", [0, 1], lambda t, p: roc_auc_score(t, p, average="micro")),
+        ("log loss", [0, None], log_loss),
+        ("mean squared error", [0, None], mean_squared_error)
     ]
 
     if score_name_subset is not None:
         scores = list(filter(lambda i: i[0] in score_name_subset, scores))
 
-    score_names, score_functions = list(zip(*scores))
+    score_names, score_ranges, score_functions = list(zip(*scores))
     score_names = cast(List[str], score_names)
+    score_ranges = cast(List[Tuple[float, float]], score_ranges)
     score_functions = cast(List[ScoreFunctionType], score_functions)
 
-    return score_names, score_functions
+    return score_names, score_ranges, score_functions
 
 
 def do_default_box_plot_evaluation(
@@ -133,7 +138,7 @@ def do_default_box_plot_evaluation(
     """Do 10-fold cross validation for default models and scores and save box plot."""
     # setup models and scores
     model_names, model_classes = default_named_models(model_name_subset)
-    score_names, score_functions = default_named_scores(score_name_subset)
+    score_names, score_ranges, score_functions = default_named_scores(score_name_subset)
 
     # do evaluate
     score_matrix = evaluate_dataset(
@@ -149,6 +154,7 @@ def do_default_box_plot_evaluation(
         score_matrix,
         model_names,
         score_names,
+        score_ranges,
         columns=2
     ).write_html(
         box_plot_filepath,

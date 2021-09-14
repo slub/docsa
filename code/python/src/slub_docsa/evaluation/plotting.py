@@ -3,8 +3,9 @@
 # pylint: disable=dangerous-default-value
 
 import math
+from typing import cast, Any, List, Tuple
 
-from typing import cast, Any
+import numpy as np
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -16,7 +17,13 @@ def _get_marker_color(i, colorlist=px.colors.qualitative.Plotly):
     return colorlist[i % len(colorlist)]
 
 
-def score_matrix_box_plot(score_matrix, model_names, score_names, columns=1):
+def score_matrix_box_plot(
+    score_matrix: np.ndarray,
+    model_names: List[str],
+    score_names: List[str],
+    score_ranges: List[Tuple[float, float]],
+    columns: int = 1
+) -> Any:
     """Return box plot for score matrix."""
     _, n_scores, _ = score_matrix.shape
 
@@ -36,5 +43,9 @@ def score_matrix_box_plot(score_matrix, model_names, score_names, columns=1):
             )
             fig.add_trace(box, row=math.floor(i/columns)+1, col=(i % columns)+1)
 
-    fig.update_yaxes(range=[0, 1], dtick=0.2)
+    for i in range(n_scores):
+        fig.update_layout(
+            {"yaxis" + str(i+1): {"range": score_ranges[i]}}
+        )
+
     return fig
