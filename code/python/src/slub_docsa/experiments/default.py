@@ -33,7 +33,7 @@ from slub_docsa.evaluation.pipeline import evaluate_dataset
 ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 
 
-def default_named_models(model_name_subset: Iterable[str] = None) -> Tuple[List[str], List[Model]]:
+def default_named_models(language: str, model_name_subset: Iterable[str] = None) -> Tuple[List[str], List[Model]]:
     """Return a list of default models to use for evaluating model performance."""
     models = [
         ("random", ScikitTfidfClassifier(predictor=DummyClassifier(strategy="uniform"))),
@@ -49,9 +49,11 @@ def default_named_models(model_name_subset: Iterable[str] = None) -> Tuple[List[
         ("svc", ScikitTfidfClassifier(predictor=MultiOutputClassifier(
             estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
         ))),
-        ("annif tfidf", AnnifModel(model_type="tfidf", language="english")),
-        ("annif svc", AnnifModel(model_type="svc", language="english")),
-        ("annif fasttext", AnnifModel(model_type="fasttext", language="english"))
+        ("annif tfidf", AnnifModel(model_type="tfidf", language=language)),
+        ("annif svc", AnnifModel(model_type="svc", language=language)),
+        ("annif fasttext", AnnifModel(model_type="fasttext", language=language)),
+        ("annif omikuji", AnnifModel(model_type="omikuji", language=language)),
+        ("annif vw_multi", AnnifModel(model_type="vw_multi", language=language))
     ]
 
     if model_name_subset is not None:
@@ -131,13 +133,14 @@ def default_named_scores(
 
 def do_default_box_plot_evaluation(
     dataset: Dataset,
+    language: str,
     box_plot_filepath: str,
     model_name_subset: Iterable[str] = None,
     score_name_subset: Iterable[str] = None,
 ):
     """Do 10-fold cross validation for default models and scores and save box plot."""
     # setup models and scores
-    model_names, model_classes = default_named_models(model_name_subset)
+    model_names, model_classes = default_named_models(language, model_name_subset)
     score_names, score_ranges, score_functions = default_named_scores(score_name_subset)
 
     # do evaluate

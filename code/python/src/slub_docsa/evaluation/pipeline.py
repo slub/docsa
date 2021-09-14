@@ -30,8 +30,8 @@ def evaluate_dataset(
 
     subject_order = unique_subject_order(dataset.subjects)
 
-    logger.info("prepare cross validation splits")
     for i, split in enumerate(cross_validation_split(n_splits, dataset, random_state=random_state)):
+        logger.info("prepare %d-th cross validation split", i + 1)
         train_dataset, test_dataset = split
         train_incidence_matrix = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
         test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)

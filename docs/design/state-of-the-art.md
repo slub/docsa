@@ -55,7 +55,6 @@ Relevant Conferences
 - [Semantic Web in Libraries](http://swib.org/) (SWIB)
 - [European Library Automation Group](https://elag.org/) (ELAG)
 
-
 Related Publications
 - Golub, Koraljka, Johan Hagelbäck, and Anders Ardö. "[Automatic Classification of Swedish Metadata Using Dewey Decimal Classification: A Comparison of Approaches](https://www.sciendo.com/article/10.2478/jdis-2020-0003)" (2020)
 - Lüschow, Andreas, and Christian Wartena. "[Classifying medical literature using k-nearest-neighbours algorithm](https://serwiss.bib.hs-hannover.de/frontdoor/deliver/index/docId/1146/file/Lueschow_Wartena_classifying.pdf)" (2017)
@@ -70,8 +69,6 @@ Main Strategies
 - Automated comparison with a gold standard (split in training and test data)
 - Indirectly via task-based performance
 
-
-
 # Existing Solutions
 
 Open Source Projects
@@ -82,11 +79,19 @@ Closed-Source Projects
 - [JRC EuroVoc Indexer (JEX)](https://ec.europa.eu/jrc/en/language-technologies/jrc-eurovoc-indexer) for classifying [EUR-Lex](https://eur-lex.europa.eu/homepage.html?locale=de) documents according to the [EuroVoc](https://eur-lex.europa.eu/browse/eurovoc.html?locale=de) classes
 
 
-
-Old stuff
-- Pharos by the [Alexandria Digital Research Library](http://www.alexandria.ucsb.edu/)
-
 # Relevant Programming Libraries
+
+Bibliographic Classification
+- [Annif](https://annif.org/) -
+Tool for automated subject indexing and classification
+
+Preprocessing
+- [nltk](https://www.nltk.org/) - Natural Language Toolkit
+- [gensim](https://radimrehurek.com/gensim/) - Topic Modelling / Vectorization / Similarity Search
+
+General Machine Learning
+- [scikit-learn](https://scikit-learn.org/) - Machine Learning in Python
+- [scikit-multilearn](http://scikit.ml/) - Multi-Label Classification in Python
 
 # To Be Read
 
