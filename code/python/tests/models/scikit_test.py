@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
-from slub_docsa.evaluation.data import get_static_mini_dataset
+from slub_docsa.data.artificial.simple import get_static_mini_dataset
 from slub_docsa.models.scikit import ScikitTfidfClassifier
 
 

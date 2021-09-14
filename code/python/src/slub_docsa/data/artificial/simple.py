@@ -1,44 +1,17 @@
-"""Methods to generate artificial data sets."""
+"""Methods to generate simple artificial data."""
 
-import re
 import logging
 
-from typing import Iterable, Mapping, Sequence
+from typing import Sequence
 
 import numpy as np
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
-from slub_docsa.data.load.dbpedia import read_dbpedia_abstracts
+from slub_docsa.data.artificial.tokens import TokenProbabilities, generate_random_token_probabilties
+from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
 
 logger = logging.getLogger(__name__)
-
-TokenProbabilities = Mapping[str, float]
-
-
-def token_probabilities_from_corpus(corpus: Iterable[str]) -> TokenProbabilities:
-    """Return token probabilities by counting tokens in corpus."""
-    token_pattern = re.compile(r"^[a-z0-9]+$")
-    token_counts = {}
-
-    for document in corpus:
-        for token in document.split(" "):
-            token_normalized = token.strip().lower()
-            if token_normalized in token_counts:
-                token_counts[token_normalized] += 1
-            elif token_normalized and token_pattern.match(token_normalized):
-                token_counts[token_normalized] = 1
-
-    count_sum = sum(token_counts.values())
-
-    return {t: c / count_sum for t, c in token_counts.items()}
-
-
-def token_probabilities_from_dbpedia(language: str, n_docs=10000) -> TokenProbabilities:
-    """Return token probabilities by counting tokens in DBpedia abstracts."""
-    logger.debug("extract token probabilties from %s dbpedia abstracts", language)
-    corpus = read_dbpedia_abstracts(language, limit=n_docs)
-    return token_probabilities_from_corpus(corpus)
 
 
 def generate_random_text(n_tokens: int, tokens: Sequence[str], probabilities: Sequence[float]) -> str:
@@ -52,10 +25,12 @@ def generate_random_text(n_tokens: int, tokens: Sequence[str], probabilities: Se
     return " ".join(token_list)
 
 
-def generate_random_dbpedia_dataset(language: str, n_docs: int, n_subjects: int):
-    """Return a random dataset by generating random documents according to token probabilties extracted from DBpedia."""
-    token_probabilties = token_probabilities_from_dbpedia(language)
-
+def generate_random_dataset_from_token_probabilities(
+    token_probabilties: TokenProbabilities,
+    n_docs: int,
+    n_subjects: int
+):
+    """Return a random dataset by generating random documents according to token probabilties."""
     token_list = list(token_probabilties.keys())
     token_probabilty_list = list(map(lambda t: token_probabilties[t], token_list))
 
@@ -71,14 +46,14 @@ def generate_random_dbpedia_dataset(language: str, n_docs: int, n_subjects: int)
         size=n_docs
     )
 
-    subject_list = [f"uri://random_dbpedia/subject/{i}" for i in range(n_subjects)]
+    subject_list = [f"uri://random/subject/{i}" for i in range(n_subjects)]
 
     documents = []
-    subjects = []
+    subject_targets = []
 
     for i in range(n_docs):
 
-        doc_uri = f"uri://random_dbpedia/{i}"
+        doc_uri = f"uri://random/document/{i}"
         doc_title = generate_random_text(title_length_array[i], token_list, token_probabilty_list)
         documents.append(Document(uri=doc_uri, title=doc_title))
 
@@ -88,9 +63,21 @@ def generate_random_dbpedia_dataset(language: str, n_docs: int, n_subjects: int)
             replace=False
         ).tolist()
 
-        subjects.append(random_subjects)
+        subject_targets.append(random_subjects)
 
-    return Dataset(documents=documents, subjects=subjects)
+    return Dataset(documents=documents, subjects=subject_targets)
+
+
+def generate_random_dataset(n_tokens: int, n_docs: int, n_subjects: int):
+    """Generate random dataset with tokens from exponential distribution."""
+    token_probabilities = generate_random_token_probabilties(n_tokens)
+    return generate_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
+
+
+def generate_random_dataset_from_dbpedia(language: str, n_docs: int, n_subjects: int):
+    """Generate random dataset from with tokens from DBpedia."""
+    token_probabilities = token_probabilities_from_dbpedia(language)
+    return generate_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
 
 
 def get_static_mini_dataset():

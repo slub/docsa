@@ -237,7 +237,7 @@ class AnnifModel(Model):
 
 if __name__ == "__main__":
 
-    from slub_docsa.evaluation.data import get_static_mini_dataset
+    from slub_docsa.data.artificial.simple import get_static_mini_dataset
     from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
     logging.basicConfig(level=logging.DEBUG)
