@@ -16,7 +16,7 @@ class OracleModel(Model):
         self.test_targets = None
 
     def set_test_targets(self, test_targets: np.ndarray):
-        """Provide test targets that will be returned when predict_proba is called."""
+        """Provide test targets that will be returned when `OracleModel.predict_proba()` is called."""
         self.test_targets = test_targets
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
@@ -25,7 +25,7 @@ class OracleModel(Model):
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
-        """Return test targets as provided by ``set_test_targets."""
+        """Return test targets as provided by `OracleModel.set_test_targets()`."""
         if self.test_targets is None:
             raise RuntimeError("test targets are missing")
         return self.test_targets
