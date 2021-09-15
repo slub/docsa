@@ -10,8 +10,11 @@ import zipfile
 import io
 import logging
 
-from typing import Iterable, Any, Optional
+from typing import Iterable, Any, List, Optional
+
+import rdflib
 from lxml import etree  # nosec
+from rdflib.namespace import SKOS
 from slub_docsa.common.paths import RESOURCES_DIR, CACHE_DIR
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
 from slub_docsa.data.store.subject import SubjectHierarchyDbmStore
@@ -149,6 +152,11 @@ def convert_rvk_classes_to_annif_tsv():
             for uri, rvk_subject_node in rvk_subject_hierarchy.items():
                 breadcrumb = subject_label_breadcrumb(rvk_subject_node, rvk_subject_hierarchy)
                 f_tsv.write(f"<{uri}>\t{breadcrumb}\n")
+
+
+def generate_rvk_custom_skos_triples(subject_node: RvkSubjectNode) -> List[Any]:
+    """Return additional skos triples that should be added to an SKOS graph for each subject node."""
+    return [(rdflib.URIRef(subject_node.uri), SKOS.notation, rdflib.Literal(subject_node.notation))]
 
 
 if __name__ == "__main__":

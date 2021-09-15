@@ -53,7 +53,8 @@ def default_named_models(language: str, model_name_subset: Iterable[str] = None)
         ("annif svc", AnnifModel(model_type="svc", language=language)),
         ("annif fasttext", AnnifModel(model_type="fasttext", language=language)),
         ("annif omikuji", AnnifModel(model_type="omikuji", language=language)),
-        ("annif vw_multi", AnnifModel(model_type="vw_multi", language=language))
+        ("annif vw_multi", AnnifModel(model_type="vw_multi", language=language)),
+        # ("annif mllm", AnnifModel(model_type="mllm", language=language))
     ]
 
     if model_name_subset is not None:

@@ -22,6 +22,7 @@ if __name__ == "__main__":
         "random", "oracle",
         "knn k=1", "rforest", "mlp",
         "annif tfidf", "annif svc", "annif fasttext", "annif omikuji", "annif vw_multi",
+        # "annif mllm",
     ]
     filename = f"box_plot_prune_level={prune_level}.html"
 
