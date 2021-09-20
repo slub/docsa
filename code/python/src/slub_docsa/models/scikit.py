@@ -7,6 +7,7 @@ import numpy as np
 from scipy.sparse.csr import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import GaussianNB
+from sklearn.dummy import DummyClassifier
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import Model
@@ -39,8 +40,11 @@ class ScikitTfidfClassifier(Model):
 
         corpus = [d.title for d in documents]
         features = cast(csr_matrix, self.vectorizer.transform(corpus))
+
+        # NaiveBayes classifier requires features as full-size numpy matrix
         if hasattr(self.predictor, "estimator") and isinstance(self.predictor.estimator, GaussianNB):
             features = features.toarray()
+
         return features
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
@@ -72,3 +76,16 @@ class ScikitTfidfClassifier(Model):
     def __str__(self):
         """Return string describing meta classifier."""
         return f"<ScikitTfidfClassifier predictor={str(self.predictor)} >"
+
+
+class ScikitTfidiRandomClassifier(ScikitTfidfClassifier):
+    """Predict fully random probabilities for each class."""
+
+    def __init__(self):
+        """Initialize random classifier."""
+        super().__init__(DummyClassifier(strategy="uniform"))
+
+    def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
+        """Predict random probabilities between 0 and 1 for each class individually."""
+        probabilities = super().predict_proba(test_documents)
+        return np.random.random(size=probabilities.shape)

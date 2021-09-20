@@ -24,7 +24,7 @@ from slub_docsa.evaluation.plotting import score_matrix_box_plot
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.oracle import OracleModel
-from slub_docsa.models.scikit import ScikitTfidfClassifier
+from slub_docsa.models.scikit import ScikitTfidfClassifier, ScikitTfidiRandomClassifier
 from slub_docsa.common.model import Model
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import evaluate_dataset
@@ -36,7 +36,7 @@ ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 def default_named_models(language: str, model_name_subset: Iterable[str] = None) -> Tuple[List[str], List[Model]]:
     """Return a list of default models to use for evaluating model performance."""
     models = [
-        ("random", ScikitTfidfClassifier(predictor=DummyClassifier(strategy="uniform"))),
+        ("random", ScikitTfidiRandomClassifier()),
         ("stratified", ScikitTfidfClassifier(predictor=DummyClassifier(strategy="stratified"))),
         ("oracle", OracleModel()),
         ("knn k=1", ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=1))),
