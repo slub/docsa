@@ -19,7 +19,7 @@ if __name__ == "__main__":
     dataset = None
     subject_hierarchy = None
     dataset_name = "hierarchical"
-    n_token = 200
+    n_token = 2000
     n_docs = 5000
     n_subjects = 10
     model_name_subset = ("oracle", "random", "knn k=1", "annif tfidf", "mlp")

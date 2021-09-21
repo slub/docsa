@@ -137,10 +137,9 @@ def top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionType:
     """
 
     def _decision(probabilities: np.ndarray) -> np.ndarray:
-        min_k = np.min([k, probabilities.shape[1]])
         incidence = np.zeros(probabilities.shape)
-        x_indices = np.repeat(np.arange(0, incidence.shape[0]), min_k)
-        y_indices = np.argpartition(probabilities, -min_k)[:, -min_k:].flatten()
+        x_indices = np.repeat(np.arange(0, incidence.shape[0]), k)
+        y_indices = np.argpartition(probabilities, -k)[:, -k:].flatten()
         incidence[x_indices, y_indices] = 1
         return incidence
 
@@ -166,10 +165,9 @@ def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionTy
     """
 
     def _decision(probabilities: np.ndarray) -> np.ndarray:
-        min_k = np.min([k, probabilities.shape[1]])
         incidence = np.zeros(probabilities.shape)
-        x_indices = np.repeat(np.arange(0, incidence.shape[0]), min_k)
-        y_indices = np.argpartition(probabilities, -min_k)[:, -min_k:].flatten()
+        x_indices = np.repeat(np.arange(0, incidence.shape[0]), k)
+        y_indices = np.argpartition(probabilities, -k)[:, -k:].flatten()
         incidence[x_indices, y_indices] = 1
         incidence[probabilities <= 0.0] = 0
         return incidence
