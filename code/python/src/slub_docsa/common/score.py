@@ -5,8 +5,11 @@ from typing import Callable
 import numpy as np
 
 
-ScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
-"""Score function comparing true and predicted subject lists for each document."""
+MultiClassScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
+"""Score function comparing true and predicted subject probabilities for multiple classes for each document."""
+
+BinaryClassScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
+"""Score function comparing true and predicted subject probabilities for a single class for each document."""
 
 IncidenceDecisionFunctionType = Callable[[np.ndarray], np.ndarray]
 """Convert a subject probabilities matrix to an incidence matrix by applying some decision."""
