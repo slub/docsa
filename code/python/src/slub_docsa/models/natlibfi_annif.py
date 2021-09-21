@@ -1,4 +1,7 @@
-"""Test script to use Annif backend model via import."""
+"""Annif model implementation.
+
+This module provides an Annif model interface such that Annif models can be used with this library.
+"""
 
 # pylint: disable=too-few-public-methods, consider-using-with, too-many-instance-attributes, too-many-arguments
 
@@ -106,15 +109,6 @@ class _CustomAnnifDocumentCorpus:
             return next(self.documents.__iter__()) is None
         except StopIteration:
             return True
-
-
-# MODEL_IDENTIFIER = "vw_multi"  # works, requires pip install
-# MODEL_IDENTIFIER = "yake"  # does not work, requires skos attribute, uses skos:"prefLabel", but no skos:"broader"
-# MODEL_IDENTIFIER = "stwfsa"  # does not work, requires subjects as rdflib graph, uses skos:"braoder"
-# MODEL_IDENTIFIER = "mllm"  # does not work, requires subjects as rdflib graph, uses skos:"broader"
-# MODEL_IDENTIFIER = "omikuji"  # works, requires pip install
-# MODEL_IDENTIFIER = "svc"  # works
-# MODEL_IDENTIFIER = "fasttext"  # works, requires pip install
 
 
 class AnnifModel(Model):
