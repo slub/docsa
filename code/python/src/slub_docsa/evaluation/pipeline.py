@@ -1,16 +1,16 @@
 """Provides basic evaluation pipeline for multiple models."""
 
-# pylint: disable=fixme, too-many-locals
+# pylint: disable=fixme, too-many-locals, too-many-arguments
 
 import logging
-from typing import Collection
+from typing import Collection, Sequence
 
 import numpy as np
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.model import Model
 from slub_docsa.common.score import ScoreFunctionType
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import cross_validation_split
 from slub_docsa.models.oracle import OracleModel
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 def evaluate_dataset(
     n_splits: int,
     dataset: Dataset,
+    subject_order: Sequence[str],
     models: Collection[Model],
     score_functions: Collection[ScoreFunctionType],
     random_state=0,
@@ -27,8 +28,6 @@ def evaluate_dataset(
     """Evaluate a dataset for a number of models and score functions."""
     score_matrix = np.empty((len(models), len(score_functions), n_splits))
     score_matrix[:, :, :] = np.NaN
-
-    subject_order = unique_subject_order(dataset.subjects)
 
     for i, split in enumerate(cross_validation_split(n_splits, dataset, random_state=random_state)):
         logger.info("prepare %d-th cross validation split", i + 1)

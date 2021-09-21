@@ -18,6 +18,7 @@ def subject_hierarchy_to_skos_graph(
     generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Any]]] = None
 ):
     """Convert subject hierarchy to an rdflib graph using SKOS triples."""
+    logger.debug("convert subject hierarchy to rdflib skos graph")
     graph = rdflib.Graph()
     graph.namespace_manager.bind('skos', SKOS)
     i = 0
@@ -39,7 +40,7 @@ def subject_hierarchy_to_skos_graph(
         i += 1
 
         if i % 10000 == 0:
-            logger.debug("Added %d subjects to graph so far", i)
+            logger.debug("added %d subjects to graph so far", i)
 
     return graph
 

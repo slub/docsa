@@ -15,14 +15,14 @@ from slub_docsa.evaluation.incidence import unique_subject_order
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     prune_level = None  # 34 subjects at 1, 325 subjects at 2, in total 4857 subjects
     model_subset = [
         "random", "oracle",
-        "knn k=1", "rforest", "mlp",
-        "annif tfidf", "annif svc", "annif fasttext", "annif omikuji", "annif vw_multi",
-        # "annif mllm",
+        # "knn k=1", "rforest", "mlp",
+        # "annif tfidf", "annif svc", "annif fasttext", "annif omikuji", "annif vw_multi",
+        "annif mllm",
     ]
     filename = f"box_plot_prune_level={prune_level}.html"
 
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     do_default_box_plot_evaluation(
         dataset=dataset,
         language="german",
-        box_plot_filepath=os.path.join(FIGURES_DIR, f"qucosa/{filename}"),
+        box_plot_filepath=os.path.join(FIGURES_DIR, f"qucosa/test_{filename}"),
+        subject_hierarchy=rvk_hierarchy,
         model_name_subset=model_subset,
     )

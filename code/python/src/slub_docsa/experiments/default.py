@@ -1,7 +1,11 @@
 """Provides common defaults for experimentation."""
 
+# pylint: disable=too-many-arguments
+
 import os
-from typing import Iterable, List, Tuple, cast
+import logging
+
+from typing import Iterable, List, Sequence, Tuple, cast
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, log_loss
 from sklearn.metrics import mean_squared_error
@@ -19,7 +23,9 @@ from sklearn.svm import LinearSVC
 
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.common.score import ScoreFunctionType
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
+from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.plotting import score_matrix_box_plot
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from slub_docsa.models.natlibfi_annif import AnnifModel
@@ -29,11 +35,17 @@ from slub_docsa.common.model import Model
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import evaluate_dataset
 
+logger = logging.getLogger(__name__)
 
 ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 
 
-def default_named_models(language: str, model_name_subset: Iterable[str] = None) -> Tuple[List[str], List[Model]]:
+def default_named_models(
+    language: str,
+    subject_order: Sequence[str] = None,
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
+    model_name_subset: Iterable[str] = None
+) -> Tuple[List[str], List[Model]]:
     """Return a list of default models to use for evaluating model performance."""
     models = [
         ("random", ScikitTfidiRandomClassifier()),
@@ -54,7 +66,15 @@ def default_named_models(language: str, model_name_subset: Iterable[str] = None)
         ("annif fasttext", AnnifModel(model_type="fasttext", language=language)),
         ("annif omikuji", AnnifModel(model_type="omikuji", language=language)),
         ("annif vw_multi", AnnifModel(model_type="vw_multi", language=language)),
-        # ("annif mllm", AnnifModel(model_type="mllm", language=language))
+        ("annif mllm", AnnifModel(
+            model_type="mllm", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+        )),
+        ("annif yake", AnnifModel(
+            model_type="yake", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+        )),
+        ("annif stwfsa", AnnifModel(
+            model_type="stwfsa", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+        )),
     ]
 
     if model_name_subset is not None:
@@ -136,18 +156,31 @@ def do_default_box_plot_evaluation(
     dataset: Dataset,
     language: str,
     box_plot_filepath: str,
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
     model_name_subset: Iterable[str] = None,
     score_name_subset: Iterable[str] = None,
 ):
     """Do 10-fold cross validation for default models and scores and save box plot."""
+    # define subject ordering
+    subject_order = unique_subject_order(dataset.subjects)
+
+    logger.debug("subject order: %s", subject_order)
+
     # setup models and scores
-    model_names, model_classes = default_named_models(language, model_name_subset)
+    model_names, model_classes = default_named_models(
+        language,
+        model_name_subset=model_name_subset,
+        subject_order=subject_order,
+        subject_hierarchy=subject_hierarchy
+
+    )
     score_names, score_ranges, score_functions = default_named_scores(score_name_subset)
 
     # do evaluate
     score_matrix = evaluate_dataset(
         n_splits=10,
         dataset=dataset,
+        subject_order=subject_order,
         models=model_classes,
         score_functions=score_functions,
         random_state=0

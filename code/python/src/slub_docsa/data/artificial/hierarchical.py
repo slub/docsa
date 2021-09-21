@@ -14,20 +14,22 @@ from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, print_s
 from slub_docsa.data.artificial.simple import generate_random_text
 from slub_docsa.data.artificial.tokens import TokenProbabilities, choose_tokens_by_probabilities
 from slub_docsa.data.artificial.tokens import generate_random_token_probabilties, combine_token_probabilities
+from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
 
 
 logger = logging.getLogger(__name__)
 
 
 def generate_hierarchical_subject_token_probabilities(
-    n_tokens: int,
     n_subjects: int,
+    root_token_probabilities: TokenProbabilities,
+    label_from_tokens: bool = True,
 ) -> Tuple[Mapping[str, TokenProbabilities], SubjectHierarchyType]:
     """Generate a number of hierarchical subjects each represented by random token probabilities."""
     subject_token_probabilities = {}
     subject_hierarchy = {}
     parent_backlog: List[Tuple[Optional[str], int, TokenProbabilities]] = [
-        (None, 0, generate_random_token_probabilties(n_tokens))
+        (None, 0, root_token_probabilities)
     ]
     i = 0
     while len(subject_token_probabilities) < n_subjects:
@@ -38,7 +40,12 @@ def generate_hierarchical_subject_token_probabilities(
         if current_level > 0:
             # remember parent for document generation
             current_subject_uri = "uri://random/subject/" + str(i)
-            current_subject_label = "subject " + str(i)
+            if label_from_tokens:
+                tokens = list(current_token_probabilties.keys())
+                probabilities = [current_token_probabilties[t] for t in tokens]
+                current_subject_label = " ".join(np.random.choice(tokens, size=5, p=probabilities, replace=False))
+            else:
+                current_subject_label = "subject " + str(i)
             subject_token_probabilities[current_subject_uri] = current_token_probabilties
             subject_hierarchy[current_subject_uri] = SubjectNode(
                 uri=current_subject_uri,
@@ -67,22 +74,23 @@ def generate_hierarchical_subject_token_probabilities(
     return subject_token_probabilities, subject_hierarchy
 
 
-def generate_hierarchical_random_dataset(
-    n_tokens: int,
+def generate_hierarchical_random_dataset_from_token_probabilities(
+    token_probabilities: TokenProbabilities,
     n_documents: int,
     n_subjects: int,
 ) -> Tuple[Dataset, SubjectHierarchyType]:
-    """Generate a random hierarchical dataset based on 1-gram token probabilities."""
+    """Generate a random hierarchical dataset based on token probabilities."""
+    logger.debug("generate hierarchical dataset with %d documents", n_documents)
     subject_token_probabilities, subject_hierarchy = generate_hierarchical_subject_token_probabilities(
-        n_tokens,
-        n_subjects
+        n_subjects,
+        token_probabilities
     )
 
     subject_uri_list = list(subject_token_probabilities.keys())
     subject_probabilities = np.random.default_rng().exponential(size=len(subject_uri_list))
     subject_probabilities = subject_probabilities / np.sum(subject_probabilities)
     n_subjects_per_document = np.random.default_rng().integers(low=1, high=4, size=n_documents)
-    n_tokens_per_document = np.random.default_rng().integers(low=5, high=30, size=n_documents)
+    n_tokens_per_document = np.random.default_rng().integers(low=10, high=50, size=n_documents)
 
     documents = []
     subject_targets = []
@@ -104,8 +112,37 @@ def generate_hierarchical_random_dataset(
     return Dataset(documents=documents, subjects=subject_targets), subject_hierarchy
 
 
+def generate_hierarchical_random_dataset(
+    n_tokens: int,
+    n_documents: int,
+    n_subjects: int,
+):
+    """Generate a random hierarchical dataset based on artificially generated tokens."""
+    token_probabilities = generate_random_token_probabilties(n_tokens)
+    return generate_hierarchical_random_dataset_from_token_probabilities(
+        token_probabilities,
+        n_documents,
+        n_subjects,
+    )
+
+
+def generate_hierarchical_random_dataset_from_dbpedia(
+    language: str,
+    n_documents: int,
+    n_subjects: int,
+):
+    """Generate a random hierarchical dataset based on token probabilities extracted from DBpedia abstracts."""
+    token_probabilities = token_probabilities_from_dbpedia(language)
+    return generate_hierarchical_random_dataset_from_token_probabilities(
+        token_probabilities,
+        n_documents,
+        n_subjects,
+    )
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    subject_tp, subject_h = generate_hierarchical_subject_token_probabilities(1000, 10)
+    test_token_probabilities = generate_random_token_probabilties(1000)
+    subject_tp, subject_h = generate_hierarchical_subject_token_probabilities(10, test_token_probabilities)
     print_subject_hierarchy(subject_h)

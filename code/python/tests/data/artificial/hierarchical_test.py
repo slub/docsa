@@ -2,6 +2,7 @@
 
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_subject_token_probabilities
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset
+from slub_docsa.data.artificial.tokens import generate_random_token_probabilties
 from slub_docsa.evaluation.incidence import unique_subject_order
 
 
@@ -10,7 +11,8 @@ def test_generate_hierarchical_subject_token_probabilities():
     n_subjects = 10
     n_tokens = 200
 
-    subject_tp, subject_hierarchy = generate_hierarchical_subject_token_probabilities(n_tokens, n_subjects)
+    token_probabilities = generate_random_token_probabilties(n_tokens)
+    subject_tp, subject_hierarchy = generate_hierarchical_subject_token_probabilities(n_subjects, token_probabilities)
 
     assert n_subjects == len(subject_tp)
     assert n_subjects == len(subject_hierarchy)
