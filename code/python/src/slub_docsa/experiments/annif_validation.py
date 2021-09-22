@@ -3,13 +3,16 @@
 
 import logging
 import os
+from typing import cast
 
 from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_simple_rvk_training_dataset
+from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
+from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
@@ -28,6 +31,7 @@ if __name__ == "__main__":
 
     # load data
     dataset = read_qucosa_simple_rvk_training_dataset()
+    rvk_hierarchy = get_rvk_subject_store()
 
     # calculate subject list on whole dataset
     subject_order = unique_subject_order(dataset.subjects)
@@ -40,6 +44,15 @@ if __name__ == "__main__":
         subject_order,
         os.path.join(ANNIF_DIR, "comparison_experiment/subjects.tsv"),
     )
+
+    logger.info("save subject hierarchy as skos turtle file")
+    rvk_skos_graph = subject_hierarchy_to_skos_graph(
+        subject_hierarchy=rvk_hierarchy,
+        language=LANGUAGE,
+        mandatory_subject_list=subject_order
+    )
+    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.ttl"), "wb") as f:
+        f.write(cast(bytes, rvk_skos_graph.serialize(format="turtle")))
 
     # split data to fixed train and test set
     training_dataset, test_dataset = train_test_split(0.8, dataset, random_state=5)
@@ -63,7 +76,12 @@ if __name__ == "__main__":
     )
 
     logger.info("fit Annif model with training data")
-    model = AnnifModel(MODEL_TYPE, LANGUAGE)
+    model = AnnifModel(
+        model_type=MODEL_TYPE,
+        language=LANGUAGE,
+        subject_hierarchy=rvk_hierarchy,
+        subject_order=subject_order
+    )
     train_incidence_matrix = subject_incidence_matrix_from_targets(training_dataset.subjects, subject_order)
     model.fit(training_dataset.documents, train_incidence_matrix)
 
@@ -125,5 +143,6 @@ if __name__ == "__main__":
     print("")
     print("Run the following commands for comparison:")
     print("annif loadvoc qucosa-de data/comparison_experiment/subjects.tsv")
+    print("annif loadvoc qucosa-de data/comparison_experiment/subjects.ttl")
     print("annif train qucosa-de data/comparison_experiment/training_data.tsv")
     print("annif eval --limit 5 qucosa-de data/comparison_experiment/test_data.tsv")
