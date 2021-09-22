@@ -8,6 +8,7 @@ This module provides an Annif model interface such that Annif models can be used
 import os
 import logging
 import tempfile
+import time
 from typing import Iterable, Mapping, Optional, Sequence, Any
 
 import numpy as np
@@ -160,8 +161,14 @@ class AnnifModel(Model):
             raise ValueError("data directory %s does not exist" % self.data_dir)
 
     def _init_subject_skos_graph(self):
-        if self.subject_hierarchy is not None:
-            self.subject_skos_graph = subject_hierarchy_to_skos_graph(self.subject_hierarchy, self.language)
+        if self.subject_hierarchy is not None and self.subject_order is not None:
+            self.subject_skos_graph = subject_hierarchy_to_skos_graph(
+                subject_hierarchy=self.subject_hierarchy,
+                language=self.language,
+                mandatory_subject_list=self.subject_order,
+            )
+        elif self.model_type in ["yake", "stwfsa", "mllm"]:
+            logger.error("Annif model %s requires that subject hierarchy is provided", self.model_type)
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
         """Train an Annif model with a sequence of documents and a subject incidence matrix.
@@ -279,6 +286,8 @@ class AnnifModel(Model):
         probabilities = np.empty((len(test_documents), self.n_unique_subject))
         probabilities[:, :] = np.nan
 
+        last_info_time = time.time()
+
         for i, doc in enumerate(test_documents):
 
             results = self.model.suggest(doc.title)
@@ -290,6 +299,10 @@ class AnnifModel(Model):
                 else:
                     idx = j
                 probabilities[i, idx] = annif_score_vector[j]
+
+            if time.time() - last_info_time > 5:
+                last_info_time = time.time()
+                logger.info("predicted %d out of %d samples", i+1, len(test_documents))
 
         if np.min(probabilities) < 0.0:
             raise RuntimeError("some probabilities below 0.0")
