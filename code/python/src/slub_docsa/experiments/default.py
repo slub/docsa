@@ -84,7 +84,7 @@ def default_named_models(
         ("knn k=3", lambda: ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=3))),
         ("dtree", lambda: ScikitTfidfClassifier(predictor=DecisionTreeClassifier(max_leaf_nodes=1000))),
         ("rforest", lambda: ScikitTfidfClassifier(predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000))),
-        ("mlp", lambda: ScikitTfidfClassifier(predictor=MLPClassifier(max_iter=1000))),
+        ("mlp", lambda: ScikitTfidfClassifier(predictor=MLPClassifier(max_iter=10))),
         ("log_reg", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=LogisticRegression()))),
         ("nbayes", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=GaussianNB()))),
         ("svc", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(
@@ -263,6 +263,33 @@ def do_default_score_matrix_evaluation(
     )
 
 
+def write_default_plots(
+    evaluation_result: DefaultEvaluationResult,
+    plot_directory: str,
+    filename_suffix: str,
+):
+    """Write all default plots to a file."""
+    write_precision_recall_plot(
+        evaluation_result,
+        os.path.join(plot_directory, f"precision_recall_plot_{filename_suffix}.html"),
+    )
+
+    write_per_subject_precision_recall_vs_samples_plot(
+        evaluation_result,
+        os.path.join(plot_directory, f"per_subject_precision_recall_vs_samples_plot_{filename_suffix}.html"),
+    )
+
+    write_score_matrix_box_plot(
+        evaluation_result,
+        os.path.join(plot_directory, f"score_plot_{filename_suffix}.html"),
+    )
+
+    write_per_subject_score_histograms_plot(
+        evaluation_result,
+        os.path.join(plot_directory, f"per_subject_score_{filename_suffix}.html"),
+    )
+
+
 def write_score_matrix_box_plot(
     evaluation_result: DefaultEvaluationResult,
     plot_filepath: str
@@ -319,7 +346,7 @@ def write_per_subject_score_histograms_plot(
     )
 
 
-def write_per_subject_precision_vs_samples_plot(
+def write_per_subject_precision_recall_vs_samples_plot(
     evaluation_result: DefaultEvaluationResult,
     plot_filepath: str
 ):
