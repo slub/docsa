@@ -128,11 +128,13 @@ def generate_hierarchical_random_dataset(
 
 def generate_hierarchical_random_dataset_from_dbpedia(
     language: str,
+    n_tokens: int,
     n_documents: int,
     n_subjects: int,
 ):
     """Generate a random hierarchical dataset based on token probabilities extracted from DBpedia abstracts."""
     token_probabilities = token_probabilities_from_dbpedia(language)
+    token_probabilities = choose_tokens_by_probabilities(n_tokens, token_probabilities)
     return generate_hierarchical_random_dataset_from_token_probabilities(
         token_probabilities,
         n_documents,
