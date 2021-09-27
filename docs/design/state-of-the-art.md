@@ -92,6 +92,7 @@ Preprocessing
 General Machine Learning
 - [scikit-learn](https://scikit-learn.org/) - Machine Learning in Python
 - [scikit-multilearn](http://scikit.ml/) - Multi-Label Classification in Python
+- [sklearn-hierarchical-classification](https://github.com/globality-corp/sklearn-hierarchical-classification) - Hierarchical classification algorithms
 
 # To Be Read
 
