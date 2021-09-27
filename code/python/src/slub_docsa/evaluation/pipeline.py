@@ -10,6 +10,7 @@ import numpy as np
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.model import Model
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
+from slub_docsa.evaluation.condition import check_subjects_have_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import cross_validation_split
 from slub_docsa.models.oracle import OracleModel
@@ -27,6 +28,9 @@ def score_models_for_dataset(
     random_state=0,
 ):
     """Evaluate a dataset for a number of models and score functions."""
+    # check minimum requirements for cross-validation
+    check_subjects_have_minimum_samples(dataset, n_splits)
+
     overall_score_matrix = np.empty((len(models), len(overall_score_functions), n_splits))
     overall_score_matrix[:, :, :] = np.NaN
 
@@ -38,6 +42,12 @@ def score_models_for_dataset(
         train_dataset, test_dataset = split
         train_incidence_matrix = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
         test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
+        logger.info(
+            "evaluate %d-th cross validation split with %d training and %d test samples",
+            i + 1,
+            len(train_dataset.subjects),
+            len(test_dataset.subjects)
+        )
 
         for s_i, s_name in enumerate(subject_order):
             if len(np.where(test_incidence_matrix[:, s_i] > 0)[0]) == 0:
