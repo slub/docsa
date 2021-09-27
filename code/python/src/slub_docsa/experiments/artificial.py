@@ -8,13 +8,15 @@ import os
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.simple import generate_random_dataset
-from slub_docsa.experiments.default import do_default_score_matrix_evaluation, write_per_subject_score_histograms_plot
+from slub_docsa.experiments.default import do_default_score_matrix_evaluation
 from slub_docsa.experiments.default import write_score_matrix_box_plot, write_precision_recall_plot
+from slub_docsa.experiments.default import write_per_subject_precision_vs_samples_plot
+from slub_docsa.experiments.default import write_per_subject_score_histograms_plot
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     dataset = None
     subject_hierarchy = None
@@ -22,7 +24,12 @@ if __name__ == "__main__":
     n_token = 2000
     n_docs = 5000
     n_subjects = 10
-    model_name_subset = ("oracle", "random", "knn k=1", "annif tfidf", "mlp")
+    model_name_subset = [
+        "oracle", "random", "knn k=1", "annif tfidf", "mlp",
+        # "annif mllm",
+        # "annif yake",
+        # "annif stwfsa"
+    ]
 
     filename = f"{dataset_name}_token={n_token}_docs={n_docs}_subj={n_subjects}.html"
 
@@ -31,6 +38,8 @@ if __name__ == "__main__":
         dataset = generate_random_dataset(n_token, n_docs, n_subjects)
     if dataset_name == "hierarchical":
         dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_dbpedia("english", n_docs, n_subjects)
+
+    logger.info("subject hierarchy is %s", subject_hierarchy)
 
     if dataset is None:
         raise ValueError("dataset can not be none")
@@ -45,6 +54,11 @@ if __name__ == "__main__":
     write_precision_recall_plot(
         evaluation_result,
         os.path.join(FIGURES_DIR, f"artificial/precision_recall_plot_{filename}"),
+    )
+
+    write_per_subject_precision_vs_samples_plot(
+        evaluation_result,
+        os.path.join(FIGURES_DIR, f"artificial/per_subject_precision_vs_samples_plot_{filename}"),
     )
 
     write_score_matrix_box_plot(

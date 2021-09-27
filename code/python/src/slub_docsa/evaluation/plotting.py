@@ -80,6 +80,34 @@ def precision_recall_plot(
     return fig
 
 
+def per_subject_precision_vs_samples_plot(
+    score_matrix: np.ndarray,
+    model_names: List[str],
+) -> Any:
+    """Return plot showing precision vs number of training examples per subject."""
+    n_models, _, _, _ = score_matrix.shape
+
+    fig = cast(Any, go.Figure)()
+
+    for i in range(n_models):
+        fig.add_trace(
+            cast(Any, go.Scatter)(
+                x=score_matrix[i, 0, :, :].flatten(),
+                y=score_matrix[i, 1, :, :].flatten(),
+                name=model_names[i],
+                mode="markers"
+            )
+        )
+
+    fig.update_layout(
+        xaxis_title="training examples",
+        yaxis_title="t=0.5 precision",
+        yaxis_range=[0, 1],
+    )
+
+    return fig
+
+
 def _calculate_score_histogram_bin(values, score_range):
     """Calculate histogram bins from values and optional score range."""
     non_nan_values = values[np.logical_not(np.isnan(values))]
