@@ -11,6 +11,7 @@ from sklearn.dummy import DummyClassifier
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import Model
+from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 
@@ -38,7 +39,7 @@ class ScikitTfidfClassifier(Model):
         if not self.vectorizer:
             raise RuntimeError("Vectorizer not initialized, execute fit before predict!")
 
-        corpus = [d.title for d in documents]
+        corpus = [document_as_concatenated_string(d) for d in documents]
         features = cast(csr_matrix, self.vectorizer.transform(corpus))
 
         # NaiveBayes classifier requires features as full-size numpy matrix

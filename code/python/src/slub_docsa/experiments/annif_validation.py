@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import ANNIF_DIR
-from slub_docsa.data.load.qucosa import read_qucosa_simple_rvk_training_dataset
+from slub_docsa.data.load.qucosa import read_qucosa_titles_rvk_training_dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     LANGUAGE = "german"
 
     # load data
-    dataset = read_qucosa_simple_rvk_training_dataset()
+    dataset = read_qucosa_titles_rvk_training_dataset()
     rvk_hierarchy = get_rvk_subject_store()
 
     # calculate subject list on whole dataset

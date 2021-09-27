@@ -5,7 +5,7 @@ import gzip
 import json
 import logging
 
-from typing import Mapping, List, Any
+from typing import Callable, Iterable, Mapping, List, Any, Optional
 from slub_docsa.common.document import Document
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
@@ -19,8 +19,10 @@ QUCOSA_SIMPLE_TRAINING_DATA_TSV = os.path.join(CACHE_DIR, "qucosa/simple_trainin
 ClassificationElementType = Mapping[str, Any]
 ClassifcationType = List[ClassificationElementType]
 
+QucosaDocument = Mapping[str, Any]
 
-def read_qucosa_metadata():
+
+def read_qucosa_metadata() -> Iterable[QucosaDocument]:
     """Read qucosa metadata from gzip compressed jsonl files."""
     for entry in os.scandir(QUCOSA_FULLTEXT_MAPPING_DIR):
         if entry.is_file():
@@ -29,7 +31,7 @@ def read_qucosa_metadata():
                     yield json.loads(line)
 
 
-def get_rvk_notations_from_qucosa_metadata(doc: Mapping[str, Any]) -> List[str]:
+def get_rvk_notations_from_qucosa_metadata(doc: QucosaDocument) -> List[str]:
     """Return list of RVK notations from qucosa metadata object."""
     classification: ClassifcationType = doc["metadata"]["classification"]
     rvk_dict = list(filter(lambda d: d["type"] == "rvk", classification))[0]
@@ -41,20 +43,32 @@ def get_rvk_notations_from_qucosa_metadata(doc: Mapping[str, Any]) -> List[str]:
     return []
 
 
-def get_document_title_from_qucosa_metadata(doc: Mapping[str, Any]) -> str:
+def get_document_title_from_qucosa_metadata(doc: QucosaDocument) -> str:
     """Return the document title from a qucosa metadata object."""
     if isinstance(doc["title"]["text"], list):
         return doc["title"]["text"][0]
     return doc["title"]["text"]
 
 
-def get_document_id_from_qucosa_metadate(doc: Mapping[str, Any]) -> str:
+def get_document_abstract_from_qucosa_metadata(doc: QucosaDocument) -> Optional[str]:
+    """Return the document abstract from a qucosa metadata object."""
+    for fulltext in doc["fulltext"]:
+        if fulltext["type"] == "abstract" and "text" in fulltext:
+            if isinstance(fulltext["text"], list):
+                return fulltext["text"][0]
+            return fulltext["text"]
+    return None
+
+
+def get_document_id_from_qucosa_metadate(doc: QucosaDocument) -> str:
     """Return the document id from a qucosa metadata object."""
     return doc["id"]
 
 
-def read_qucosa_simple_rvk_training_dataset() -> Dataset:
-    """Read qucosa documents and return full training data."""
+def read_qucosa_generic_rvk_training_dataset(
+    create_document_from_qucosa: Callable[[QucosaDocument], Optional[Document]]
+) -> Dataset:
+    """Read qucosa data and extract documents and RVK subjects."""
     logger.debug("load rvk classes and index them by notation")
     rvk_subject_store = get_rvk_subject_store()
 
@@ -65,25 +79,55 @@ def read_qucosa_simple_rvk_training_dataset() -> Dataset:
         notations = get_rvk_notations_from_qucosa_metadata(doc)
         notations_filtered = list(filter(lambda n: rvk_notation_to_uri(n) in rvk_subject_store, notations))
         subject_uris_filtered = list(map(rvk_notation_to_uri, notations_filtered))
+
+        if len(subject_uris_filtered) < 1:
+            logger.debug("qucosa document with no known rvk subjects: %s", get_document_id_from_qucosa_metadate(doc))
+            continue
+
+        document = create_document_from_qucosa(doc)
+        if document is None:
+            continue
+
+        documents.append(document)
+        subjects.append(subject_uris_filtered)
+
+    return Dataset(documents=documents, subjects=subjects)
+
+
+def read_qucosa_titles_rvk_training_dataset() -> Dataset:
+    """Read qucosa documents and use document titles as training data."""
+    def make_title_only_doc(doc: QucosaDocument) -> Optional[Document]:
+        """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + get_document_id_from_qucosa_metadate(doc)
         doc_title = get_document_title_from_qucosa_metadata(doc)
 
         if len(doc_title) < 10:
             logger.debug("qucosa document with short title '%s': %s", doc_title, doc_uri)
-            continue
+            return None
 
-        if len(subject_uris_filtered) < 1:
-            logger.debug("qucosa document with not rvk subjects: %s", doc_uri)
-            continue
+        return Document(uri=doc_uri, title=doc_title)
 
-        documents.append(
-            Document(uri=doc_uri, title=doc_title)
-        )
-        subjects.append(
-            subject_uris_filtered
-        )
+    return read_qucosa_generic_rvk_training_dataset(make_title_only_doc)
 
-    return Dataset(documents=documents, subjects=subjects)
+
+def read_qucosa_abstracts_rvk_training_dataset() -> Dataset:
+    """Read qucosa documents and use document titles and abstracts as training data."""
+    def make_title_and_abstract_doc(doc: QucosaDocument) -> Optional[Document]:
+        """Only uses title with at least 10 characters as document text."""
+        doc_uri = "uri://" + get_document_id_from_qucosa_metadate(doc)
+        doc_title = get_document_title_from_qucosa_metadata(doc)
+        doc_abstract = get_document_abstract_from_qucosa_metadata(doc)
+
+        if len(doc_title) < 10:
+            logger.debug("qucosa document with too short title '%s': %s", doc_title, doc_uri)
+            return None
+
+        if doc_abstract is None or len(doc_abstract) < 20:
+            logger.debug("qucosa document with too short abstract '%s': %s", doc_abstract, doc_uri)
+
+        return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
+
+    return read_qucosa_generic_rvk_training_dataset(make_title_and_abstract_doc)
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv():
@@ -93,7 +137,7 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv():
 
     if not os.path.exists(QUCOSA_SIMPLE_TRAINING_DATA_TSV):
         with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w", encoding="utf8") as f_tsv:
-            dataset = read_qucosa_simple_rvk_training_dataset()
+            dataset = read_qucosa_titles_rvk_training_dataset()
             for i, doc in enumerate(dataset.documents):
                 text = doc.title
                 labels_list = dataset.subjects[i]

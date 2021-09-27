@@ -26,6 +26,7 @@ from rdflib.namespace import SKOS
 from slub_docsa.common.model import Model
 from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
 from slub_docsa.data.load.nltk import download_nltk
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
@@ -229,7 +230,7 @@ class AnnifModel(Model):
         # define corpus
         annif_document_list = [
             AnnifDocument(
-                text=d.title,
+                text=document_as_concatenated_string(d),
                 uris=train_subject_targets[i],
                 labels=None
             )
@@ -290,7 +291,7 @@ class AnnifModel(Model):
 
         for i, doc in enumerate(test_documents):
 
-            results = self.model.suggest(doc.title)
+            results = self.model.suggest(document_as_concatenated_string(doc))
             annif_score_vector = results.as_vector(self.project.subjects)
 
             for j in range(self.n_unique_subject):
