@@ -98,9 +98,9 @@ class _CustomAnnifSubjectCorpus:
 class _CustomAnnifDocumentCorpus:
     """A custom Annif document corpus, which simply allows to iterate over all documets."""
 
-    documents: Iterable[AnnifDocument]
+    documents: Sequence[AnnifDocument]
 
-    def __init__(self, documents: Iterable[AnnifDocument]):
+    def __init__(self, documents: Sequence[AnnifDocument]):
         """Set the document iterable."""
         self.documents = documents
 
@@ -256,7 +256,7 @@ class AnnifModel(Model):
             project=self.project
         )
 
-        logger.debug("annif: call train on model")
+        logger.debug("annif: call train on model with %d documents", len(document_corpus.documents))
         if self.model_type != "yake":
             self.model.train(document_corpus, params={
                 "language": self.language,

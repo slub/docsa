@@ -28,8 +28,9 @@ from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScor
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
-from slub_docsa.evaluation.plotting import per_subject_precision_vs_samples_plot, per_subject_score_histograms_plot
+from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_samples_plot
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
+from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.oracle import OracleModel
@@ -83,7 +84,7 @@ def default_named_models(
         ("knn k=3", lambda: ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=3))),
         ("dtree", lambda: ScikitTfidfClassifier(predictor=DecisionTreeClassifier(max_leaf_nodes=1000))),
         ("rforest", lambda: ScikitTfidfClassifier(predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000))),
-        ("mlp", lambda: ScikitTfidfClassifier(predictor=MLPClassifier(max_iter=10))),
+        ("mlp", lambda: ScikitTfidfClassifier(predictor=MLPClassifier(max_iter=1000))),
         ("log_reg", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=LogisticRegression()))),
         ("nbayes", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=GaussianNB()))),
         ("svc", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(
@@ -324,14 +325,16 @@ def write_per_subject_precision_vs_samples_plot(
 ):
     """Generate the per subject precision vs samples plot from evaluation results and write it as html file."""
     score_names = evaluation_result.per_class_score_lists.names
-    if "t=0.5 precision" not in score_names or "# training samples" not in score_names:
-        raise ValueError("score matrix needs to contain t=0.5 precision and # training examples scores")
+    if "t=0.5 precision" not in score_names or "t=0.5 recall" not in score_names \
+            or "# training samples" not in score_names:
+        raise ValueError("score matrix needs to contain t=0.5 precision, recall and # training examples scores")
 
     precision_idx = score_names.index("t=0.5 precision")
+    recall_idx = score_names.index("t=0.5 recall")
     samples_idx = score_names.index("# training samples")
 
-    per_subject_precision_vs_samples_plot(
-        evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx], :, :],
+    per_subject_precision_recall_vs_samples_plot(
+        evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],
         evaluation_result.model_lists.names,
     ).write_html(
         plot_filepath,

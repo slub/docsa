@@ -80,29 +80,41 @@ def precision_recall_plot(
     return fig
 
 
-def per_subject_precision_vs_samples_plot(
+def per_subject_precision_recall_vs_samples_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
 ) -> Any:
     """Return plot showing precision vs number of training examples per subject."""
     n_models, _, _, _ = score_matrix.shape
 
-    fig = cast(Any, go.Figure)()
+    fig = cast(Any, make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=["precision vs. training samples", "recall vs. training samples"],
+    ))
 
     for i in range(n_models):
-        fig.add_trace(
-            cast(Any, go.Scatter)(
-                x=score_matrix[i, 0, :, :].flatten(),
-                y=score_matrix[i, 1, :, :].flatten(),
-                name=model_names[i],
-                mode="markers"
+        for j in [0, 1]:
+            fig.add_trace(
+                cast(Any, go.Scatter)(
+                    x=score_matrix[i, 0, :, :].flatten(),
+                    y=score_matrix[i, j+1, :, :].flatten(),
+                    name=model_names[i],
+                    showlegend=j <= 0,
+                    legendgroup=i,
+                    marker_color=_get_marker_color(i),
+                    mode="markers"
+                ),
+                row=1, col=j+1,
             )
-        )
 
     fig.update_layout(
-        xaxis_title="training examples",
-        yaxis_title="t=0.5 precision",
-        yaxis_range=[0, 1],
+        xaxis1_title="training examples",
+        yaxis1_title="t=0.5 precision",
+        xaxis2_title="training examples",
+        yaxis2_title="t=0.5 recall",
+        yaxis1_range=[0, 1],
+        yaxis2_range=[0, 1],
     )
 
     return fig
