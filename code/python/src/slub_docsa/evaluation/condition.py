@@ -21,6 +21,6 @@ def check_subjects_have_minimum_samples(dataset: Dataset, minimum_samples: int =
             minimum_samples
         )
         for subject_uri in subjects_below_minimum:
-            logger.debug("subject %s only has %d samples", subject_uri, subject_counts[subject_uri])
+            logger.error("subject %s only has %d samples", subject_uri, subject_counts[subject_uri])
 
         raise ValueError("dataset contains subjects with insufficient number of samples")

@@ -9,10 +9,12 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import ANNIF_DIR
-from slub_docsa.data.load.qucosa import read_qucosa_titles_rvk_training_dataset
+from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
+from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
+from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
@@ -25,13 +27,19 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
+    MIN_SAMPLES = 10
     LIMIT = 5
     MODEL_TYPE = "tfidf"
     LANGUAGE = "german"
+    SKOS_LANGUAGE_CODE = "de"
 
     # load data
-    dataset = read_qucosa_titles_rvk_training_dataset()
+    dataset = read_qucosa_abstracts_rvk_training_dataset()
     rvk_hierarchy = get_rvk_subject_store()
+
+    # do pruning
+    dataset.subjects = prune_subject_targets_to_minimum_samples(MIN_SAMPLES, dataset.subjects, rvk_hierarchy)
+    dataset = remove_subjects_with_insufficient_samples(dataset, MIN_SAMPLES)
 
     # calculate subject list on whole dataset
     subject_order = unique_subject_order(dataset.subjects)
@@ -48,7 +56,7 @@ if __name__ == "__main__":
     logger.info("save subject hierarchy as skos turtle file")
     rvk_skos_graph = subject_hierarchy_to_skos_graph(
         subject_hierarchy=rvk_hierarchy,
-        language=LANGUAGE,
+        language=SKOS_LANGUAGE_CODE,
         mandatory_subject_list=subject_order
     )
     with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.ttl"), "wb") as f:

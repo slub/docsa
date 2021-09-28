@@ -9,6 +9,7 @@ from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.simple import generate_random_dataset
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
+from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.experiments.default import do_default_score_matrix_evaluation, write_default_plots
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,9 @@ if __name__ == "__main__":
     subject_hierarchy = None
     dataset_name = "hierarchical"
     n_token = 1000
-    n_docs = 5000
+    n_docs = 1000
     n_subjects = 20
+    min_samples = 20
     model_name_subset = [
         "oracle", "random", "knn k=1",
         # "knn k=3", "mlp", "rforest",
@@ -40,12 +42,13 @@ if __name__ == "__main__":
         dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_dbpedia(
             "english", n_token, n_docs, n_subjects
         )
+        dataset.subjects = prune_subject_targets_to_minimum_samples(min_samples, dataset.subjects, subject_hierarchy)
 
     if dataset is None:
         raise RuntimeError("dataset can not be none, check parameters")
 
-    # remove subjects with less than 10 samples
-    dataset = remove_subjects_with_insufficient_samples(dataset, 10)
+    # remove subjects with less than min samples
+    dataset = remove_subjects_with_insufficient_samples(dataset, min_samples)
 
     logger.info("subject hierarchy is %s", subject_hierarchy)
 
