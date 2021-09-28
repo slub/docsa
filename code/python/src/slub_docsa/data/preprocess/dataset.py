@@ -2,23 +2,12 @@
 
 import logging
 
-from typing import Mapping, Set
+from typing import Set
 
 from slub_docsa.common.dataset import Dataset
-from slub_docsa.common.subject import SubjectTargets
+from slub_docsa.data.preprocess.subject import count_number_of_samples_by_subjects
 
 logger = logging.getLogger(__name__)
-
-
-def count_number_of_samples_by_subjects(subject_targets: SubjectTargets) -> Mapping[str, int]:
-    """Count the number of occurances of subjects annotations."""
-    counts = {}
-
-    for subject_list in subject_targets:
-        for subject_uri in subject_list:
-            counts[subject_uri] = counts.get(subject_uri, 0) + 1
-
-    return counts
 
 
 def remove_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dataset:
