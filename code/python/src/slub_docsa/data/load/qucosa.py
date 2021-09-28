@@ -122,8 +122,13 @@ def read_qucosa_abstracts_rvk_training_dataset() -> Dataset:
             logger.debug("qucosa document with too short title '%s': %s", doc_title, doc_uri)
             return None
 
-        if doc_abstract is None or len(doc_abstract) < 20:
+        if doc_abstract is None:
+            logger.debug("qucosa document with no abstract: %s", doc_uri)
+            return None
+
+        if len(doc_abstract) < 20:
             logger.debug("qucosa document with too short abstract '%s': %s", doc_abstract, doc_uri)
+            return None
 
         return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
 
