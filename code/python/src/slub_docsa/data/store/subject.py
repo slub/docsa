@@ -3,7 +3,7 @@
 import dbm
 import pickle  # nosec
 
-from typing import Generic
+from typing import Generic, cast
 
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
 from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
@@ -44,7 +44,7 @@ class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[Su
         if self.store is None:
             raise RuntimeError("dbm store already closed")
         for uri in self.store.keys():
-            yield uri
+            yield cast(bytes, uri).decode()
 
     def __len__(self) -> int:
         """Return number of subject nodes in dbm database."""
