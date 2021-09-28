@@ -33,6 +33,11 @@ from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matri
 
 logger = logging.getLogger(__name__)
 
+LANGUAGE_CODES_MAP = {
+    "german": "de",
+    "english": "en",
+}
+
 
 class _CustomAnnifVocabulary:
     """A custom Annif vocabulary, which does not support exposing subjects as an RDFlib graph yet."""
@@ -163,9 +168,10 @@ class AnnifModel(Model):
 
     def _init_subject_skos_graph(self):
         if self.subject_hierarchy is not None and self.subject_order is not None:
+
             self.subject_skos_graph = subject_hierarchy_to_skos_graph(
                 subject_hierarchy=self.subject_hierarchy,
-                language=self.language,
+                language=LANGUAGE_CODES_MAP[self.language],
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
@@ -252,7 +258,7 @@ class AnnifModel(Model):
             backend_id=self.model_type,
             config_params={
                 "limit": len(annif_subject_list),
-                "language": self.language,
+                "language": LANGUAGE_CODES_MAP[self.language],
             },
             project=self.project
         )
@@ -260,7 +266,7 @@ class AnnifModel(Model):
         logger.debug("annif: call train on model with %d documents", len(document_corpus.documents))
         if self.model_type != "yake":
             self.model.train(document_corpus, params={
-                "language": self.language,
+                "language": LANGUAGE_CODES_MAP[self.language],
                 "concept_type_uri": SKOS.Concept,
                 "thesaurus_relation_type_uri": SKOS.broader,
                 "thesaurus_relation_is_specialisation": False,
