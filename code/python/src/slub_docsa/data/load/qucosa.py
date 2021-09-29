@@ -50,13 +50,21 @@ def get_document_title_from_qucosa_metadata(doc: QucosaDocument) -> str:
     return doc["title"]["text"]
 
 
-def get_document_abstract_from_qucosa_metadata(doc: QucosaDocument) -> Optional[str]:
+def get_document_abstract_from_qucosa_metadata(doc: QucosaDocument, lang_code: str) -> Optional[str]:
     """Return the document abstract from a qucosa metadata object."""
     for fulltext in doc["fulltext"]:
-        if fulltext["type"] == "abstract" and "text" in fulltext:
-            if isinstance(fulltext["text"], list):
-                return fulltext["text"][0]
-            return fulltext["text"]
+        if fulltext["type"] == "abstract" and "text" in fulltext and "language" in fulltext:
+            language_entry = fulltext["language"]
+            text_entry = fulltext["text"]
+
+            # if there are multiple abstracts, find the abstract matching the current language
+            if isinstance(language_entry, list) and isinstance(text_entry, list) and lang_code in language_entry:
+                language_match_idx = language_entry.index(lang_code)
+                return text_entry[language_match_idx]
+
+            # if there is only one abstract, check that it is the correct language
+            if isinstance(language_entry, str) and isinstance(text_entry, str) and language_entry == lang_code:
+                return text_entry
     return None
 
 
@@ -116,7 +124,7 @@ def read_qucosa_abstracts_rvk_training_dataset() -> Dataset:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + get_document_id_from_qucosa_metadate(doc)
         doc_title = get_document_title_from_qucosa_metadata(doc)
-        doc_abstract = get_document_abstract_from_qucosa_metadata(doc)
+        doc_abstract = get_document_abstract_from_qucosa_metadata(doc, "ger")
 
         if len(doc_title) < 10:
             logger.debug("qucosa document with too short title '%s': %s", doc_title, doc_uri)
