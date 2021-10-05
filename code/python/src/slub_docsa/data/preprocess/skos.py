@@ -1,7 +1,7 @@
 """Convert between subject hierarchy and skos using rdflib."""
 
 import logging
-from typing import Any, Callable, List, Optional, Sequence
+from typing import Any, Callable, List, Mapping, Optional, Sequence
 
 import rdflib
 from rdflib.namespace import SKOS, RDF
@@ -11,6 +11,22 @@ from slub_docsa.data.load.rvk import generate_rvk_custom_skos_triples
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
 logger = logging.getLogger(__name__)
+
+
+def subject_labels_to_skos_graph(
+    subject_labels: Mapping[str, str],
+    language: str,
+):
+    """Convert subject labels without hierarchical relationships to an rdflib SKOS graph."""
+    graph = rdflib.Graph()
+    graph.namespace_manager.bind('skos', SKOS)
+
+    for uri, label in subject_labels.items():
+        subject_uri_ref = rdflib.URIRef(uri)
+        graph.add((subject_uri_ref, RDF.type, SKOS.Concept))
+        graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, language)))
+
+    return graph
 
 
 def subject_hierarchy_to_skos_graph(

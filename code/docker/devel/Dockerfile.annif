@@ -1,4 +1,4 @@
-FROM quay.io/natlibfi/annif:0.53.2
+FROM quay.io/natlibfi/annif:0.54.1
 
 ARG UID=1000
 ARG GID=1000

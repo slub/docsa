@@ -263,14 +263,29 @@ class AnnifModel(Model):
             project=self.project
         )
 
-        logger.debug("annif: call train on model with %d documents", len(document_corpus.documents))
-        if self.model_type != "yake":
-            self.model.train(document_corpus, params={
-                "language": LANGUAGE_CODES_MAP[self.language],
+        params: Mapping[str, Any] = {
+            "language": LANGUAGE_CODES_MAP[self.language],
+        }
+
+        if self.model_type == "fasttext":
+            params.update({
+                "dim": 100,
+                "lr": 0.25,
+                "epoch": 5,
+                "loss": "hs",
+                "chunksize": 24
+            })
+
+        if self.model_type == "stwfsa":
+            params.update({
                 "concept_type_uri": SKOS.Concept,
                 "thesaurus_relation_type_uri": SKOS.broader,
                 "thesaurus_relation_is_specialisation": False,
             })
+
+        if self.model_type != "yake":
+            logger.debug("annif: call train on model with %d documents", len(document_corpus.documents))
+            self.model.train(document_corpus, params=params)
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:

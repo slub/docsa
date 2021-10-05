@@ -1,6 +1,6 @@
 """Load and save data as TSV files."""
 
-from typing import Iterable
+from typing import Mapping
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
@@ -22,10 +22,10 @@ def save_dataset_as_annif_tsv(
 
 
 def save_subject_targets_as_annif_tsv(
-    subject_target_list: Iterable[str],
+    subject_labels: Mapping[str, str],
     subject_tsv_filepath: str,
 ):
     """Write subject targets to Annif tsv file."""
     with open(subject_tsv_filepath, "w", encoding="utf8") as f_tsv:
-        for sub in subject_target_list:
-            f_tsv.write(f"<{sub}>\t{sub}\n")
+        for uri, label in subject_labels.items():
+            f_tsv.write(f"<{uri}>\t{label}\n")

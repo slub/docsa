@@ -13,7 +13,7 @@ from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_datas
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
-from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
+from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
@@ -43,15 +43,21 @@ if __name__ == "__main__":
 
     # calculate subject list on whole dataset
     subject_order = unique_subject_order(dataset.subjects)
+    rvk_labels = {uri: rvk_hierarchy[uri].label for uri in subject_order}
 
     # create experiment directory
     os.makedirs(os.path.join(ANNIF_DIR, "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")
     save_subject_targets_as_annif_tsv(
-        subject_order,
+        rvk_labels,
         os.path.join(ANNIF_DIR, "comparison_experiment/subjects.tsv"),
     )
+
+    logger.info("save flat subject labels as skos turtle file")
+    rvk_flat_graph = subject_labels_to_skos_graph(rvk_labels, SKOS_LANGUAGE_CODE)
+    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.flat.ttl"), "wb") as f:
+        f.write(cast(bytes, rvk_flat_graph.serialize(format="turtle")))
 
     logger.info("save subject hierarchy as skos turtle file")
     rvk_skos_graph = subject_hierarchy_to_skos_graph(
@@ -59,7 +65,7 @@ if __name__ == "__main__":
         language=SKOS_LANGUAGE_CODE,
         mandatory_subject_list=subject_order
     )
-    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.ttl"), "wb") as f:
+    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.hierarchical.ttl"), "wb") as f:
         f.write(cast(bytes, rvk_skos_graph.serialize(format="turtle")))
 
     # split data to fixed train and test set
@@ -150,7 +156,10 @@ if __name__ == "__main__":
     print("Documents evaluated:\t\t", len(test_dataset.documents))
     print("")
     print("Run the following commands for comparison:")
+    print("rm -rf data/projects/qucosa-de")
+    print("rm -rf data/vocabs/rvk-de")
     print("annif loadvoc qucosa-de data/comparison_experiment/subjects.tsv")
-    print("annif loadvoc qucosa-de data/comparison_experiment/subjects.ttl")
+    print("annif loadvoc qucosa-de data/comparison_experiment/subjects.flat.ttl")
+    print("annif loadvoc qucosa-de data/comparison_experiment/subjects.hierarchical.ttl")
     print("annif train qucosa-de data/comparison_experiment/training_data.tsv")
     print("annif eval --limit 5 qucosa-de data/comparison_experiment/test_data.tsv")
