@@ -69,6 +69,9 @@ Main Strategies
 - Automated comparison with a gold standard (split in training and test data)
 - Indirectly via task-based performance
 
+Hierarchical Score Functions
+- H-Loss, assumes strong subtree annotation, see [Cesa-Bianchi et al.](https://www.jmlr.org/papers/volume7/cesa-bianchi06a/cesa-bianchi06a.pdf) (2006)
+- Shortest Path, see [Cai et al.](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.408.5940&rep=rep1&type=pdf)
 # Existing Solutions
 
 Open Source Projects

@@ -3,6 +3,8 @@
 import itertools
 from typing import Mapping, Set
 
+import pytest
+
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_token_probabilities
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia
@@ -11,6 +13,7 @@ from slub_docsa.evaluation.incidence import unique_subject_order
 
 
 def _check_dataset_documents_do_not_share_tokens(dataset):
+    """Verify that documents of different subjects do not share a single token."""
     unique_subjects_list = unique_subject_order(dataset.subjects)
     tokens_by_subject: Mapping[str, Set[str]] = {}
     for s_uri in unique_subjects_list:
@@ -22,7 +25,7 @@ def _check_dataset_documents_do_not_share_tokens(dataset):
 
 
 def test_generate_easy_random_dataset_from_token_probabilities():
-
+    """Test easy random dataset and verify that documents do not share any tokens."""
     n_subjects = 3
     n_docs = 5
 
@@ -46,12 +49,15 @@ def test_generate_easy_random_dataset_from_token_probabilities():
 
 
 def test_generate_easy_random_dataset():
+    """Test easy random dataset and verify that documents do not share any tokens."""
     _check_dataset_documents_do_not_share_tokens(
         generate_easy_random_dataset(100, 50, 10)
     )
 
 
+@pytest.mark.skip(reason="requires large download of dbpedia")
 def test_generate_easy_random_dataset_from_dbpedia():
+    """Test easy random dataset and verify that documents do not share any tokens."""
     _check_dataset_documents_do_not_share_tokens(
         generate_easy_random_dataset_from_dbpedia("english", 100, 10)
     )

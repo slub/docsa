@@ -1,12 +1,13 @@
 """Methods to work with incidence matrices."""
 
 import logging
-from typing import Sequence
+from typing import List, Sequence
 
 import numpy as np
 from slub_docsa.common.score import IncidenceDecisionFunctionType
 
-from slub_docsa.common.subject import SubjectTargets, SubjectUriList
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectTargets, SubjectUriList
+from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
 logger = logging.getLogger(__name__)
 
@@ -173,3 +174,23 @@ def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionTy
         return incidence
 
     return _decision
+
+
+def extend_incidence_list_to_ancestors(
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_order: Sequence[str],
+    incidence_list: Sequence[int],
+) -> Sequence[int]:
+    """Return extended incidence list that marks all ancestors subjects."""
+    extended_incidence: List[int] = list(incidence_list)
+    for i, value in enumerate(incidence_list):
+        if value == 1:
+            # iterate over ancestors and set extended incidence to 1
+            subject_uri = subject_order[i]
+            subject_node = subject_hierarchy[subject_uri]
+            ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
+            for ancestor in ancestors:
+                if ancestor.uri in subject_order:
+                    ancestor_id = subject_order.index(ancestor.uri)
+                    extended_incidence[ancestor_id] = 1
+    return extended_incidence

@@ -175,7 +175,7 @@ class AnnifModel(Model):
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
-            logger.error("Annif model %s requires that subject hierarchy is provided", self.model_type)
+            raise ValueError("annif model '%s' requires that subject hierarchy is provided" % self.model_type)
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
         """Train an Annif model with a sequence of documents and a subject incidence matrix.
