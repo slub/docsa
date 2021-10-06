@@ -7,7 +7,7 @@ import os
 
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
-from slub_docsa.data.artificial.simple import generate_random_dataset
+from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia, generate_random_dataset
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.experiments.default import do_default_score_matrix_evaluation, write_default_plots
@@ -21,13 +21,21 @@ if __name__ == "__main__":
     subject_hierarchy = None
     dataset_name = "hierarchical"
     n_token = 1000
-    n_docs = 1000
+    n_docs = 5000
     n_subjects = 20
     min_samples = 20
     model_name_subset = [
-        "oracle", "random", "knn k=1",
-        # "knn k=3", "mlp", "rforest",
+        "oracle",
+        "nihilistic",
+        "random",
+        "knn k=1",
+        # "knn k=3",
+        # "mlp",
+        # "rforest",
         # "annif tfidf",
+        # "annif omikuji",
+        # "annif vw_multi",
+        # "annif fasttext",
         # "annif mllm",
         # "annif yake",
         # "annif stwfsa"
@@ -38,6 +46,8 @@ if __name__ == "__main__":
     # setup dataset
     if dataset_name == "random":
         dataset = generate_random_dataset(n_token, n_docs, n_subjects)
+    if dataset_name == "easy":
+        dataset = generate_easy_random_dataset_from_dbpedia("english", n_docs, n_subjects)
     if dataset_name == "hierarchical":
         dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_dbpedia(
             "english", n_token, n_docs, n_subjects

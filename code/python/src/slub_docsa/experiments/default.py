@@ -31,9 +31,9 @@ from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_samples_plot
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
 from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
-from slub_docsa.evaluation.score import scikit_incidence_metric
+from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
+from slub_docsa.models.dummy import NihilisticModel, OracleModel
 from slub_docsa.models.natlibfi_annif import AnnifModel
-from slub_docsa.models.oracle import OracleModel
 from slub_docsa.models.scikit import ScikitTfidfClassifier, ScikitTfidiRandomClassifier
 from slub_docsa.common.model import Model
 from slub_docsa.common.dataset import Dataset
@@ -78,6 +78,7 @@ def default_named_models(
     """Return a list of default models to use for evaluating model performance."""
     models = [
         ("random", lambda: ScikitTfidiRandomClassifier()),
+        ("nihilistic", lambda: NihilisticModel()),
         ("stratified", lambda: ScikitTfidfClassifier(predictor=DummyClassifier(strategy="stratified"))),
         ("oracle", lambda: OracleModel()),
         ("knn k=1", lambda: ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=1))),
@@ -117,18 +118,20 @@ def default_named_models(
 
 
 def default_named_multiclass_scores(
+    subject_order: Sequence[str] = None,
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
     score_name_subset: Iterable[str] = None
 ) -> DefaultScoreLists:
     """Return a list of default score functions for evaluation."""
     scores = [
-        ("t=0.5 accuracy", [0, 1], scikit_incidence_metric(
-            threshold_incidence_decision(0.5),
-            accuracy_score
-        )),
-        ("top3 accuracy", [0, 1], scikit_incidence_metric(
-            positive_top_k_incidence_decision(3),
-            accuracy_score
-        )),
+        # ("t=0.5 accuracy", [0, 1], scikit_incidence_metric(
+        #     threshold_incidence_decision(0.5),
+        #     accuracy_score
+        # )),
+        # ("top3 accuracy", [0, 1], scikit_incidence_metric(
+        #     positive_top_k_incidence_decision(3),
+        #     accuracy_score
+        # )),
         ("t=0.5 f1_score micro", [0, 1], scikit_incidence_metric(
             threshold_incidence_decision(0.5),
             f1_score,
@@ -165,9 +168,17 @@ def default_named_multiclass_scores(
             average="micro",
             zero_division=0
         )),
+        ("t=0.5 h_loss", [0, 1], scikit_incidence_metric(
+            threshold_incidence_decision(0.5),
+            cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
+        )),
+        ("top3 h_loss", [0, 1], scikit_incidence_metric(
+            positive_top_k_incidence_decision(3),
+            cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
+        )),
         ("roc auc micro", [0, 1], lambda t, p: roc_auc_score(t, p, average="micro")),
         ("log loss", [0, None], log_loss),
-        ("mean squared error", [0, None], mean_squared_error)
+        # ("mean squared error", [0, None], mean_squared_error)
     ]
 
     if score_name_subset is not None:
@@ -240,7 +251,11 @@ def do_default_score_matrix_evaluation(
         subject_order=subject_order,
         subject_hierarchy=subject_hierarchy
     )
-    overall_score_lists = default_named_multiclass_scores(overall_score_name_subset)
+    overall_score_lists = default_named_multiclass_scores(
+        subject_order,
+        subject_hierarchy,
+        overall_score_name_subset
+    )
     per_class_score_lists = default_named_binary_scores(per_class_score_name_subset)
 
     # do evaluate

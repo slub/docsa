@@ -20,16 +20,25 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     prune_level = None  # 34 subjects at 1, 325 subjects at 2, in total 4857 subjects
-    min_samples = 10
+    min_samples = 100
     model_subset = [
-        "random", "oracle", "knn k=1",
-        # "rforest", "mlp",
-        # "annif tfidf", "annif svc", "annif fasttext", "annif omikuji", "annif vw_multi",
-        "annif mllm",
-        # "annif yake", "annif stwfsa"
+        # "random",
+        "oracle",
+        "nihilistic",
+        "knn k=1",
+        # "rforest",
+        # "mlp",
+        "annif tfidf",
+        # "annif svc",
+        # "annif omikuji",
+        # "annif vw_multi",
+        # "annif mllm",
+        # "annif fasttext"
+        # "annif yake",
+        # "annif stwfsa"
     ]
     dataset_name = "titles"  # abstracts, titles
-    filename_suffix = f"{dataset_name}_prune_level={prune_level}_mim_samples={min_samples}"
+    filename_suffix = f"{dataset_name}_prune_level={prune_level}_min_samples={min_samples}"
 
     # setup dataset
     rvk_hierarchy = get_rvk_subject_store()
