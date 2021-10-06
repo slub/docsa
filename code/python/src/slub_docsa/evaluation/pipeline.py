@@ -13,7 +13,7 @@ from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScor
 from slub_docsa.evaluation.condition import check_subjects_have_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import cross_validation_split
-from slub_docsa.models.oracle import OracleModel
+from slub_docsa.models.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
 

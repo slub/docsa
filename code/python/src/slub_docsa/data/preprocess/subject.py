@@ -27,6 +27,20 @@ def subject_ancestors_list(
     return ancestors
 
 
+def subject_siblings_list(
+    subject_node: SubjectNodeType,
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+) -> List[SubjectNodeType]:
+    """Return the list of siblings for a subject node in a subject hierarchy."""
+    siblings: List[SubjectNodeType] = []
+
+    for siblings_node in subject_hierarchy.values():
+        if siblings_node.parent_uri == subject_node.parent_uri:
+            siblings.append(siblings_node)
+
+    return siblings
+
+
 def subject_label_breadcrumb(
     subject: SubjectNodeType,
     subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
