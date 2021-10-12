@@ -1,5 +1,7 @@
 """Defines various scores that can be used to judge the performance of models."""
 
+# pylint: disable=too-many-locals
+
 import logging
 import math
 from typing import Any, Callable, Optional, Sequence, Tuple, cast
@@ -62,6 +64,7 @@ def cesa_bianchi_h_loss(
         return np.nan
 
     if subject_hierarchy is None or subject_order is None:
+        # always return nan if there is no subject hierarchy provided
         return _nan_results
 
     children_map = children_map_from_subject_hierarchy(subject_hierarchy)

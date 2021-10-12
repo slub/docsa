@@ -8,7 +8,7 @@ import plotly.express as px
 from slub_docsa.common.subject import SubjectHierarchyType
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
-from slub_docsa.data.load.qucosa import get_rvk_notations_from_qucosa_metadata, read_qucosa_metadata
+from slub_docsa.data.load.qucosa import _get_rvk_notations_from_qucosa_metadata, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store, rvk_notation_to_uri
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ def qucosa_number_of_documents_by_rvk_subjects(
     """Count the number of Qucosa documents for each RVK subject."""
     logger.debug("count rvk subject occurances in Qucosa")
     qucosa_rvk_subjects: Mapping[str, float] = {}
-    for doc in read_qucosa_metadata():
-        notations = get_rvk_notations_from_qucosa_metadata(doc)
+    for doc in read_qucosa_documents_from_directory():
+        notations = _get_rvk_notations_from_qucosa_metadata(doc)
         for notation in notations:
             subject_uri = rvk_notation_to_uri(notation)
             fraction = 1.0 / len(notations)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     rvk_store = get_rvk_subject_store()
     rvk_subjects = qucosa_number_of_documents_by_rvk_subjects(rvk_store)
-    qucosa_doc_count = sum(1 for x in read_qucosa_metadata())
+    qucosa_doc_count = sum(1 for x in read_qucosa_documents_from_directory())
 
     count_no_value = rvk_subjects["uri://no_value"]
     count_not_found = rvk_subjects["uri://not_found"]

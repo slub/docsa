@@ -1,4 +1,4 @@
-"""Persitent storage for subject hierarchies."""
+"""Persistent storage for subject hierarchies."""
 
 import dbm
 import pickle  # nosec

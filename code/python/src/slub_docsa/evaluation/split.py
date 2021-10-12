@@ -21,7 +21,7 @@ class IndexedSequence(Sequence[SequenceType]):
         self.idx = idx
 
     def __contains__(self, x: object) -> bool:
-        """Return true of indexed sequence contains object."""
+        """Return true if indexed sequence contains object."""
         for i in self.idx:
             if self.sequence[i] == x:
                 return True
