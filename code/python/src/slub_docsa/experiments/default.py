@@ -217,7 +217,7 @@ def default_named_binary_scores(
             zero_division=0
         )),
         ("mean squared error", [0, None], mean_squared_error),
-        ("# training samples", [0, None], lambda t, _: len(np.where(t > 0)[0]))
+        ("# test samples", [0, None], lambda t, _: len(np.where(t > 0)[0]))
     ]
 
     if score_name_subset is not None:
@@ -368,12 +368,12 @@ def write_per_subject_precision_recall_vs_samples_plot(
     """Generate the per subject precision vs samples plot from evaluation results and write it as html file."""
     score_names = evaluation_result.per_class_score_lists.names
     if "t=0.5 precision" not in score_names or "t=0.5 recall" not in score_names \
-            or "# training samples" not in score_names:
-        raise ValueError("score matrix needs to contain t=0.5 precision, recall and # training examples scores")
+            or "# test samples" not in score_names:
+        raise ValueError("score matrix needs to contain t=0.5 precision, recall and # test examples scores")
 
     precision_idx = score_names.index("t=0.5 precision")
     recall_idx = score_names.index("t=0.5 recall")
-    samples_idx = score_names.index("# training samples")
+    samples_idx = score_names.index("# test samples")
 
     per_subject_precision_recall_vs_samples_plot(
         evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],

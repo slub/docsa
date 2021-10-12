@@ -84,13 +84,13 @@ def per_subject_precision_recall_vs_samples_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
 ) -> Any:
-    """Return plot showing precision vs number of training examples per subject."""
+    """Return plot showing precision vs number of test examples per subject."""
     n_models, _, _, _ = score_matrix.shape
 
     fig = cast(Any, make_subplots(
         rows=1,
         cols=2,
-        subplot_titles=["precision vs. training samples", "recall vs. training samples"],
+        subplot_titles=["precision vs. # test samples", "recall vs. # test samples"],
     ))
 
     for i in range(n_models):
@@ -109,9 +109,9 @@ def per_subject_precision_recall_vs_samples_plot(
             )
 
     fig.update_layout(
-        xaxis1_title="training examples",
+        xaxis1_title="# test examples",
         yaxis1_title="t=0.5 precision",
-        xaxis2_title="training examples",
+        xaxis2_title="# test examples",
         yaxis2_title="t=0.5 recall",
         yaxis1_range=[0, 1],
         yaxis2_range=[0, 1],
