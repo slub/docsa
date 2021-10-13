@@ -12,5 +12,6 @@
     "python.linting.banditArgs": ["--configfile code/python/bandit.yml"],
     "python.linting.enabled": true,
     "files.trimTrailingWhitespace": true,
-    "editor.rulers": [120]
+    "editor.rulers": [120],
+    "terminal.integrated.scrollback": 10000,
 }
