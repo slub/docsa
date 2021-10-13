@@ -7,47 +7,56 @@ import os
 
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_dataset
+from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory, read_qucosa_fulltext_rvk_training_dataset
 from slub_docsa.data.load.qucosa import read_qucosa_titles_rvk_training_dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
-from slub_docsa.experiments.default import do_default_score_matrix_evaluation, write_default_plots
+from slub_docsa.experiments.default import do_default_score_matrix_evaluation, get_split_function_by_name
+from slub_docsa.experiments.default import write_default_plots
 from slub_docsa.evaluation.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("slub_docsa.data.load.qucosa").setLevel(logging.INFO)
 
+    dataset_name = "titles"  # abstracts, titles, fulltexts
+    split_function_name = "stratified"  # either: random, stratified
     prune_level = None  # 34 subjects at 1, 325 subjects at 2, in total 4857 subjects
-    min_samples = 100
+    n_splits = 10
+    min_samples = 10
     model_subset = [
-        # "random",
+        # ### "random", ####
         "oracle",
         "nihilistic",
         "knn k=1",
         # "rforest",
         # "mlp",
         "annif tfidf",
-        # "annif svc",
-        # "annif omikuji",
+        "annif svc",
+        "annif omikuji",
         # "annif vw_multi",
         # "annif mllm",
         # "annif fasttext"
         # "annif yake",
-        # "annif stwfsa"
+        # ### "annif stwfsa" ###
     ]
-    dataset_name = "titles"  # abstracts, titles
-    filename_suffix = f"{dataset_name}_prune_level={prune_level}_min_samples={min_samples}"
+    filename_suffix = f"{dataset_name}_split={split_function_name}_prune_level={prune_level}_min_samples={min_samples}"
 
     # setup dataset
+    logger.info("loading rvk subjects")
     rvk_hierarchy = get_rvk_subject_store()
 
+    logger.info("loading qucosa dataset")
     dataset = None
     if dataset_name == "titles":
-        dataset = read_qucosa_titles_rvk_training_dataset()
+        dataset = read_qucosa_titles_rvk_training_dataset(read_qucosa_documents_from_directory())
     elif dataset_name == "abstracts":
-        dataset = read_qucosa_abstracts_rvk_training_dataset()
+        dataset = read_qucosa_abstracts_rvk_training_dataset(read_qucosa_documents_from_directory())
+    elif dataset_name == "fulltexts":
+        dataset = read_qucosa_fulltext_rvk_training_dataset(read_qucosa_documents_from_directory(), "ger")
 
     if dataset is None:
         raise RuntimeError("dataset can not be none, check parameters")
@@ -71,6 +80,7 @@ if __name__ == "__main__":
 
     evaluation_result = do_default_score_matrix_evaluation(
         dataset=dataset,
+        split_function=get_split_function_by_name(split_function_name, n_splits),
         language="german",
         subject_hierarchy=rvk_hierarchy,
         model_name_subset=model_subset

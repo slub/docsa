@@ -32,6 +32,8 @@ from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_sampl
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
 from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
 from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
+from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
+from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
 from slub_docsa.models.dummy import NihilisticModel, OracleModel
 from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.scikit import ScikitTfidfClassifier, ScikitTfidiRandomClassifier
@@ -231,14 +233,24 @@ def default_named_binary_scores(
     return DefaultScoreLists(score_names, score_ranges, score_functions)
 
 
+def get_split_function_by_name(name: str, n_splits: int) -> DatasetSplitFunction:
+    """Return split function that matches simplified name."""
+    # set up split function
+    if name == "random":
+        return scikit_kfold_splitter(n_splits)
+    if name == "stratified":
+        return skmultilearn_iterative_stratification_splitter(n_splits)
+    raise RuntimeError("split function name not correct")
+
+
 def do_default_score_matrix_evaluation(
     dataset: Dataset,
+    split_function: DatasetSplitFunction,
     language: str,
     subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
     model_name_subset: Iterable[str] = None,
     overall_score_name_subset: Iterable[str] = None,
     per_class_score_name_subset: Iterable[str] = None,
-    random_state: float = None,
 ) -> DefaultEvaluationResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     # define subject ordering
@@ -264,9 +276,9 @@ def do_default_score_matrix_evaluation(
         dataset=dataset,
         subject_order=subject_order,
         models=model_lists.classes,
+        split_function=split_function,
         overall_score_functions=overall_score_lists.functions,
         per_class_score_functions=per_class_score_lists.functions,
-        random_state=random_state,
     )
 
     return DefaultEvaluationResult(

@@ -151,6 +151,7 @@ Requirements
 Requirements
 
 - requires subjects as rdflib graph, supports skos:"broader"
+- requires subject labels that match terms in documents
 
 ### Annif ensemble
 

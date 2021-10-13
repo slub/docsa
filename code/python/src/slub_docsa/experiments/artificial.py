@@ -10,29 +10,32 @@ from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia, generate_random_dataset
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
-from slub_docsa.experiments.default import do_default_score_matrix_evaluation, write_default_plots
+from slub_docsa.experiments.default import do_default_score_matrix_evaluation, get_split_function_by_name
+from slub_docsa.experiments.default import write_default_plots
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     dataset = None
     subject_hierarchy = None
-    dataset_name = "hierarchical"
+    dataset_name = "hierarchical"  # either: random, easy, hierarchical
+    split_function_name = "random"  # either: random, stratified
     n_token = 1000
-    n_docs = 5000
-    n_subjects = 20
-    min_samples = 20
+    n_docs = 10000
+    n_subjects = 100
+    n_splits = 10
+    min_samples = 10
     model_name_subset = [
         "oracle",
         "nihilistic",
-        "random",
+        # "random",
         "knn k=1",
         # "knn k=3",
         # "mlp",
         # "rforest",
-        # "annif tfidf",
+        "annif tfidf",
         # "annif omikuji",
         # "annif vw_multi",
         # "annif fasttext",
@@ -41,7 +44,7 @@ if __name__ == "__main__":
         # "annif stwfsa"
     ]
 
-    filename_suffix = f"{dataset_name}_token={n_token}_docs={n_docs}_subj={n_subjects}"
+    filename_suffix = f"{dataset_name}_split={split_function_name}_token={n_token}_docs={n_docs}_subj={n_subjects}"
 
     # setup dataset
     if dataset_name == "random":
@@ -60,13 +63,12 @@ if __name__ == "__main__":
     # remove subjects with less than min samples
     dataset = remove_subjects_with_insufficient_samples(dataset, min_samples)
 
-    logger.info("subject hierarchy is %s", subject_hierarchy)
-
     if dataset is None:
         raise ValueError("dataset can not be none")
 
     evaluation_result = do_default_score_matrix_evaluation(
         dataset=dataset,
+        split_function=get_split_function_by_name(split_function_name, n_splits),
         language="english",
         subject_hierarchy=subject_hierarchy,
         model_name_subset=model_name_subset

@@ -1,13 +1,21 @@
 """Methods for splitting data into training and test sets."""
 
-from typing import Sequence, Iterator, TypeVar, Iterable, Tuple
+import logging
+
+from typing import Callable, Sequence, Iterator, TypeVar, Iterable, Tuple
 import numpy as np
 
 from sklearn.model_selection import KFold
+from sklearn.model_selection._split import _BaseKFold
+from skmultilearn.model_selection import IterativeStratification
 
 from slub_docsa.common.dataset import Dataset
+from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+
+logger = logging.getLogger(__name__)
 
 SequenceType = TypeVar("SequenceType")
+DatasetSplitFunction = Callable[[Dataset], Iterable[Tuple[Dataset, Dataset]]]
 
 
 class IndexedSequence(Sequence[SequenceType]):
@@ -41,29 +49,58 @@ class IndexedSequence(Sequence[SequenceType]):
         return self.sequence[self.idx[i]]
 
 
-def cross_validation_split(n_splits: int, dataset: Dataset, random_state=None) -> Iterable[Tuple[Dataset, Dataset]]:
-    """Split dataset into `n_splits` many training and test datasets."""
-    virtual_features = np.zeros((len(dataset.documents), 1))
-    virtual_targets = np.random.randint(n_splits, size=(len(dataset.documents), 1))
+def scikit_base_folder_splitter(
+    n_splits: int,
+    folder: _BaseKFold,
+    use_random_targets: bool = False,
+) -> DatasetSplitFunction:
+    """Apply a scikit `folder` (which implements BaseKFold) to a dataset."""
 
+    def split_function(dataset: Dataset) -> Iterable[Tuple[Dataset, Dataset]]:
+        # features should not have any effect on splitting, use artificial features
+        features = np.zeros((len(dataset.documents), 1))
+        # if targets are not provided, use random targets
+        if use_random_targets:
+            targets = np.random.randint(n_splits, size=(len(dataset.documents), 1))
+        else:
+            targets = subject_incidence_matrix_from_targets(dataset.subjects, unique_subject_order(dataset.subjects))
+
+        for train_idx_list, test_idx_list in folder.split(features, targets):
+
+            train_dataset = Dataset(
+                documents=IndexedSequence(dataset.documents, train_idx_list),
+                subjects=IndexedSequence(dataset.subjects, train_idx_list),
+            )
+
+            test_dataset = Dataset(
+                documents=IndexedSequence(dataset.documents, test_idx_list),
+                subjects=IndexedSequence(dataset.subjects, test_idx_list),
+            )
+
+            yield train_dataset, test_dataset
+
+    return split_function
+
+
+def scikit_kfold_splitter(
+    n_splits: int,
+    random_state: float = None,
+) -> DatasetSplitFunction:
+    """Split dataset randomly into `n_splits` many training and test datasets using scikit's KFold class."""
     folder = KFold(n_splits=n_splits, random_state=random_state, shuffle=True)
-
-    for train_idx_list, test_idx_list in folder.split(virtual_features, virtual_targets):
-
-        train_dataset = Dataset(
-            documents=IndexedSequence(dataset.documents, train_idx_list),
-            subjects=IndexedSequence(dataset.subjects, train_idx_list),
-        )
-
-        test_dataset = Dataset(
-            documents=IndexedSequence(dataset.documents, test_idx_list),
-            subjects=IndexedSequence(dataset.subjects, test_idx_list),
-        )
-
-        yield train_dataset, test_dataset
+    return scikit_base_folder_splitter(n_splits, folder, use_random_targets=True)
 
 
-def train_test_split(ratio: float, dataset: Dataset, random_state=None) -> Tuple[Dataset, Dataset]:
+def skmultilearn_iterative_stratification_splitter(
+    n_splits: int,
+    random_state: float = None,
+) -> DatasetSplitFunction:
+    """Split dataset random into `n_splits` using skmultilearn's IterativeStratification class."""
+    folder = IterativeStratification(n_splits=n_splits, order=1, random_state=random_state)
+    return scikit_base_folder_splitter(n_splits, folder, use_random_targets=False)
+
+
+def scikit_kfold_train_test_split(ratio: float, dataset: Dataset, random_state=None) -> Tuple[Dataset, Dataset]:
     """Return a single training and test split with a rough ratio of samples."""
     n_splits = round(1 / (1 - ratio))
-    return next(iter(cross_validation_split(n_splits, dataset, random_state=random_state)))
+    return next(iter(scikit_kfold_splitter(n_splits, random_state=random_state)(dataset)))

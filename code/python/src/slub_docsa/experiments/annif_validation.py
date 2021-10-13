@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import ANNIF_DIR
-from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_dataset
+from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_dataset, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
@@ -18,7 +18,7 @@ from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
-from slub_docsa.evaluation.split import train_test_split
+from slub_docsa.evaluation.split import scikit_kfold_train_test_split
 from slub_docsa.models.natlibfi_annif import AnnifModel
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     SKOS_LANGUAGE_CODE = "de"
 
     # load data
-    dataset = read_qucosa_abstracts_rvk_training_dataset()
+    dataset = read_qucosa_abstracts_rvk_training_dataset(read_qucosa_documents_from_directory())
     rvk_hierarchy = get_rvk_subject_store()
 
     # do pruning
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         f.write(cast(bytes, rvk_skos_graph.serialize(format="turtle")))
 
     # split data to fixed train and test set
-    training_dataset, test_dataset = train_test_split(0.8, dataset, random_state=5)
+    training_dataset, test_dataset = scikit_kfold_train_test_split(0.8, dataset, random_state=5)
 
     test_subject_order = unique_subject_order(test_dataset.subjects)
     logger.info(

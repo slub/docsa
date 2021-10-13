@@ -10,9 +10,10 @@ import numpy as np
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.model import Model
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
-from slub_docsa.evaluation.condition import check_subjects_have_minimum_samples
+from slub_docsa.evaluation.condition import check_dataset_subject_distribution
+from slub_docsa.evaluation.condition import check_dataset_subjects_have_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
-from slub_docsa.evaluation.split import cross_validation_split
+from slub_docsa.evaluation.split import DatasetSplitFunction
 from slub_docsa.models.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
@@ -23,13 +24,14 @@ def score_models_for_dataset(
     dataset: Dataset,
     subject_order: Sequence[str],
     models: Collection[Model],
+    split_function: DatasetSplitFunction,
     overall_score_functions: Collection[MultiClassScoreFunctionType],
     per_class_score_functions: Collection[BinaryClassScoreFunctionType],
-    random_state=0,
 ):
     """Evaluate a dataset for a number of models and score functions."""
     # check minimum requirements for cross-validation
-    check_subjects_have_minimum_samples(dataset, n_splits)
+    if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
+        raise ValueError("dataset contains subjects with insufficient number of samples")
 
     overall_score_matrix = np.empty((len(models), len(overall_score_functions), n_splits))
     overall_score_matrix[:, :, :] = np.NaN
@@ -37,9 +39,10 @@ def score_models_for_dataset(
     per_class_score_matrix = np.empty((len(models), len(per_class_score_functions), n_splits, len(subject_order)))
     per_class_score_matrix[:, :, :, :] = np.NaN
 
-    for i, split in enumerate(cross_validation_split(n_splits, dataset, random_state=random_state)):
+    for i, split in enumerate(split_function(dataset)):
         logger.info("prepare %d-th cross validation split", i + 1)
         train_dataset, test_dataset = split
+        check_dataset_subject_distribution(train_dataset, test_dataset, (0.5 / n_splits, 2.0 / n_splits))
         train_incidence_matrix = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
         test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
         logger.info(
@@ -48,10 +51,6 @@ def score_models_for_dataset(
             len(train_dataset.subjects),
             len(test_dataset.subjects)
         )
-
-        for s_i, s_name in enumerate(subject_order):
-            if len(np.where(test_incidence_matrix[:, s_i] > 0)[0]) == 0:
-                logger.warning("no test case for subject %s in %d-th split", s_name, i+1)
 
         for j, model in enumerate(models):
             logger.info("evaluate model %s for %d-th split", str(model), i + 1)
@@ -70,7 +69,7 @@ def score_models_for_dataset(
                 overall_score_matrix[j, k, i] = score_function(test_incidence_matrix, predicted_subject_probabilities)
 
             logger.info("do per-subject scoring")
-            for s_i, s_name in enumerate(subject_order):
+            for s_i in range(len(subject_order)):
                 per_class_test_incidence_matrix = test_incidence_matrix[:, [s_i]]
                 per_class_predicted_subject_probabilities = \
                     predicted_subject_probabilities[:, [s_i]]

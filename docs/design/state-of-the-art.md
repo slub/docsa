@@ -72,6 +72,10 @@ Main Strategies
 Hierarchical Score Functions
 - H-Loss, assumes strong subtree annotation, see [Cesa-Bianchi et al.](https://www.jmlr.org/papers/volume7/cesa-bianchi06a/cesa-bianchi06a.pdf) (2006)
 - Shortest Path, see [Cai et al.](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.408.5940&rep=rep1&type=pdf)
+
+Problems
+- Balanced multi-label stratification, see [Sechidis et al.](https://link.springer.com/content/pdf/10.1007/978-3-642-23808-6_10.pdf)
+
 # Existing Solutions
 
 Open Source Projects
