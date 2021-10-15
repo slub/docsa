@@ -3,6 +3,7 @@
 Contents
 - [Scientific Publications](#scientific-publications)
   - Preprocessing & Feature Extraction
+  - Multi-Label Text Classification
   - Hierarchical Classification
   - Bibliographic Classification
   - Evaluation Strategies
@@ -22,6 +23,20 @@ General Preprocessing Methods:
 - Vectorization
 
 ### Metadaten Feature Extraction
+
+
+## Multi-label Text Classification
+
+Approaches
+- Classic methods
+  - Instance-based methods (k-nearest neighbor search)
+  - Tf-IdF vectorization + classification model (Support Vector Machines, Random Forests, etc.)
+- ...
+- Artificial Neural Networks
+  - Convolutional Networks, see [Mullenbach et al.](https://aclanthology.org/N18-1100.pdf) (2018) and [Liu et al.](https://dl.acm.org/doi/pdf/10.1145/3077136.3080834) (2017)
+  - BiGRU (Bi-directional Gated Recurrent) + Attention Networks, see [Chalkidis et al.](https://aclanthology.org/P19-1636.pdf) (2019) and [Xu et. al](http://proceedings.mlr.press/v37/xuc15.pdf) (2015)
+  - BERT (Bi-directional Encoder Representations from Transformers), see [Chalkidis et al.](https://aclanthology.org/P19-1636.pdf) (2019), [code](https://github.com/iliaschalkidis/lmtc-eurlex57k)
+  - Overview Paper by [Minaee et al.](https://arxiv.org/pdf/2004.03705.pdf) (2021)
 
 ## Hierarchical Classification
 
@@ -46,6 +61,9 @@ Related Overview Publications
 ### Approach: Models that understand hierarchical classes
 
 - L. Cai and T. Hofmann. "[Hierarchical Document Categorization with Support Vector Machines](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.408.5940&rep=rep1&type=pdf)" (2004)
+
+- W. Huang, et al. "[Hierarchical Multi-label Text Classification: An Attention-based
+Recurrent Network Approach](https://bigdata.ustc.edu.cn/paper_pdf/2019/Wei-Huang-CIKM.pdf)" (2019)
 
 - J. Risch, S. Garda, R. Krestel. "[Hierarchical Document Classification as a Sequence Generation Task](https://hpi.de/fileadmin/user_upload/fachgebiete/naumann/people/risch/risch2020hierarchical.pdf)" (2020)
 
@@ -85,7 +103,6 @@ Tool for automated subject indexing and classification
 Closed-Source Projects
 - [JRC EuroVoc Indexer (JEX)](https://ec.europa.eu/jrc/en/language-technologies/jrc-eurovoc-indexer) for classifying [EUR-Lex](https://eur-lex.europa.eu/homepage.html?locale=de) documents according to the [EuroVoc](https://eur-lex.europa.eu/browse/eurovoc.html?locale=de) classes
 
-
 # Relevant Programming Libraries
 
 Bibliographic Classification
@@ -96,12 +113,18 @@ Preprocessing
 - [nltk](https://www.nltk.org/) - Natural Language Toolkit
 - [gensim](https://radimrehurek.com/gensim/) - Topic Modelling / Vectorization / Similarity Search
 
+Deep Learning
+- [ktrain](https://github.com/amaiya/ktrain)
+
 General Machine Learning
 - [scikit-learn](https://scikit-learn.org/) - Machine Learning in Python
 - [scikit-multilearn](http://scikit.ml/) - Multi-Label Classification in Python
 - [sklearn-hierarchical-classification](https://github.com/globality-corp/sklearn-hierarchical-classification) - Hierarchical classification algorithms
 
+Research Papers with Code:
+- [PapersWithCode](https://paperswithcode.com/dataset/glue)
+
 # To Be Read
 
-- [Large-Scale Multi-Label Text Classification on EU Legislation](https://arxiv.org/pdf/1906.02192v1.pdf) and [Extreme Multi-Label Legal Text Classification:
-A case study in EU Legislation](https://arxiv.org/pdf/1905.10892.pdf)
+- Deep neural network for hierarchical extreme multi-label text
+classification, [Gargiulo et al.](https://d1wqtxts1xzle7.cloudfront.net/63730011/Deep_neural_network_for_hierarchical_extreme_multi-with-cover-page-v2.pdf?Expires=1634292661&Signature=gjeQL8QOyP6C~4R1XMuJl98mWMYKNzxsZVo9YKOPJg8FNnUH3VGBNz9LYH6zLB5zae58itr-JcR6MYnOHThk4Rh3Tn2gMh1t0ZhSOwxJEdmbqcr6piV0OMZl5DXLoKb~Yra3lkT1VXKQCiwn~e9UXnDIX1qwSciA24HHXPxJ-uLCZMmio5zWdgh2dPlxr34mcxQouKvn-F0sqVtxz3i1i58bZbvnTjJWXhdhpRMCEyCCd4~BWOUqxXAkxcZjZnKeP1sUTptvu~vN1-SGOkgqnH61pv-302D4NLWCifd6l07cCeVRvo-Fv6C10OroL-ZWmypjImQzG6Kv1xU-KqZc9Q__&Key-Pair-Id=APKAJLOHF5GGSLRBV4ZA) (2019)
