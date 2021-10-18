@@ -12,7 +12,7 @@ from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_training_dataset, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
-from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
+from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # do pruning
     dataset.subjects = prune_subject_targets_to_minimum_samples(MIN_SAMPLES, dataset.subjects, rvk_hierarchy)
-    dataset = remove_subjects_with_insufficient_samples(dataset, MIN_SAMPLES)
+    dataset = filter_subjects_with_insufficient_samples(dataset, MIN_SAMPLES)
 
     # calculate subject list on whole dataset
     subject_order = unique_subject_order(dataset.subjects)

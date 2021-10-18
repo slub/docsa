@@ -2,15 +2,33 @@
 
 import logging
 
-from typing import Set
+from typing import Set, Callable
 
-from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.document import Document
+from slub_docsa.common.subject import SubjectUriList
+from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.data.preprocess.subject import count_number_of_samples_by_subjects
 
 logger = logging.getLogger(__name__)
 
 
-def remove_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dataset:
+def filter_samples_from_dataset_by_condition(
+    dataset: Dataset,
+    condition: Callable[[Document, SubjectUriList], bool]
+) -> Dataset:
+    """Return a new dataset that contains only samples matching a condition."""
+    new_documents = []
+    new_targets = []
+
+    for i, _ in enumerate(dataset.documents):
+        if condition(dataset.documents[i], dataset.subjects[i]):
+            new_documents.append(dataset.documents[i])
+            new_targets.append(dataset.subjects[i])
+
+    return SimpleDataset(documents=new_documents, subjects=new_targets)
+
+
+def filter_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dataset:
     """Remove subjects from dataset.
 
     Samples are only removed if all subject annotations will be removed, such that it can not be considered as a
@@ -29,10 +47,10 @@ def remove_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dat
             document_uri = dataset.documents[i].uri
             logger.debug("document %s is removed since it has no subject annotations left", document_uri)
 
-    return Dataset(documents=new_documents, subjects=new_targets)
+    return SimpleDataset(documents=new_documents, subjects=new_targets)
 
 
-def remove_subjects_with_insufficient_samples(dataset: Dataset, minimum_samples: int = 1) -> Dataset:
+def filter_subjects_with_insufficient_samples(dataset: Dataset, minimum_samples: int = 1) -> Dataset:
     """Remove subjects from a dataset that do not meet the minimum required number of samples.
 
     Samples are only removed if all subject annotations will be removed, such that it can not be considered as a
@@ -50,5 +68,5 @@ def remove_subjects_with_insufficient_samples(dataset: Dataset, minimum_samples:
             len(subject_set_to_be_removed),
             minimum_samples
         )
-        return remove_subjects_from_dataset(dataset, subject_set_to_be_removed)
+        return filter_subjects_from_dataset(dataset, subject_set_to_be_removed)
     return dataset

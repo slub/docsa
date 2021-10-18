@@ -8,7 +8,7 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
-from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.dataset import SimpleDataset
 from slub_docsa.common.document import Document
 from slub_docsa.data.artificial.tokens import TokenProbabilities, generate_random_token_probabilties
 from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
@@ -67,7 +67,7 @@ def generate_random_dataset_from_token_probabilities(
 
         subject_targets.append(random_subjects)
 
-    return Dataset(documents=documents, subjects=subject_targets)
+    return SimpleDataset(documents=documents, subjects=subject_targets)
 
 
 def generate_easy_random_dataset_from_token_probabilities(
@@ -132,7 +132,7 @@ def generate_easy_random_dataset_from_token_probabilities(
         documents.append(Document(uri=doc_uri, title=doc_title))
         subject_targets.append([subject_list[subject_id]])
 
-    return Dataset(documents=documents, subjects=subject_targets)
+    return SimpleDataset(documents=documents, subjects=subject_targets)
 
 
 def generate_random_dataset(n_tokens: int, n_docs: int, n_subjects: int):
@@ -187,7 +187,7 @@ def get_static_mini_dataset():
         ["uri://subject1", "uri://subject4"],
     ]
 
-    return Dataset(
+    return SimpleDataset(
         documents=documents,
         subjects=subjects
     )

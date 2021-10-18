@@ -14,14 +14,20 @@ from elasticsearch import Elasticsearch
 from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.dataset import Dataset, dataset_from_samples
+from slub_docsa.common.sample import SampleIterator
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
+from slub_docsa.data.store.dataset import DatasetDbmStore
 
 logger = logging.getLogger(__name__)
 
 QUCOSA_FULLTEXT_MAPPING_DIR = os.path.join(RESOURCES_DIR, "qucosa/fulltext_mapping/")
 QUCOSA_SIMPLE_TRAINING_DATA_TSV = os.path.join(CACHE_DIR, "qucosa/simple_training_data.tsv")
+
+QUCOSA_TITLES_DATASET_CACHE = os.path.join(CACHE_DIR, "qucosa/titles_dataset.dbm")
+QUCOSA_ABSTRACTS_DATASET_CACHE = os.path.join(CACHE_DIR, "qucosa/abstracts_dataset.dbm")
+QUCOSA_FULLTEXTS_DATASET_CACHE = os.path.join(CACHE_DIR, "qucosa/fulltexts_dataset.dbm")
 
 SLUB_ELASTICSEARCH_SERVER_URL = "es.data.slub-dresden.de"
 SLUB_ELASTICSEARCH_SERVER_USER = os.environ.get("SLUB_ELASTICSEARCH_SERVER_USER", None)
@@ -31,6 +37,11 @@ ClassificationElementType = Mapping[str, Any]
 ClassifcationType = List[ClassificationElementType]
 
 QucosaDocument = Mapping[str, Any]
+
+QUCOSA_LANGUAGE_CODE = {
+    "de": "ger",
+    "en": "eng",
+}
 
 
 def read_qucosa_metadata_from_elasticsearch(
@@ -195,20 +206,29 @@ def _get_document_title_from_qucosa_metadata(doc: QucosaDocument) -> str:
     return doc["title"]["text"]
 
 
-def _get_document_abstract_from_qucosa_metadata(doc: QucosaDocument, lang_code: str) -> Optional[str]:
+def _get_document_abstract_from_qucosa_metadata(doc: QucosaDocument, lang_code: Optional[str] = None) -> Optional[str]:
     """Return the document abstract from a qucosa json document."""
     for fulltext in doc["fulltext"]:
         if fulltext["type"] == "abstract" and "text" in fulltext and "language" in fulltext:
             language_entry = fulltext["language"]
             text_entry = fulltext["text"]
 
+            # if language does not matter
+            if lang_code is None:
+                if isinstance(text_entry, list):
+                    return text_entry[0]
+                return text_entry
+
+            # convert lang code to qucosa lang code
+            qucosa_lang_code = QUCOSA_LANGUAGE_CODE[lang_code]
+
             # if there are multiple abstracts, find the abstract matching the current language
-            if isinstance(language_entry, list) and isinstance(text_entry, list) and lang_code in language_entry:
-                language_match_idx = language_entry.index(lang_code)
+            if isinstance(language_entry, list) and isinstance(text_entry, list) and qucosa_lang_code in language_entry:
+                language_match_idx = language_entry.index(qucosa_lang_code)
                 return text_entry[language_match_idx]
 
             # if there is only one abstract, check that it is the correct language
-            if isinstance(language_entry, str) and isinstance(text_entry, str) and language_entry == lang_code:
+            if isinstance(language_entry, str) and isinstance(text_entry, str) and language_entry == qucosa_lang_code:
                 return text_entry
     return None
 
@@ -224,7 +244,7 @@ def _extract_text_from_qucosa_document_fulltext_xml(fulltext_xml: str) -> Option
     return None
 
 
-def _get_document_fulltext_from_qucosa_metadata(doc: QucosaDocument, lang_code: str) -> Optional[str]:
+def _get_document_fulltext_from_qucosa_metadata(doc: QucosaDocument, lang_code: Optional[str]) -> Optional[str]:
     """Return the fulltext raw text from a qucosa json document."""
     for fulltext in doc["fulltext"]:
         if fulltext["type"] == "fulltext" and "text" in fulltext and "language" in fulltext:
@@ -247,8 +267,15 @@ def _get_document_fulltext_from_qucosa_metadata(doc: QucosaDocument, lang_code: 
 
             extraction_source = None
 
+            # language doesnt matter
+            if lang_code is None:
+                if isinstance(text_entry, list):
+                    extraction_source = text_entry[0]
+                else:
+                    extraction_source = text_entry
+
             # check that language and text entries are of the same type (either both string or both list)
-            if not isinstance(language_entry, type(text_entry)):
+            if lang_code is not None and not isinstance(language_entry, type(text_entry)):
                 logger.debug(
                     "qucosa document '%s' incorrect format for language entry %s with %s and text entry %s",
                     _get_document_id_from_qucosa_metadate(doc),
@@ -259,9 +286,10 @@ def _get_document_fulltext_from_qucosa_metadata(doc: QucosaDocument, lang_code: 
                 continue
 
             # if there are multiple fulltexts, find the one matching the requested language
-            if isinstance(language_entry, list) and isinstance(text_entry, list):
-                if lang_code in language_entry:
-                    language_match_idx = language_entry.index(lang_code)
+            if lang_code is not None and isinstance(language_entry, list) and isinstance(text_entry, list):
+                qucosa_lang_code = QUCOSA_LANGUAGE_CODE[lang_code]
+                if qucosa_lang_code in language_entry:
+                    language_match_idx = language_entry.index(qucosa_lang_code)
                     extraction_source = text_entry[language_match_idx]
 
                     if extraction_source is None or len(extraction_source) < 3:
@@ -273,8 +301,9 @@ def _get_document_fulltext_from_qucosa_metadata(doc: QucosaDocument, lang_code: 
                         continue
 
             # if there is only one fulltext, check that it is the correct language
-            if isinstance(language_entry, str) and isinstance(text_entry, str):
-                if language_entry == lang_code:
+            if lang_code is not None and isinstance(language_entry, str) and isinstance(text_entry, str):
+                qucosa_lang_code = QUCOSA_LANGUAGE_CODE[lang_code]
+                if language_entry == qucosa_lang_code:
                     extraction_source = text_entry
 
                     if extraction_source is None or len(extraction_source) < 3:
@@ -315,13 +344,11 @@ def _get_document_id_from_qucosa_metadate(doc: QucosaDocument) -> str:
 def _read_qucosa_generic_rvk_training_dataset(
     qucosa_iterator: Iterable[QucosaDocument],
     create_document_from_qucosa: Callable[[QucosaDocument], Optional[Document]]
-) -> Dataset:
+) -> SampleIterator:
     """Read qucosa data and extract documents and RVK subjects."""
     logger.debug("load rvk classes and index them by notation")
     rvk_subject_store = get_rvk_subject_store()
 
-    documents = []
-    subjects = []
     logger.debug("read qucosa meta data json")
     for doc in qucosa_iterator:
         notations = _get_rvk_notations_from_qucosa_metadata(doc)
@@ -336,14 +363,22 @@ def _read_qucosa_generic_rvk_training_dataset(
         if document is None:
             continue
 
-        documents.append(document)
-        subjects.append(subject_uris_filtered)
+        yield document, subject_uris_filtered
 
-    return Dataset(documents=documents, subjects=subjects)
+
+def _qucosa_dataset_from_samples(samples, store_path: str = None) -> Dataset:
+    if store_path is not None:
+        if not os.path.exists(store_path):
+            store = DatasetDbmStore(store_path, populate_mode=True)
+            store.populate(samples)
+            store.close()
+        return DatasetDbmStore(store_path)
+    return dataset_from_samples(samples)
 
 
 def read_qucosa_titles_rvk_training_dataset(
     qucosa_iterator: Iterable[QucosaDocument],
+    store_path: Optional[str] = QUCOSA_TITLES_DATASET_CACHE,
 ) -> Dataset:
     """Read qucosa documents and use document titles as training data."""
     def make_title_only_doc(doc: QucosaDocument) -> Optional[Document]:
@@ -357,18 +392,23 @@ def read_qucosa_titles_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title)
 
-    return _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_only_doc)
+    return _qucosa_dataset_from_samples(
+        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_only_doc),
+        store_path,
+    )
 
 
 def read_qucosa_abstracts_rvk_training_dataset(
     qucosa_iterator: Iterable[QucosaDocument],
+    lang_code: Optional[str] = "de",
+    store_path: Optional[str] = QUCOSA_ABSTRACTS_DATASET_CACHE,
 ) -> Dataset:
     """Read qucosa documents and use document titles and abstracts as training data."""
     def make_title_and_abstract_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
         doc_title = _get_document_title_from_qucosa_metadata(doc)
-        doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, "ger")
+        doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, lang_code)
 
         if doc_title is None or len(doc_title) < 1:
             logger.debug("qucosa document with no title: %s", doc_uri)
@@ -384,19 +424,23 @@ def read_qucosa_abstracts_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
 
-    return _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_abstract_doc)
+    return _qucosa_dataset_from_samples(
+        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_abstract_doc),
+        store_path
+    )
 
 
 def read_qucosa_fulltext_rvk_training_dataset(
     qucosa_iterator: Iterable[QucosaDocument],
-    language: str,
+    lang_code: Optional[str] = "de",
+    store_path: Optional[str] = QUCOSA_FULLTEXTS_DATASET_CACHE,
 ) -> Dataset:
     """Read qucosa documents and use document titles and fulltext as training data."""
     def make_title_and_fulltext_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
         doc_title = _get_document_title_from_qucosa_metadata(doc)
-        doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, language)
+        doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, lang_code)
 
         if doc_title is None or len(doc_title) < 1:
             logger.debug("qucosa document with no title: %s", doc_uri)
@@ -408,7 +452,10 @@ def read_qucosa_fulltext_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
 
-    return _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_fulltext_doc)
+    return _qucosa_dataset_from_samples(
+        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_fulltext_doc),
+        store_path
+    )
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(

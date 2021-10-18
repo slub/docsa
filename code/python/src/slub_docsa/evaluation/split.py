@@ -9,7 +9,7 @@ from sklearn.model_selection import KFold
 from sklearn.model_selection._split import _BaseKFold
 from skmultilearn.model_selection import IterativeStratification
 
-from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.dataset import SimpleDataset, Dataset
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
 logger = logging.getLogger(__name__)
@@ -67,12 +67,12 @@ def scikit_base_folder_splitter(
 
         for train_idx_list, test_idx_list in folder.split(features, targets):
 
-            train_dataset = Dataset(
+            train_dataset = SimpleDataset(
                 documents=IndexedSequence(dataset.documents, train_idx_list),
                 subjects=IndexedSequence(dataset.subjects, train_idx_list),
             )
 
-            test_dataset = Dataset(
+            test_dataset = SimpleDataset(
                 documents=IndexedSequence(dataset.documents, test_idx_list),
                 subjects=IndexedSequence(dataset.subjects, test_idx_list),
             )

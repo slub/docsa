@@ -8,7 +8,7 @@ import math
 from typing import List, Mapping, Optional, Tuple
 import numpy as np
 
-from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, print_subject_hierarchy
 from slub_docsa.data.artificial.simple import generate_random_text
@@ -109,7 +109,7 @@ def generate_hierarchical_random_dataset_from_token_probabilities(
         documents.append(Document(uri=document_uri, title=document))
         subject_targets.append(chosen_subjects)
 
-    return Dataset(documents=documents, subjects=subject_targets), subject_hierarchy
+    return SimpleDataset(documents=documents, subjects=subject_targets), subject_hierarchy
 
 
 def generate_hierarchical_random_dataset(

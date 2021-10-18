@@ -8,7 +8,7 @@ import os
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia, generate_random_dataset
-from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
+from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.experiments.common import do_default_score_matrix_evaluation, get_split_function_by_name
 from slub_docsa.experiments.common import write_default_plots
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         raise RuntimeError("dataset can not be none, check parameters")
 
     # remove subjects with less than min samples
-    dataset = remove_subjects_with_insufficient_samples(dataset, min_samples)
+    dataset = filter_subjects_with_insufficient_samples(dataset, min_samples)
 
     if dataset is None:
         raise ValueError("dataset can not be none")
