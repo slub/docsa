@@ -12,8 +12,8 @@ from slub_docsa.data.load.qucosa import read_qucosa_titles_rvk_training_dataset
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.preprocess.dataset import remove_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
-from slub_docsa.experiments.default import do_default_score_matrix_evaluation, get_split_function_by_name
-from slub_docsa.experiments.default import write_default_plots
+from slub_docsa.experiments.common import do_default_score_matrix_evaluation, get_split_function_by_name
+from slub_docsa.experiments.common import write_default_plots
 from slub_docsa.evaluation.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
