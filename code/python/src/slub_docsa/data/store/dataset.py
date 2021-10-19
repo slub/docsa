@@ -22,7 +22,7 @@ class _DatasetDbmStoreSequence(Sequence):
             raise ValueError("can not access data in populate mode")
         if self.closed:
             raise ValueError("can not access data of closed store")
-        return pickle.loads(self.store[str(key)])[self.idx]
+        return pickle.loads(self.store[str(key)])[self.idx]  # nosec
 
     def __len__(self):
         if self.populate_mode:
