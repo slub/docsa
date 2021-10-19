@@ -298,22 +298,22 @@ def write_default_plots(
     """Write all default plots to a file."""
     write_precision_recall_plot(
         evaluation_result,
-        os.path.join(plot_directory, f"precision_recall_plot_{filename_suffix}.html"),
+        os.path.join(plot_directory, f"precision_recall_plot_{filename_suffix}"),
     )
 
     write_per_subject_precision_recall_vs_samples_plot(
         evaluation_result,
-        os.path.join(plot_directory, f"per_subject_precision_recall_vs_samples_plot_{filename_suffix}.html"),
+        os.path.join(plot_directory, f"per_subject_precision_recall_vs_samples_plot_{filename_suffix}"),
     )
 
     write_score_matrix_box_plot(
         evaluation_result,
-        os.path.join(plot_directory, f"score_plot_{filename_suffix}.html"),
+        os.path.join(plot_directory, f"score_plot_{filename_suffix}"),
     )
 
     write_per_subject_score_histograms_plot(
         evaluation_result,
-        os.path.join(plot_directory, f"per_subject_score_{filename_suffix}.html"),
+        os.path.join(plot_directory, f"per_subject_score_{filename_suffix}"),
     )
 
 
@@ -323,16 +323,29 @@ def write_score_matrix_box_plot(
 ):
     """Generate the score matrix box plot from evaluation results and write it as html file."""
     # generate figure
-    score_matrix_box_plot(
+    figure = score_matrix_box_plot(
         evaluation_result.overall_score_matrix,
         evaluation_result.model_lists.names,
         evaluation_result.overall_score_lists.names,
         evaluation_result.overall_score_lists.ranges,
         columns=2
-    ).write_html(
-        plot_filepath,
+    )
+    figure.write_html(
+        f"{plot_filepath}.html",
         include_plotlyjs="cdn",
         # default_height=f"{len(score_names) * 500}px"
+    )
+    figure.write_image(
+        f"{plot_filepath}.jpg",
+    )
+    figure.write_image(
+        f"{plot_filepath}.png",
+    )
+    figure.write_image(
+        f"{plot_filepath}.svg",
+    )
+    figure.write_image(
+        f"{plot_filepath}.pdf",
     )
 
 
@@ -352,7 +365,7 @@ def write_precision_recall_plot(
         evaluation_result.overall_score_matrix[:, [precision_idx, recall_idx], :],
         evaluation_result.model_lists.names,
     ).write_html(
-        plot_filepath,
+        f"{plot_filepath}.html",
         include_plotlyjs="cdn",
     )
 
@@ -368,7 +381,7 @@ def write_per_subject_score_histograms_plot(
         evaluation_result.per_class_score_lists.names,
         evaluation_result.per_class_score_lists.ranges,
     ).write_html(
-        plot_filepath,
+        f"{plot_filepath}.html",
         include_plotlyjs="cdn",
     )
 
@@ -391,6 +404,6 @@ def write_per_subject_precision_recall_vs_samples_plot(
         evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],
         evaluation_result.model_lists.names,
     ).write_html(
-        plot_filepath,
+        f"{plot_filepath}.html",
         include_plotlyjs="cdn",
     )
