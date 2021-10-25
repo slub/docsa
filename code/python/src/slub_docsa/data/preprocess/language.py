@@ -4,10 +4,10 @@ import logging
 
 import langid
 
-from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
+from slub_docsa.common.sample import SampleIterator
 from slub_docsa.common.subject import SubjectUriList
-from slub_docsa.data.preprocess.dataset import filter_samples_from_dataset_by_condition
+from slub_docsa.data.preprocess.dataset import filter_samples_by_condition
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,10 @@ def detect_language_from_text_via_langid(text: str) -> str:
     return langid.classify(text)[0]
 
 
-def filter_dataset_by_detected_fulltext_language_via_langid(dataset: Dataset, lang_code: str) -> Dataset:
+def filter_samples_by_detected_fulltext_language_via_langid(
+    samples_iterator: SampleIterator,
+    lang_code: str
+) -> SampleIterator:
     """Return dataset filtered for samples whose fulltext language detected by langid matches the expected language."""
     def condition(document: Document, _: SubjectUriList) -> bool:
         if document.fulltext is not None:
@@ -32,4 +35,4 @@ def filter_dataset_by_detected_fulltext_language_via_langid(dataset: Dataset, la
             return True
         return False
 
-    return filter_samples_from_dataset_by_condition(dataset, condition)
+    return filter_samples_by_condition(samples_iterator, condition)

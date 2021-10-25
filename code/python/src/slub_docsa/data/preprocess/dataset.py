@@ -5,6 +5,7 @@ import logging
 from typing import Set, Callable
 
 from slub_docsa.common.document import Document
+from slub_docsa.common.sample import SampleIterator
 from slub_docsa.common.subject import SubjectUriList
 from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.data.preprocess.subject import count_number_of_samples_by_subjects
@@ -12,20 +13,14 @@ from slub_docsa.data.preprocess.subject import count_number_of_samples_by_subjec
 logger = logging.getLogger(__name__)
 
 
-def filter_samples_from_dataset_by_condition(
-    dataset: Dataset,
+def filter_samples_by_condition(
+    samples_iterator: SampleIterator,
     condition: Callable[[Document, SubjectUriList], bool]
-) -> Dataset:
+) -> SampleIterator:
     """Return a new dataset that contains only samples matching a condition."""
-    new_documents = []
-    new_targets = []
-
-    for i, _ in enumerate(dataset.documents):
-        if condition(dataset.documents[i], dataset.subjects[i]):
-            new_documents.append(dataset.documents[i])
-            new_targets.append(dataset.subjects[i])
-
-    return SimpleDataset(documents=new_documents, subjects=new_targets)
+    for document, subjects in samples_iterator:
+        if condition(document, subjects):
+            yield document, subjects
 
 
 def filter_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dataset:

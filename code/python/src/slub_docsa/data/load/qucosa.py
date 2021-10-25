@@ -14,11 +14,9 @@ from elasticsearch import Elasticsearch
 from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.dataset import Dataset, dataset_from_samples
 from slub_docsa.common.sample import SampleIterator
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
-from slub_docsa.data.store.dataset import DatasetDbmStore
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +162,7 @@ def save_qucosa_documents_to_directory(
 
 def read_qucosa_documents_from_directory(
     directory: str = QUCOSA_FULLTEXT_MAPPING_DIR,
+    fallback_retrieve_from_elasticsearch: bool = True,
 ) -> Iterable[QucosaDocument]:
     """Read qucosa documents from a directory of gzip compressed jsonl files.
 
@@ -177,6 +176,11 @@ def read_qucosa_documents_from_directory(
     Iterable[QucosaDocuments]
         The Qucosa documents that were read from the provided directory.
     """
+    if not os.path.exists(directory) and fallback_retrieve_from_elasticsearch:
+        logger.info("qucosa directory does not exist, try to read and save documents from SLUB elasticsearch")
+        qucosa_document_iterator = read_qucosa_metadata_from_elasticsearch()
+        save_qucosa_documents_to_directory(qucosa_document_iterator, directory)
+
     if not os.path.exists(directory):
         raise ValueError("directory '%s' does not exist" % directory)
 
@@ -341,7 +345,7 @@ def _get_document_id_from_qucosa_metadate(doc: QucosaDocument) -> str:
     return doc["id"]
 
 
-def _read_qucosa_generic_rvk_training_dataset(
+def _read_qucosa_generic_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument],
     create_document_from_qucosa: Callable[[QucosaDocument], Optional[Document]]
 ) -> SampleIterator:
@@ -366,21 +370,13 @@ def _read_qucosa_generic_rvk_training_dataset(
         yield document, subject_uris_filtered
 
 
-def _qucosa_dataset_from_samples(samples, store_path: str = None) -> Dataset:
-    if store_path is not None:
-        if not os.path.exists(store_path):
-            store = DatasetDbmStore(store_path, populate_mode=True)
-            store.populate(samples)
-            store.close()
-        return DatasetDbmStore(store_path)
-    return dataset_from_samples(samples)
-
-
-def read_qucosa_titles_rvk_training_dataset(
-    qucosa_iterator: Iterable[QucosaDocument],
-    store_path: Optional[str] = QUCOSA_TITLES_DATASET_CACHE,
-) -> Dataset:
+def read_qucosa_titles_rvk_samples(
+    qucosa_iterator: Iterable[QucosaDocument] = None,
+) -> SampleIterator:
     """Read qucosa documents and use document titles as training data."""
+    if qucosa_iterator is None:
+        qucosa_iterator = read_qucosa_documents_from_directory()
+
     def make_title_only_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
@@ -392,18 +388,17 @@ def read_qucosa_titles_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title)
 
-    return _qucosa_dataset_from_samples(
-        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_only_doc),
-        store_path,
-    )
+    return _read_qucosa_generic_rvk_samples(qucosa_iterator, make_title_only_doc)
 
 
-def read_qucosa_abstracts_rvk_training_dataset(
-    qucosa_iterator: Iterable[QucosaDocument],
+def read_qucosa_abstracts_rvk_samples(
+    qucosa_iterator: Iterable[QucosaDocument] = None,
     lang_code: Optional[str] = "de",
-    store_path: Optional[str] = QUCOSA_ABSTRACTS_DATASET_CACHE,
-) -> Dataset:
+) -> SampleIterator:
     """Read qucosa documents and use document titles and abstracts as training data."""
+    if qucosa_iterator is None:
+        qucosa_iterator = read_qucosa_documents_from_directory()
+
     def make_title_and_abstract_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
@@ -424,18 +419,17 @@ def read_qucosa_abstracts_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
 
-    return _qucosa_dataset_from_samples(
-        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_abstract_doc),
-        store_path
-    )
+    return _read_qucosa_generic_rvk_samples(qucosa_iterator, make_title_and_abstract_doc)
 
 
-def read_qucosa_fulltext_rvk_training_dataset(
-    qucosa_iterator: Iterable[QucosaDocument],
+def read_qucosa_fulltext_rvk_samples(
+    qucosa_iterator: Iterable[QucosaDocument] = None,
     lang_code: Optional[str] = "de",
-    store_path: Optional[str] = QUCOSA_FULLTEXTS_DATASET_CACHE,
-) -> Dataset:
+) -> SampleIterator:
     """Read qucosa documents and use document titles and fulltext as training data."""
+    if qucosa_iterator is None:
+        qucosa_iterator = read_qucosa_documents_from_directory()
+
     def make_title_and_fulltext_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
@@ -452,40 +446,22 @@ def read_qucosa_fulltext_rvk_training_dataset(
 
         return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
 
-    return _qucosa_dataset_from_samples(
-        _read_qucosa_generic_rvk_training_dataset(qucosa_iterator, make_title_and_fulltext_doc),
-        store_path
-    )
+    return _read_qucosa_generic_rvk_samples(qucosa_iterator, make_title_and_fulltext_doc)
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(
-    qucosa_iterator: Iterable[QucosaDocument],
+    qucosa_iterator: Iterable[QucosaDocument] = None,
 ):
     """Save qucosa simple RVK training data as annif tsv file."""
+    if qucosa_iterator is None:
+        qucosa_iterator = read_qucosa_documents_from_directory()
+
     # make sure directory exists
     os.makedirs(os.path.dirname(QUCOSA_SIMPLE_TRAINING_DATA_TSV), exist_ok=True)
 
     if not os.path.exists(QUCOSA_SIMPLE_TRAINING_DATA_TSV):
         with open(QUCOSA_SIMPLE_TRAINING_DATA_TSV, "w", encoding="utf8") as f_tsv:
-            dataset = read_qucosa_titles_rvk_training_dataset(qucosa_iterator)
-            for i, doc in enumerate(dataset.documents):
+            for doc, subjects in read_qucosa_titles_rvk_samples(qucosa_iterator):
                 text = doc.title
-                labels_list = dataset.subjects[i]
-                labels_str = " ".join(map(lambda l: f"<{l}>", labels_list))
-
+                labels_str = " ".join(map(lambda l: f"<{l}>", subjects))
                 f_tsv.write(f"{text}\t{labels_str}\n")
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-
-    # count = 0
-    # for qucosa_doc in :
-    #     qucosa_text = get_document_fulltext_from_qucosa_metadata(qucosa_doc, "ger")
-    #     if qucosa_text is not None:
-    #         count += 1
-
-    # print(count)
-
-    qucosa_dataset = read_qucosa_fulltext_rvk_training_dataset(read_qucosa_documents_from_directory(), "ger")
-    print(len(qucosa_dataset.documents))
