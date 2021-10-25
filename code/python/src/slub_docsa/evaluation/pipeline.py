@@ -3,11 +3,12 @@
 # pylint: disable=fixme, too-many-locals, too-many-arguments
 
 import logging
-from typing import Collection, Sequence
+from typing import Callable, Collection, Sequence
 
 import numpy as np
 
 from slub_docsa.common.dataset import Dataset
+from slub_docsa.common.document import Document
 from slub_docsa.common.model import Model
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.evaluation.condition import check_dataset_subject_distribution
@@ -18,6 +19,22 @@ from slub_docsa.models.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
 
+FitModelAndPredictCallable = Callable[[Model, Sequence[Document], np.ndarray, Sequence[Document]], np.ndarray]
+
+
+def fit_model_and_predict_test_documents(
+    model: Model,
+    train_documents: Sequence[Document],
+    train_incidence_matrix: np.ndarray,
+    test_documents: Sequence[Document],
+) -> np.ndarray:
+    """Call fit and predict_proba method of model in order to generated predictions."""
+    logger.info("do training")
+    model.fit(train_documents, train_incidence_matrix)
+
+    logger.info("do prediction")
+    return model.predict_proba(test_documents)
+
 
 def score_models_for_dataset(
     n_splits: int,
@@ -27,6 +44,7 @@ def score_models_for_dataset(
     split_function: DatasetSplitFunction,
     overall_score_functions: Collection[MultiClassScoreFunctionType],
     per_class_score_functions: Collection[BinaryClassScoreFunctionType],
+    fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
 ):
     """Evaluate a dataset for a number of models and score functions."""
     # check minimum requirements for cross-validation
@@ -55,14 +73,14 @@ def score_models_for_dataset(
         for j, model in enumerate(models):
             logger.info("evaluate model %s for %d-th split", str(model), i + 1)
 
-            logger.info("do training")
-            model.fit(train_dataset.documents, train_incidence_matrix)
-
-            logger.info("do prediction")
             if isinstance(model, OracleModel):
                 # provide predictions to oracle model
                 model.set_test_targets(test_incidence_matrix)
-            predicted_subject_probabilities = model.predict_proba(test_dataset.documents)
+
+            # do predictions
+            predicted_subject_probabilities = fit_model_and_predict(
+                model, train_dataset.documents, train_incidence_matrix, test_dataset.documents
+            )
 
             logger.info("do global scoring")
             for k, score_function in enumerate(overall_score_functions):
