@@ -4,7 +4,7 @@
 
 import logging
 
-from slub_docsa.data.load.qucosa import read_qucosa_fulltext_rvk_training_dataset, read_qucosa_documents_from_directory
+from slub_docsa.data.load.qucosa import read_qucosa_fulltext_rvk_samples
 from slub_docsa.data.preprocess.language import detect_language_from_text_via_langid
 
 logger = logging.getLogger(__name__)
@@ -14,12 +14,12 @@ if __name__ == "__main__":
 
     lang_code = "de"
 
-    dataset = read_qucosa_fulltext_rvk_training_dataset(
-        read_qucosa_documents_from_directory(), lang_code
-    )
+    sample_iterator = read_qucosa_fulltext_rvk_samples(lang_code=lang_code)
 
+    total = 0
     count = 0
-    for doc in dataset.documents:
+    for doc, _ in sample_iterator:
+        total += 1
         if doc.fulltext is not None:
             detected_lang_code = detect_language_from_text_via_langid(doc.fulltext)
             logger.debug("detected language code %s for doc %s", detected_lang_code, doc.uri)
@@ -27,4 +27,4 @@ if __name__ == "__main__":
                 count += 1
                 logger.info("qucosa document %s is detected with wrong language but %s", doc.uri, detected_lang_code)
 
-    logger.info("%d of in total %d documents are not detected as correct language", count, len(dataset.documents))
+    logger.info("%d of in total %d documents are not detected as correct language", count, total)

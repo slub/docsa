@@ -1,6 +1,6 @@
 """Generates plots for evaluation."""
 
-# pylint: disable=dangerous-default-value
+# pylint: disable=dangerous-default-value, too-many-arguments, too-many-locals
 
 import math
 from typing import cast, Any, List, Tuple
@@ -47,6 +47,70 @@ def score_matrix_box_plot(
         fig.update_layout(
             {"yaxis" + str(i+1): {"range": score_ranges[i]}}
         )
+
+    return fig
+
+
+def score_matrices_box_plot(
+    score_matrices: List[np.ndarray],
+    dataset_names: List[str],
+    model_names: List[str],
+    score_names: List[str],
+    score_ranges: List[Tuple[float, float]],
+    columns: int = 1
+) -> Any:
+    """Return box plot for multiple score matrix evaluated for different datasets."""
+    n_models, n_scores, n_splits = score_matrices[0].shape
+
+    fig = cast(Any, make_subplots(
+        rows=math.ceil(n_scores/columns),
+        cols=columns,
+        subplot_titles=score_names,
+        horizontal_spacing=0.1/columns,
+        vertical_spacing=0.1/columns
+    ))
+
+    for i in range(n_scores):
+        for k, dataset_name in enumerate(dataset_names):
+            x_values = np.repeat(model_names, n_splits)
+            y_values = np.hstack([score_matrices[k][j, i, :] for j in range(n_models)])
+            box = cast(Any, go.Box)(
+                name=dataset_name,
+                x=x_values,
+                y=y_values,
+                offsetgroup=dataset_name,
+                showlegend=i <= 0,
+                legendgroup=k,
+                marker_color=_get_marker_color(k),
+                line={"width": 3},
+            )
+            fig.add_trace(box, row=math.floor(i/columns)+1, col=(i % columns)+1)
+
+    fig.update_layout(
+        boxmode='group'
+    )
+
+    for i in range(n_scores):
+        # set y axis range for every plot
+        fig.update_layout({
+                "yaxis" + str(i+1): {
+                    "range": score_ranges[i],
+                    # "title": score_names[i],
+                    # "title_font": {
+                    #     "size": 12,
+                    # }
+                },
+            }
+        )
+        # hide x axis tick labels for all plots but the last row
+        if i < n_scores - columns:
+            fig.update_layout({
+                "xaxis" + str(i+1): {
+                    "showticklabels": False,
+                }
+            })
+        # set plot title font size
+        fig.layout.annotations[i].font.size = 12
 
     return fig
 

@@ -155,6 +155,10 @@ class AnnifModel(Model):
         self._init_data_dir()
         self._init_subject_skos_graph()
 
+    def __str__(self):
+        """Return string describing the Annif model and its parameters used for predictions."""
+        return f"<AnnifModel type='{self.model_type}' language='{self.language}'>"
+
     def _init_analyzer(self):
         download_nltk("punkt")
         self.analyzer = SnowballAnalyzer(self.language)

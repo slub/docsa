@@ -87,7 +87,7 @@ def scikit_kfold_splitter(
     random_state: float = None,
 ) -> DatasetSplitFunction:
     """Split dataset randomly into `n_splits` many training and test datasets using scikit's KFold class."""
-    folder = KFold(n_splits=n_splits, random_state=random_state, shuffle=True)
+    folder = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     return scikit_base_folder_splitter(n_splits, folder, use_random_targets=True)
 
 

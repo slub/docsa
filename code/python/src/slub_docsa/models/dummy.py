@@ -30,6 +30,10 @@ class OracleModel(Model):
             raise RuntimeError("test targets are missing")
         return self.test_targets
 
+    def __str__(self):
+        """Return string describing model."""
+        return "<OracleModel>"
+
 
 class NihilisticModel(Model):
     """Model that always predicts 0 probabilitiy."""
@@ -48,3 +52,7 @@ class NihilisticModel(Model):
         if self.n_subjects is None:
             raise ValueError("number of subjects not known, did you call fit?")
         return np.zeros((len(test_documents), self.n_subjects))
+
+    def __str__(self):
+        """Return string describing model."""
+        return "<NihilisticModel>"
