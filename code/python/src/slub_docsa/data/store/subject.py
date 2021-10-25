@@ -2,11 +2,15 @@
 
 import dbm
 import pickle  # nosec
+import logging
+import os
 
-from typing import Generic, cast
+from typing import Callable, Generic, Iterable, cast
 
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
 from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
+
+logger = logging.getLogger(__name__)
 
 
 class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
@@ -59,17 +63,34 @@ class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[Su
             self.store = None
 
 
+def load_persisted_subject_hierarchy_from_lazy_subject_generator(
+    lazy_subject_generator: Callable[[], Iterable[SubjectNodeType]],
+    filepath: str,
+) -> SubjectHierarchyType[SubjectNodeType]:
+    """Load a subject hierarchy if it was stored before, or otherwise store it using the provided subject generator."""
+    if not os.path.exists(filepath):
+        store = SubjectHierarchyDbmStore[SubjectNodeType](filepath, read_only=False)
+
+        for i, subject_node in enumerate(lazy_subject_generator()):
+            store[subject_node.uri] = subject_node
+            if i % 10000 == 0:
+                logger.debug("added %d subjects to store so far", i)
+
+        store.close()
+
+    return SubjectHierarchyDbmStore[SubjectNodeType](filepath, read_only=True)
+
+
 if __name__ == "__main__":
-    import os
     import tempfile
 
     with tempfile.TemporaryDirectory(suffix="_subject_store") as td:
-        store = SubjectHierarchyDbmStore[SubjectNode](os.path.join(td, "data"))
+        s = SubjectHierarchyDbmStore[SubjectNode](os.path.join(td, "data"))
 
         subject1 = SubjectNode("uri://subject1", "subject 1", None)
         subject2 = SubjectNode("uri://subject2", "subject 2", "uri://subject1")
 
-        store[subject1.uri] = subject1
-        store[subject2.uri] = subject2
+        s[subject1.uri] = subject1
+        s[subject2.uri] = subject2
 
-        print(subject_label_breadcrumb(store[subject2.uri], store))
+        print(subject_label_breadcrumb(s[subject2.uri], s))

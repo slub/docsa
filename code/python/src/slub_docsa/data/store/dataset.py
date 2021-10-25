@@ -1,11 +1,13 @@
 """Persistent storage of datasets for fast random access of samples."""
 
 import dbm.gnu as dbm
+import os
 import pickle  # nosec
-from typing import Iterable, Sequence, Tuple
+from typing import Callable, Iterable, Sequence, Tuple
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
+from slub_docsa.common.sample import SampleIterator
 from slub_docsa.common.subject import SubjectUriList
 
 
@@ -78,3 +80,15 @@ class DatasetDbmStore(Dataset):
             self.subjects.close()
             self.store.close()
             self.store = None
+
+
+def load_persisted_dataset_from_lazy_sample_iterator(
+    lazy_sample_iterator: Callable[[], SampleIterator],
+    filepath: str
+) -> Dataset:
+    """Return dataset from persistent dbm store, or use sample iterator to populate and return a new dbm store."""
+    if not os.path.exists(filepath):
+        store = DatasetDbmStore(filepath, populate_mode=True)
+        store.populate(lazy_sample_iterator())
+        store.close()
+    return DatasetDbmStore(filepath)
