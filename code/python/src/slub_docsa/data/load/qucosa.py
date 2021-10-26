@@ -203,11 +203,60 @@ def _get_rvk_notations_from_qucosa_metadata(doc: QucosaDocument) -> List[str]:
     return []
 
 
-def _get_document_title_from_qucosa_metadata(doc: QucosaDocument) -> str:
+def _get_document_title_from_qucosa_metadata(
+    doc: QucosaDocument,
+    lang_code: Optional[str] = "de",
+    title_attribute: str = "title",
+) -> Optional[str]:
     """Return the document title from a qucosa json document."""
-    if isinstance(doc["title"]["text"], list):
-        return doc["title"]["text"][0]
-    return doc["title"]["text"]
+    if title_attribute not in doc:
+        logger.debug("document does not have a %s attribute", title_attribute)
+        return None
+
+    if "text" not in doc[title_attribute]:
+        logger.debug("document does not have a %s text attribute", title_attribute)
+        return None
+
+    text_entry = doc[title_attribute]["text"]
+
+    if lang_code is not None:
+        # language filtering is required
+        if "language" not in doc[title_attribute]:
+            logger.debug("document has no %s language attribute", title_attribute)
+            return None
+
+        language_entry = doc[title_attribute]["language"]
+
+        if not isinstance(text_entry, type(language_entry)):
+            logger.debug("document %s text and language attribute have different type", title_attribute)
+            return None
+
+        if isinstance(language_entry, str):
+            if language_entry == QUCOSA_LANGUAGE_CODE[lang_code]:
+                return text_entry
+            logger.debug("found document title with wrong language code %s", language_entry)
+            return None
+
+        if isinstance(language_entry, list):
+
+            if not isinstance(text_entry, list):
+                logger.debug("document %s text attribute is not a list, but language attribute is", title_attribute)
+
+            if len(language_entry) != len(text_entry):
+                logger.debug("document %s list not of the same length as language list", title_attribute)
+
+            qucosa_lang_code = QUCOSA_LANGUAGE_CODE[lang_code]
+            if qucosa_lang_code in language_entry:
+                language_match_idx = language_entry.index(qucosa_lang_code)
+                return text_entry[language_match_idx]
+
+            logger.debug("found document title with other language codes %s", str(language_entry))
+            return None
+
+    # language doesn't matter, just return first title text
+    if isinstance(text_entry, list):
+        return text_entry[0]
+    return text_entry
 
 
 def _get_document_abstract_from_qucosa_metadata(doc: QucosaDocument, lang_code: Optional[str] = None) -> Optional[str]:
@@ -372,6 +421,7 @@ def _read_qucosa_generic_rvk_samples(
 
 def read_qucosa_titles_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument] = None,
+    lang_code: Optional[str] = "de",
 ) -> SampleIterator:
     """Read qucosa documents and use document titles as training data."""
     if qucosa_iterator is None:
@@ -380,13 +430,22 @@ def read_qucosa_titles_rvk_samples(
     def make_title_only_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
-        doc_title = _get_document_title_from_qucosa_metadata(doc)
+        doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code, "title")
+        doc_subtitle = _get_document_title_from_qucosa_metadata(doc, lang_code, "subtitle")
 
-        if len(doc_title) < 10:
-            logger.debug("qucosa document with short title '%s': %s", doc_title, doc_uri)
+        if doc_title is None:
+            logger.debug("qucosa document '%s' with no title or of wrong language", doc_uri)
             return None
 
-        return Document(uri=doc_uri, title=doc_title)
+        full_title = doc_title
+        if doc_subtitle is not None:
+            full_title = doc_title + " " + doc_subtitle
+
+        if len(full_title) < 10:
+            logger.debug("qucosa document with short full title '%s': %s", full_title, doc_uri)
+            return None
+
+        return Document(uri=doc_uri, title=full_title)
 
     return _read_qucosa_generic_rvk_samples(qucosa_iterator, make_title_only_doc)
 
@@ -402,11 +461,11 @@ def read_qucosa_abstracts_rvk_samples(
     def make_title_and_abstract_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
-        doc_title = _get_document_title_from_qucosa_metadata(doc)
+        doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
         doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, lang_code)
 
         if doc_title is None or len(doc_title) < 1:
-            logger.debug("qucosa document with no title: %s", doc_uri)
+            logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
             return None
 
         if doc_abstract is None:
@@ -433,11 +492,11 @@ def read_qucosa_fulltext_rvk_samples(
     def make_title_and_fulltext_doc(doc: QucosaDocument) -> Optional[Document]:
         """Only uses title with at least 10 characters as document text."""
         doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
-        doc_title = _get_document_title_from_qucosa_metadata(doc)
+        doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
         doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, lang_code)
 
         if doc_title is None or len(doc_title) < 1:
-            logger.debug("qucosa document with no title: %s", doc_uri)
+            logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
             return None
 
         if doc_fulltext is None:

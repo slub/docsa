@@ -19,26 +19,23 @@ if __name__ == "__main__":
     logging.getLogger("slub_docsa.data.load.qucosa").setLevel(logging.DEBUG)
 
     random_state = 123
-    dataset_subset = None  # abstracts, titles, fulltexts
+    dataset_subset = None
     split_function_name = "random"  # either: random, stratified
-    language_code = "de"  # either: de, en
-    prune_level = None  # 34 subjects at 1, 325 subjects at 2, in total 4857 subjects
     n_splits = 10
-    min_samples = 10
     model_subset = [
         # ### "random", ####
         "oracle",
         "nihilistic",
         "knn k=1",
-        # "rforest",
-        # "mlp",
+        "rforest",
+        "mlp",
         "annif tfidf",
-        # "annif svc",
+        "annif svc",
         "annif omikuji",
-        # "annif vw_multi",
-        # "annif mllm",
-        # "annif fasttext"
-        # "annif yake",
+        "annif vw_multi",
+        "annif mllm",
+        "annif fasttext"
+        "annif yake",
         # ### "annif stwfsa" ###
     ]
     filename_suffix = f"split={split_function_name}"
