@@ -1,4 +1,4 @@
-"""Methods model token and their probabilities."""
+"""Methods to generate random token distributions or extract them from existing corpora."""
 
 import re
 import string
@@ -15,20 +15,60 @@ logger = logging.getLogger(__name__)
 TokenProbabilities = Mapping[str, float]
 
 
-def generate_random_token_probabilties(n_tokens: int) -> TokenProbabilities:
-    """Generate random tokens of random letters with probabilities from exponential distribution."""
+def generate_random_token_probabilties(n_tokens: int, token_length=10, exp_scale=1.0) -> TokenProbabilities:
+    """Generate random tokens of random lowercase letters with probabilities from an exponential distribution.
+
+    Parameters
+    ----------
+    n_tokens: int
+        The number of random tokens to generate.
+    token_length: int = 10
+        The size of the tokens as the number of random letters.
+    exp_scale: float = 1.0
+        The scale parameter of the exponential distribution used to draw token probabilities.
+
+    Returns
+    -------
+    TokenProbabilities
+        A map of random tokens and their random probabilities
+
+    Examples
+    --------
+    Generate 3 random tokens of 5 random letters with random probabilities:
+
+    >>> generate_random_token_probabilties(3, token_length=5)
+    {'hghby': 0.04076535563169729, 'kncyv': 0.6835635904749359, 'aovqt': 0.275671053893367}
+    """
     tokens: TokenProbabilities = {}
     while len(tokens) < n_tokens:
         n_tokens_left = n_tokens - len(tokens)
-        token_list = np.random.choice(list(string.ascii_lowercase), size=(n_tokens_left, 10))
-        probabilities = np.random.default_rng().exponential(1, n_tokens_left)
+        token_list = np.random.choice(list(string.ascii_lowercase), size=(n_tokens_left, token_length))
+        probabilities = np.random.default_rng().exponential(exp_scale, n_tokens_left)
         tokens.update({"".join(t): p for t, p in zip(token_list, probabilities)})
     probability_sum = np.sum(list(tokens.values()))
     return {t: p / probability_sum for t, p in tokens.items()}
 
 
 def token_probabilities_from_corpus(corpus: Iterable[str]) -> TokenProbabilities:
-    """Return token probabilities by counting tokens in corpus."""
+    """Extract token probabilities by counting tokens in an existing corpus.
+
+    Parameters
+    ----------
+    corpus: Iterable[str]
+        An iterable of strings containing texts from some corpus.
+
+    Returns
+    -------
+    TokenProbabilities
+        The occurance probabilities of each lowercased token of the provided corpus.
+
+    Examples
+    --------
+    Count token occurances of arbitrary text:
+
+    >>> token_probabilities_from_corpus(["a corpus with", "tokens tokens"])
+    {'a': 0.2, 'corpus': 0.2, 'with': 0.2, 'tokens': 0.4}
+    """
     token_pattern = re.compile(r"^[a-z0-9]+$")
     token_counts = {}
 

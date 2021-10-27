@@ -1,4 +1,4 @@
-"""Persistent storage of datasets for fast random access of samples."""
+"""Persistent storage of datasets for fast random access of both documents and subject annotations."""
 
 import dbm.gnu as dbm
 import os
@@ -8,10 +8,11 @@ from typing import Callable, Iterable, Sequence, Tuple
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import SampleIterator
-from slub_docsa.common.subject import SubjectUriList
+from slub_docsa.common.subject import SubjectTargets, SubjectUriList
 
 
 class _DatasetDbmStoreSequence(Sequence):
+    """Allows to access documents and subjects via sequence interface in a dbm database."""
 
     def __init__(self, store, index: int, populate_mode: bool):
         self.store = store
@@ -47,21 +48,64 @@ class _DatasetDbmStoreSequence(Sequence):
 
 
 class DatasetDbmStore(Dataset):
-    """Persistent storage for a dataset using the python dbm interface."""
+    """Persistent storage for a dataset using the python dbm interface.
 
-    documents: _DatasetDbmStoreSequence
-    subjects: _DatasetDbmStoreSequence
+    This naive implementation stores documents and subject annotations via `pickle` in a dbm database.
+
+    .. note::
+
+        No checks are performed to guarantee anything, e.g. continuity, or that data is not overwritten.
+
+    Examples
+    --------
+    Create a new dataset store and populate a list of documents and subject annotations.
+
+    >>> store = DatasetDbmStore("/tmp/dataset.dbm", populate_mode=True)
+    >>> store.populate(iter([(Document(uri="doc1", title="Test Document"), ["subject1"])]))
+    >>> store.close()
+
+    Re-open the database in read-only mode when using it as dataset reference.
+
+    >>> dataset = DatasetDbmStore("/tmp/dataset.dbm", populate_mode=False)
+    >>> dataset.documents[0]
+    <slub_docsa.common.document.Document object at 0x7fc3ffe4fa10>
+    """
+
+    documents: Sequence[Document]
+    """Provides access to documents as sequence interface, loading documents from dbm database."""
+
+    subjects: SubjectTargets
+    """Provides access to subject annotations as sequence interface, loading them from the dbm database."""
 
     def __init__(self, filepath: str, populate_mode: bool = False, batch_size: int = 1000):
-        """Create a new dbm store for a dataset."""
+        """Initialize new dbm database.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to file that is loaded or created as dbm database
+
+        populate_mode: bool
+            If true, allows to call `populate` method, which stores documents and subjects in batch mode.
+            If false, database is loaded in read-only mode.
+
+        batch_size: int = 1000
+            Number of samples until disc synchronization is triggered.
+        """
         self.populate_mode = populate_mode
         self.batch_size = batch_size
         self.store = dbm.open(filepath, "cf" if populate_mode else "r")
-        self.documents = _DatasetDbmStoreSequence(self.store, 0, populate_mode)
-        self.subjects = _DatasetDbmStoreSequence(self.store, 1, populate_mode)
+        self._documents = _DatasetDbmStoreSequence(self.store, 0, populate_mode)
+        self._subjects = _DatasetDbmStoreSequence(self.store, 1, populate_mode)
+        self.documents = self._documents
+        self.subjects = self._subjects
 
     def populate(self, samples: Iterable[Tuple[Document, SubjectUriList]]):
-        """Populate the store with documents and subjects."""
+        """Populate the database from an iterator over samples (documents and subjects).
+
+        Stores samples one by one, but synchronizes with disc in batches.
+        Overwrites samples if called multiple times on the same database instance.
+        """
         if not self.populate_mode:
             raise ValueError("can not populate store in read only mode")
         if self.store is None:
@@ -73,11 +117,11 @@ class DatasetDbmStore(Dataset):
                 self.store.sync()
 
     def close(self):
-        """Close dbm database."""
+        """Close dbm database. Reads and writes are no longer possible and will result in an exception."""
         if self.store:
             self.store.sync()
-            self.documents.close()
-            self.subjects.close()
+            self._documents.close()
+            self._subjects.close()
             self.store.close()
             self.store = None
 

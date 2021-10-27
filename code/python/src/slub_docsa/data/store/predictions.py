@@ -1,4 +1,4 @@
-"""Stores and loads predictions."""
+"""Persistent storage for model predictions."""
 
 import logging
 import hashlib

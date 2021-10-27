@@ -114,7 +114,7 @@ def default_named_qucosa_datasets(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     # loads all data sets and generates persistent storage for them
     for dn, ds, _ in default_named_qucosa_datasets():

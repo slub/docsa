@@ -1,4 +1,4 @@
-"""Base class describing a model."""
+"""Base class describing a classification model that can be used for training and prediction."""
 
 from typing import Sequence
 
@@ -10,7 +10,7 @@ from slub_docsa.common.document import Document
 class Model:
     """Represents a model similar to a scikit-learn estimator and predictor interface.
 
-    However, the input of both fit, predict and predict_proba methods are a collection of `Document` instances,
+    However, the input of both fit and predict_proba methods are a collection of `Document` instances,
     instead of raw vectorized feaures.
     """
 

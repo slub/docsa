@@ -1,1 +1,1 @@
-"""Various persistent storage modules."""
+"""Various persistent storage implementations."""

@@ -1,6 +1,7 @@
 """Reads qucosa documents from jsonl files and the SLUB ElasticSearch server."""
 
 # pylint: disable=unexpected-keyword-arg, too-many-arguments, broad-except, too-many-branches
+# pylint: disable=too-many-return-statements
 
 import os
 import gzip
