@@ -2,4 +2,4 @@
 
 source ./common.sh
 
-docker-compose -p ${PROJECT_NAME} down
+${COMPOSE_CMD} -p ${PROJECT_NAME} down

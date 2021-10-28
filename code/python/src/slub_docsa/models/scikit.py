@@ -29,7 +29,7 @@ class ScikitTfidfClassifier(Model):
 
     def _build_vectorizer(self, documents: Collection[Document]):
         self.vectorizer = TfidfVectorizer()
-        corpus = [d.title for d in documents]
+        corpus = [document_as_concatenated_string(d) for d in documents]
         features = cast(csr_matrix, self.vectorizer.fit_transform(corpus))
         if hasattr(self.predictor, "estimator") and isinstance(self.predictor.estimator, GaussianNB):
             features = features.toarray()

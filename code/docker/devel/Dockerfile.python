@@ -1,13 +1,17 @@
-FROM python:3.7-slim
+ARG TENSORFLOW_IMAGE_TAG
+
+FROM tensorflow/tensorflow:${TENSORFLOW_IMAGE_TAG}
+# FROM python:3.7-slim
 
 # add unprivilged user
-ARG UID=1000
-ARG GID=1000
-RUN groupadd -g $GID slub && useradd --uid $UID --gid $GID --create-home --home-dir /home/slub -s /bin/bash slub
+# ARG UID=1000
+# ARG GID=1000
+# RUN groupadd -g $GID slub && useradd --uid $UID --gid $GID --create-home --home-dir /home/slub -s /bin/bash slub
+RUN mkdir -p /home/slub
 
 # install development basics
 RUN apt-get update && \
-    apt-get install -y git vim screen wget make && \
+    apt-get install -y git vim screen wget make python3-venv python3-gdbm && \
     rm -rf /var/lib/apt/lists/*
 
 # setup python virtual environment
@@ -15,25 +19,26 @@ RUN python3 -m venv /home/slub/.venv
 ENV PATH="/home/slub/.venv/bin:$PATH"
 RUN python3 -m pip install --upgrade pip
 
-# install development requirements
-RUN pip install --no-cache-dir pylint flake8 flake8-docstrings pytest pytest-watch coverage bandit pdoc3
+# pre-install test requirements
+COPY code/python/requirements.test.txt /tmp/requirements.test.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.test.txt
 
-# pre-install python requirements
-COPY code/python/requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt
+# pre-install runtime requirements
+COPY code/python/requirements.runtime.txt /requirements.runtime.txt
+RUN pip install --no-cache-dir -r /requirements.runtime.txt
 
 # copy custom screenrc for convenience
-COPY code/docker/devel/screenrc /home/slub/.screenrc
+COPY code/docker/devel/screenrc /root/.screenrc
 
 WORKDIR /home/slub/workspace
 
 ENV PYTHONPATH=/home/slub/workspace/code/python/src
 
 # change to unprivileged user
-USER slub
+# USER slub
 
 # create .cache dir required by pylint
-RUN mkdir /home/slub/.cache
+# RUN mkdir /root/.cache
 
 ENTRYPOINT ["/bin/bash"]
 

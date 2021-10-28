@@ -2,5 +2,5 @@
 
 source ./common.sh
 
-docker-compose -p ${PROJECT_NAME} pull
-docker-compose -p ${PROJECT_NAME} build
+${COMPOSE_CMD} -p ${PROJECT_NAME} pull
+${COMPOSE_CMD} -p ${PROJECT_NAME} build

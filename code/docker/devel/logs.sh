@@ -2,4 +2,4 @@
 
 source ./common.sh
 
-docker-compose -p ${PROJECT_NAME} logs -f
+${COMPOSE_CMD} -p ${PROJECT_NAME} logs -f

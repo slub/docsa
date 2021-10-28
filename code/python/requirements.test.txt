@@ -1,0 +1,8 @@
+pylint>=2.10.2
+flake8>=3.9.2
+flake8-docstrings>=1.6.0
+pytest>=6.2.5
+pytest-watch>=4.2.0
+coverage>=5.5
+bandit>=1.7.0
+pdoc3>=0.10.0

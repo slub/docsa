@@ -9,6 +9,9 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
+        TENSORFLOW_IMAGE_TAG: ${TENSORFLOW_IMAGE_TAG}
+    security_opt:
+      - label=disable
     volumes:
         - ../../../:/home/slub/workspace:z
         - ../../../data/runtime/container/python/.bash_history:/home/slub/.bash_history:z
