@@ -6,7 +6,6 @@ langid==1.1.6
 kaleido==0.2.1
 elasticsearch>=7.0.0,<8.0.0
 scikit-multilearn==0.2.0
-tensorflow==2.6.0
 torch==1.10.0
 transformers==4.11.3
 sqlitedict==1.7.0

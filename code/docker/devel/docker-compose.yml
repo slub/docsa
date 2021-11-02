@@ -9,7 +9,7 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        TENSORFLOW_IMAGE_TAG: ${TENSORFLOW_IMAGE_TAG}
+        BASE_IMAGE: ${BASE_IMAGE}
     security_opt:
       - label=disable
     volumes:

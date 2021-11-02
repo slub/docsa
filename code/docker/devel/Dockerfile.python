@@ -1,7 +1,5 @@
-ARG TENSORFLOW_IMAGE_TAG
-
-FROM tensorflow/tensorflow:${TENSORFLOW_IMAGE_TAG}
-# FROM python:3.7-slim
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
 # add unprivilged user
 # ARG UID=1000
