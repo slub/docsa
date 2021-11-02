@@ -3,7 +3,7 @@
 # pylint: disable=fixme, too-many-locals, too-many-arguments
 
 import logging
-from typing import Callable, Collection, Sequence
+from typing import Callable, Sequence
 
 import numpy as np
 
@@ -40,11 +40,12 @@ def score_models_for_dataset(
     n_splits: int,
     dataset: Dataset,
     subject_order: Sequence[str],
-    models: Collection[Model],
+    models: Sequence[Model],
     split_function: DatasetSplitFunction,
-    overall_score_functions: Collection[MultiClassScoreFunctionType],
-    per_class_score_functions: Collection[BinaryClassScoreFunctionType],
+    overall_score_functions: Sequence[MultiClassScoreFunctionType],
+    per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
     fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
+    stop_after_evaluating_first_split: bool = False,
 ):
     """Evaluate a dataset for a number of models and score functions."""
     # check minimum requirements for cross-validation
@@ -100,5 +101,8 @@ def score_models_for_dataset(
                     )
 
             logger.info("overall scores are: %s", str(overall_score_matrix[j, :, i]))
+
+        if stop_after_evaluating_first_split:
+            break
 
     return overall_score_matrix, per_class_score_matrix

@@ -42,7 +42,7 @@ def tokenize_text_function() -> Callable[[str], List[str]]:
 def snowball_document_stemming_function(lang_code: str) -> Callable[[Document], Document]:
     """Return a function that applies the snowball stemmer to both the document title, abstract and fulltext."""
     if lang_code not in SNOWBALL_LANGUAGE_CODES:
-        raise ValueError("language code '%s' not supported for stemming" % lang_code)
+        raise ValueError(f"language code '{lang_code}' not supported for stemming")
 
     snowball_language = SNOWBALL_LANGUAGE_CODES[lang_code]
 

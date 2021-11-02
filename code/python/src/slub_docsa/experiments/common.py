@@ -26,6 +26,8 @@ from sklearn.svm import LinearSVC
 from slub_docsa.common.paths import ANNIF_DIR, CACHE_DIR
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, RandomVectorizer, TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import PersistedCachedVectorizer
 from slub_docsa.data.store.predictions import persisted_fit_model_and_predict
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
@@ -34,11 +36,13 @@ from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_sampl
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
 from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
 from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
+from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
 from slub_docsa.models.dummy import NihilisticModel, OracleModel
+from slub_docsa.models.ann_torch import TorchSingleLayerDenseModel
 from slub_docsa.models.natlibfi_annif import AnnifModel
-from slub_docsa.models.scikit import ScikitTfidfClassifier, ScikitTfidiRandomClassifier
+from slub_docsa.models.scikit import ScikitClassifier, ScikitTfidiRandomClassifier
 from slub_docsa.common.model import Model
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import score_models_for_dataset
@@ -47,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
 PREDICTIONS_CACHE = os.path.join(CACHE_DIR, "predictions")
+VECTORIZATION_CACHE = os.path.join(CACHE_DIR, "vectorizer")
 
 
 class DefaultModelLists(NamedTuple):
@@ -78,6 +83,13 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
 DefaultScoreMatrixResult = Sequence[DefaultScoreMatrixDatasetResult]
 
 
+def get_dbmdz_bert_vectorizer():
+    """Load persisted dbmdz bert vectorizer."""
+    os.makedirs(VECTORIZATION_CACHE, exist_ok=True)
+    dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, "dbmdz_bert.sqlite")
+    return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer())
+
+
 def default_named_models(
     language: str,
     subject_order: Sequence[str] = None,
@@ -85,21 +97,74 @@ def default_named_models(
     model_name_subset: Iterable[str] = None
 ) -> DefaultModelLists:
     """Return a list of default models to use for evaluating model performance."""
+    dbmdz_bert_vectorizer = get_dbmdz_bert_vectorizer()
+
     models = [
         ("random", lambda: ScikitTfidiRandomClassifier()),
         ("nihilistic", lambda: NihilisticModel()),
-        ("stratified", lambda: ScikitTfidfClassifier(predictor=DummyClassifier(strategy="stratified"))),
+        ("stratified", lambda: ScikitClassifier(
+            predictor=DummyClassifier(strategy="stratified"),
+            vectorizer=RandomVectorizer(),
+        )),
         ("oracle", lambda: OracleModel()),
-        ("knn k=1", lambda: ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=1))),
-        ("knn k=3", lambda: ScikitTfidfClassifier(predictor=KNeighborsClassifier(n_neighbors=3))),
-        ("dtree", lambda: ScikitTfidfClassifier(predictor=DecisionTreeClassifier(max_leaf_nodes=1000))),
-        ("rforest", lambda: ScikitTfidfClassifier(predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000))),
-        ("mlp", lambda: ScikitTfidfClassifier(predictor=MLPClassifier(max_iter=10))),
-        ("log_reg", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=LogisticRegression()))),
-        ("nbayes", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(estimator=GaussianNB()))),
-        ("svc", lambda: ScikitTfidfClassifier(predictor=MultiOutputClassifier(
-            estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
-        ))),
+        ("tfidf knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("dbmdz bert knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=dbmdz_bert_vectorizer,
+        )),
+        ("random vectorizer knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=RandomVectorizer(),
+        )),
+        ("tfidf knn k=3", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=3),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("tfidf dtree", lambda: ScikitClassifier(
+            predictor=DecisionTreeClassifier(max_leaf_nodes=1000),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("tfidf rforest", lambda: ScikitClassifier(
+            predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("dbmdz bert rforest", lambda: ScikitClassifier(
+            predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
+            vectorizer=dbmdz_bert_vectorizer,
+        )),
+        ("tfidf scikit mlp", lambda: ScikitClassifier(
+            predictor=MLPClassifier(max_iter=10),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("tfidf torch ann", lambda: TorchSingleLayerDenseModel(
+            epochs=10,
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("dbmdz bert scikit mlp", lambda: ScikitClassifier(
+            predictor=MLPClassifier(max_iter=10),
+            vectorizer=dbmdz_bert_vectorizer,
+        )),
+        ("dbmdz bert torch ann", lambda: TorchSingleLayerDenseModel(
+            epochs=10,
+            vectorizer=dbmdz_bert_vectorizer,
+        )),
+        ("tfidf log_reg", lambda: ScikitClassifier(
+            predictor=MultiOutputClassifier(estimator=LogisticRegression()),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("tfidf nbayes", lambda: ScikitClassifier(
+            predictor=MultiOutputClassifier(estimator=GaussianNB()),
+            vectorizer=TfidfVectorizer(),
+        )),
+        ("tfidf svc", lambda: ScikitClassifier(
+            predictor=MultiOutputClassifier(
+                estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
+            ),
+            vectorizer=TfidfVectorizer(),
+        )),
         ("annif tfidf", lambda: AnnifModel(model_type="tfidf", language=language)),
         ("annif svc", lambda: AnnifModel(model_type="svc", language=language)),
         ("annif fasttext", lambda: AnnifModel(model_type="fasttext", language=language)),
@@ -141,8 +206,7 @@ def default_named_multiclass_scores(
         #     positive_top_k_incidence_decision(3),
         #     accuracy_score
         # )),
-        ("t=0.5 f1_score micro", [0, 1], scikit_incidence_metric(
-            threshold_incidence_decision(0.5),
+        ("t=best f1_score micro", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
             f1_score,
             average="micro",
             zero_division=0
@@ -153,8 +217,7 @@ def default_named_multiclass_scores(
             average="micro",
             zero_division=0
         )),
-        ("t=0.5 precision micro", [0, 1], scikit_incidence_metric(
-            threshold_incidence_decision(0.5),
+        ("t=best precision micro", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
             precision_score,
             average="micro",
             zero_division=0
@@ -165,8 +228,7 @@ def default_named_multiclass_scores(
             average="micro",
             zero_division=0
         )),
-        ("t=0.5 recall micro", [0, 1], scikit_incidence_metric(
-            threshold_incidence_decision(0.5),
+        ("t=best recall micro", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
             recall_score,
             average="micro",
             zero_division=0
@@ -177,8 +239,7 @@ def default_named_multiclass_scores(
             average="micro",
             zero_division=0
         )),
-        ("t=0.5 h_loss", [0, 1], scikit_incidence_metric(
-            threshold_incidence_decision(0.5),
+        ("t=best h_loss", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
             cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
         )),
         ("top3 h_loss", [0, 1], scikit_incidence_metric(
@@ -257,6 +318,8 @@ def do_default_score_matrix_evaluation(
     model_name_subset: Iterable[str] = None,
     overall_score_name_subset: Iterable[str] = None,
     per_class_score_name_subset: Iterable[str] = None,
+    load_cached_predictions: bool = False,
+    stop_after_evaluating_first_split: bool = False,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     n_splits = 10
@@ -265,7 +328,10 @@ def do_default_score_matrix_evaluation(
     for dataset_name, dataset, subject_hierarchy in named_datasets:
         # load predictions cache
         os.makedirs(PREDICTIONS_CACHE, exist_ok=True)
-        fit_model_and_predict = persisted_fit_model_and_predict(os.path.join(PREDICTIONS_CACHE, dataset_name + ".dbm"))
+        fit_model_and_predict = persisted_fit_model_and_predict(
+            os.path.join(PREDICTIONS_CACHE, dataset_name + ".dbm"),
+            load_cached_predictions,
+        )
 
         # define subject ordering
         subject_order = list(sorted(unique_subject_order(dataset.subjects)))
@@ -294,6 +360,7 @@ def do_default_score_matrix_evaluation(
             overall_score_functions=overall_score_lists.functions,
             per_class_score_functions=per_class_score_lists.functions,
             fit_model_and_predict=fit_model_and_predict,
+            stop_after_evaluating_first_split=stop_after_evaluating_first_split,
         )
 
         results.append(DefaultScoreMatrixDatasetResult(

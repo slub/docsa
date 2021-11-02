@@ -138,7 +138,7 @@ def save_qucosa_documents_to_directory(
     qucosa_buffer = []
 
     def write_buffer_to_file(buffer, i):
-        filepath = os.path.join(directory, "qucosa-%d.jsonl.gz" % i)
+        filepath = os.path.join(directory, f"qucosa-{i}.jsonl.gz")
         with gzip.open(filepath, "wt", encoding="utf-8") as f_jsonl:
             for buffer_entry in buffer:
                 f_jsonl.write(json.dumps(buffer_entry))
@@ -183,7 +183,7 @@ def read_qucosa_documents_from_directory(
         save_qucosa_documents_to_directory(qucosa_document_iterator, directory)
 
     if not os.path.exists(directory):
-        raise ValueError("directory '%s' does not exist" % directory)
+        raise ValueError(f"directory '{directory}' does not exist" % directory)
 
     for entry in os.scandir(directory):
         if entry.is_file():

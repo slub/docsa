@@ -19,16 +19,27 @@ if __name__ == "__main__":
     logging.getLogger("slub_docsa.data.load.qucosa").setLevel(logging.DEBUG)
 
     random_state = 123
-    dataset_subset = None
+    load_cached_predictions = True
+    stop_after_evaluating_first_split = True
+    dataset_subset = [
+        "qucosa_de_titles_langid_rvk",
+        "qucosa_de_abstracts_langid_rvk",
+        "qucosa_de_fulltexts_langid_rvk",
+    ]
     split_function_name = "random"  # either: random, stratified
     n_splits = 10
     model_subset = [
         # ### "random", ####
         "oracle",
         "nihilistic",
-        "knn k=1",
-        "rforest",
-        "mlp",
+        "tfidf knn k=1",
+        "dbmdz bert knn k=1",
+        "tfidf rforest",
+        "dbmdz bert rforest",
+        "tfidf scikit mlp",
+        "tfidf torch ann",
+        "dbmdz bert scikit mlp",
+        "dbmdz bert torch ann",
         "annif tfidf",
         "annif svc",
         "annif omikuji",
@@ -46,7 +57,9 @@ if __name__ == "__main__":
         named_datasets=default_named_qucosa_datasets(dataset_subset),
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
         language="german",
-        model_name_subset=model_subset
+        model_name_subset=model_subset,
+        load_cached_predictions=load_cached_predictions,
+        stop_after_evaluating_first_split=stop_after_evaluating_first_split,
     )
 
     write_default_plots(evaluation_result, os.path.join(FIGURES_DIR, "qucosa"), filename_suffix)

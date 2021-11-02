@@ -76,7 +76,7 @@ def prune_subject_uri_to_level(
     if level < 1:
         raise ValueError("level must be 1 or larger than 1")
     if subject_uri not in subject_hierarchy:
-        raise ValueError("subject uri %s not in hiearchy" % subject_uri)
+        raise ValueError(f"subject uri {subject_uri} not in hiearchy")
 
     ancestors = subject_ancestors_list(subject_hierarchy[subject_uri], subject_hierarchy)
     if len(ancestors) <= level:

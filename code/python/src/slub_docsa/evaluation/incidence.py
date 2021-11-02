@@ -92,10 +92,10 @@ def subject_targets_from_incidence_matrix(
     incidence_array = np.array(incidence_matrix)
 
     if incidence_array.shape[1] != len(subject_order):
-        raise ValueError("indicence matrix has %d columns but and subject order has %d entries" % (
-            incidence_array.shape[1],
-            len(subject_order)
-        ))
+        raise ValueError(
+            f"indicence matrix has {incidence_array.shape[1]} columns " +
+            f"but subject order has {len(subject_order)} entries"
+        )
 
     return list(map(lambda l: list(map(lambda i: subject_order[i], np.where(l == 1)[0])), incidence_array))
 

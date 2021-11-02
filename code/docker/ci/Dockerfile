@@ -1,4 +1,4 @@
-FROM python:3.7-slim
+FROM python:3.6-slim
 
 # install make
 RUN apt-get update && \
@@ -7,7 +7,8 @@ RUN apt-get update && \
 
 # copy make file and requirements to install deps
 WORKDIR /home/slub/workspace
-COPY code/python/requirements.txt /home/slub/workspace/code/python/requirements.txt
+COPY code/python/requirements.runtime.txt /home/slub/workspace/code/python/requirements.runtime.txt
+COPY code/python/requirements.test.txt /home/slub/workspace/code/python/requirements.test.txt
 COPY Makefile /home/slub/workspace/Makefile
 
 # install python requirements

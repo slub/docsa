@@ -7,11 +7,12 @@ import math
 from typing import Any, Callable, Optional, Sequence, Tuple, cast
 
 import numpy as np
+from sklearn.metrics import f1_score
 
 from slub_docsa.common.score import IncidenceDecisionFunctionType
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.data.preprocess.subject import children_map_from_subject_hierarchy, subject_ancestors_list
-from slub_docsa.evaluation.incidence import extend_incidence_list_to_ancestors
+from slub_docsa.evaluation.incidence import extend_incidence_list_to_ancestors, threshold_incidence_decision
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,51 @@ def scikit_incidence_metric(
 
         predicted_subject_incidence = incidence_decision_function(predicted_subject_probabitlies)
 
+        score = metric_function(true_subject_incidence, predicted_subject_incidence, **kwargs)
+
+        if not isinstance(score, float):
+            raise RuntimeError("sklearn metric output is not a float")
+
+        return score
+
+    return _metric
+
+
+def scikit_metric_for_best_threshold_based_on_f1score(
+    metric_function,
+    **kwargs
+) -> Callable[[np.ndarray, np.ndarray], float]:
+    """Return a scikit-learn metric using the best threshold incidence by comparing f1_score."""
+
+    def _decision(true_incidence, predicted_probabilities: np.ndarray) -> np.ndarray:
+        best_score = -1
+        best_threshold = None
+        best_incidence = np.zeros((2, 2))
+        for threshold in [i/10.0 + 0.1 for i in range(9)]:
+            score = scikit_incidence_metric(
+                threshold_incidence_decision(threshold),
+                f1_score,
+                average="micro",
+                zero_division=0
+            )(
+                true_incidence,
+                predicted_probabilities
+            )
+            # logger.debug("score for threshold t=%f is %f", t, score)
+
+            if score > best_score:
+                best_incidence = threshold_incidence_decision(threshold)(predicted_probabilities)
+                best_score = score
+                best_threshold = threshold
+
+        logger.debug("found best f1_score for incidence based on threshold t=%f", best_threshold)
+        return best_incidence
+
+    def _metric(
+        true_subject_incidence: np.ndarray,
+        predicted_subject_probabitlies: np.ndarray,
+    ) -> float:
+        predicted_subject_incidence = _decision(true_subject_incidence, predicted_subject_probabitlies)
         score = metric_function(true_subject_incidence, predicted_subject_incidence, **kwargs)
 
         if not isinstance(score, float):

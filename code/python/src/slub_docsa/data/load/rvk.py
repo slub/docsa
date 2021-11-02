@@ -163,4 +163,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     rvk_store = get_rvk_subject_store()
-    print("RVK has %d subjects" % len(rvk_store))
+    print(f"RVK has {len(rvk_store)} subjects")

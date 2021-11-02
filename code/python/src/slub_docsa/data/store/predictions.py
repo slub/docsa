@@ -17,7 +17,7 @@ from slub_docsa.evaluation.pipeline import FitModelAndPredictCallable
 logger = logging.getLogger(__name__)
 
 
-def persisted_fit_model_and_predict(filepath: str) -> FitModelAndPredictCallable:
+def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool = False) -> FitModelAndPredictCallable:
     """Load model predictions from a dbm database if they have been stored previously.
 
     Stored predictions are only used if the exact same training and test data is used for the same model.
@@ -42,7 +42,7 @@ def persisted_fit_model_and_predict(filepath: str) -> FitModelAndPredictCallable
             hasher.update(document_as_concatenated_string(doc).encode())
 
         hash_code = hasher.digest()
-        if hash_code in store:
+        if load_cached_predictions and hash_code in store:
             logger.info("use cached predicitons")
             data = io.BytesIO(store[hash_code])
             data.seek(0)

@@ -111,10 +111,13 @@ Tool for automated subject indexing and classification
 
 Preprocessing
 - [nltk](https://www.nltk.org/) - Natural Language Toolkit
+- [spacy](https://spacy.io/) - Natural Language Processing
 - [gensim](https://radimrehurek.com/gensim/) - Topic Modelling / Vectorization / Similarity Search
+- [sentence-transforms](https://github.com/UKPLab/sentence-transformers) Sentence Embeddings via Transformer Models
 
 Deep Learning
 - [ktrain](https://github.com/amaiya/ktrain)
+- [huggingface](https://huggingface.co) - Many pre-trained deep learning models
 
 General Machine Learning
 - [scikit-learn](https://scikit-learn.org/) - Machine Learning in Python

@@ -168,7 +168,7 @@ class AnnifModel(Model):
             self.temporary_directory = tempfile.TemporaryDirectory()
             self.data_dir = self.temporary_directory.name
         elif not os.path.exists(self.data_dir):
-            raise ValueError("data directory %s does not exist" % self.data_dir)
+            raise ValueError(f"data directory {self.data_dir} does not exist")
 
     def _init_subject_skos_graph(self):
         if self.subject_hierarchy is not None and self.subject_order is not None:
@@ -179,7 +179,7 @@ class AnnifModel(Model):
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
-            raise ValueError("annif model '%s' requires that subject hierarchy is provided" % self.model_type)
+            raise ValueError(f"annif model '{self.model_type}' requires that subject hierarchy is provided")
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
         """Train an Annif model with a sequence of documents and a subject incidence matrix.
@@ -198,9 +198,10 @@ class AnnifModel(Model):
             self
         """
         if len(train_documents) != train_targets.shape[0]:
-            raise ValueError("train documents size %d does not match incidence matrix shape %s" % (
-                len(train_documents), str(train_targets.shape)
-            ))
+            raise ValueError(
+                f"train documents size {len(train_documents)} does not match " +
+                f"incidence matrix shape {str(train_targets.shape)}"
+            )
 
         if self.subject_order is None:
             # there is no info on which columns in train_targets are what subjets, generate numbered subjects

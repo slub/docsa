@@ -28,10 +28,10 @@ class IndexedSequence(Sequence[SequenceType]):
         self.sequence = sequence
         self.idx = idx
 
-    def __contains__(self, x: object) -> bool:
+    def __contains__(self, item: object) -> bool:
         """Return true if indexed sequence contains object."""
         for i in self.idx:
-            if self.sequence[i] == x:
+            if self.sequence[i] == item:
                 return True
         return False
 
