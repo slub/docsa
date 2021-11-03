@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 NLTK_PATH = os.path.join(RESOURCES_DIR, "nltk/")
 nltk.data.path.append(NLTK_PATH)
 
+NLTK_ALREADY_DOWNLOADED = {}
+
 
 def download_nltk(name: str):
     """Download a nltk resource.
@@ -21,5 +23,7 @@ def download_nltk(name: str):
     name: str
         The name of the nltk resources that is being downloaded.
     """
-    logger.info("nltk download of %s", name)
-    nltk.download(name, download_dir=NLTK_PATH)
+    if name not in NLTK_ALREADY_DOWNLOADED:
+        logger.info("nltk download of %s", name)
+        nltk.download(name, download_dir=NLTK_PATH)
+        NLTK_ALREADY_DOWNLOADED[name] = True
