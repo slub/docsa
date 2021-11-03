@@ -17,6 +17,7 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
 
 from slub_docsa.common.paths import CACHE_DIR
+from slub_docsa.data.preprocess.document import snowball_text_stemming_function
 from slub_docsa.data.store.array import bytes_to_numpy_array, numpy_array_to_bytes
 from slub_docsa.data.store.document import sha1_hash_from_text
 
@@ -62,6 +63,42 @@ class TfidfVectorizer(AbstractVectorizer):
     def __str__(self):
         """Return representative string of vectorizer."""
         return f"<TfidfVectorizer max_features={self.max_features}>"
+
+
+class TfidfStemmingVectorizer(TfidfVectorizer):
+    """Apply nltk stemming and stopword removal before vectorizing with Scikit TfidfVectorizer."""
+
+    def __init__(self, lang_code: str, remove_stopwords: bool = True, max_features=10000, **kwargs):
+        """Initialize vectorizer.
+
+        Parameters
+        ----------
+        lang_code: str
+            Language code of the text (e.g. "en", "de")
+        remove_stopwords: bool
+            Whether to remove stopwords
+        max_features: int = 10000
+            The maximum number of unique tokens to extract from text during fit.
+        """
+        super().__init__(max_features=max_features, **kwargs)
+        self.lang_code = lang_code
+        self.remove_stopwords = remove_stopwords
+        self.stemming = snowball_text_stemming_function(lang_code, remove_stopwords)
+
+    def fit(self, texts: Sequence[str]):
+        """Fit vectorizer."""
+        stemmed_texts = [self.stemming(t) for t in texts]
+        super().fit(stemmed_texts)
+
+    def transform(self, texts: Sequence[str]) -> csr_matrix:
+        """Return vectorized texts."""
+        stemmed_texts = [self.stemming(t) for t in texts]
+        return super().transform(stemmed_texts)
+
+    def __str__(self):
+        """Return representative string of vectorizer."""
+        return f"<TfidfStemmingVectorizer max_features={self.max_features} lang_code={self.lang_code} " + \
+            f"remove_stopwords={self.remove_stopwords}>"
 
 
 class RandomVectorizer(AbstractVectorizer):

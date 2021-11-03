@@ -186,7 +186,7 @@ def per_subject_precision_recall_vs_samples_plot(
 
 def _calculate_score_histogram_bin(values, score_range):
     """Calculate histogram bins from values and optional score range."""
-    non_nan_values = values[np.logical_not(np.isnan(values))]
+    non_nan_values = values[np.logical_not(np.isnan(values))]  # type: ignore
     bin_min = np.min(non_nan_values) if score_range[0] is None else score_range[0]
     bin_max = np.max(non_nan_values) if score_range[1] is None else score_range[1]
     bin_size = (bin_max - bin_min) / 20.0
@@ -230,7 +230,7 @@ def per_subject_score_histograms_plot(
 
             fig.add_trace(
                 cast(Any, go.Histogram)(
-                    x=values[np.logical_not(np.isnan(values))],
+                    x=values[np.logical_not(np.isnan(values))],  # type: ignore
                     xbins=bin_dict,
                     autobinx=False,
                     marker_color=_get_marker_color(j),

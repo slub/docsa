@@ -31,8 +31,7 @@ if __name__ == "__main__":
     MIN_SAMPLES = 10
     LIMIT = 5
     MODEL_TYPE = "tfidf"
-    LANGUAGE = "german"
-    SKOS_LANGUAGE_CODE = "de"
+    LANG_CODE = "de"
 
     # load data
     dataset = dataset_from_samples(read_qucosa_abstracts_rvk_samples(read_qucosa_documents_from_directory()))
@@ -56,14 +55,14 @@ if __name__ == "__main__":
     )
 
     logger.info("save flat subject labels as skos turtle file")
-    rvk_flat_graph = subject_labels_to_skos_graph(rvk_labels, SKOS_LANGUAGE_CODE)
+    rvk_flat_graph = subject_labels_to_skos_graph(rvk_labels, LANG_CODE)
     with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.flat.ttl"), "wb") as f:
         f.write(cast(bytes, rvk_flat_graph.serialize(format="turtle")))
 
     logger.info("save subject hierarchy as skos turtle file")
     rvk_skos_graph = subject_hierarchy_to_skos_graph(
         subject_hierarchy=rvk_hierarchy,
-        language=SKOS_LANGUAGE_CODE,
+        language=LANG_CODE,
         mandatory_subject_list=subject_order
     )
     with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.hierarchical.ttl"), "wb") as f:
@@ -93,7 +92,7 @@ if __name__ == "__main__":
     logger.info("fit Annif model with training data")
     model = AnnifModel(
         model_type=MODEL_TYPE,
-        language=LANGUAGE,
+        lang_code=LANG_CODE,
         subject_hierarchy=rvk_hierarchy,
         subject_order=subject_order
     )

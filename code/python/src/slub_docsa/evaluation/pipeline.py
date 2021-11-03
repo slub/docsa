@@ -45,7 +45,7 @@ def score_models_for_dataset(
     overall_score_functions: Sequence[MultiClassScoreFunctionType],
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
     fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
-    stop_after_evaluating_first_split: bool = False,
+    stop_after_evaluating_split: int = None,
 ):
     """Evaluate a dataset for a number of models and score functions."""
     # check minimum requirements for cross-validation
@@ -102,7 +102,7 @@ def score_models_for_dataset(
 
             logger.info("overall scores are: %s", str(overall_score_matrix[j, :, i]))
 
-        if stop_after_evaluating_first_split:
+        if stop_after_evaluating_split is not None and i >= stop_after_evaluating_split:
             break
 
     return overall_score_matrix, per_class_score_matrix

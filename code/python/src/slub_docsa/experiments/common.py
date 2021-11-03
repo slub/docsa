@@ -26,7 +26,7 @@ from sklearn.svm import LinearSVC
 from slub_docsa.common.paths import ANNIF_DIR, CACHE_DIR
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
-from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, RandomVectorizer, TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, RandomVectorizer, TfidfStemmingVectorizer
 from slub_docsa.data.preprocess.vectorizer import PersistedCachedVectorizer
 from slub_docsa.data.store.predictions import persisted_fit_model_and_predict
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
@@ -73,9 +73,9 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
     """Stores evaluation result matrices as well as model and score info."""
 
     dataset_name: str
+    model_names: List[str]
     overall_score_matrix: np.ndarray
     per_class_score_matrix: np.ndarray
-    model_lists: DefaultModelLists
     overall_score_lists: DefaultScoreLists
     per_class_score_lists: DefaultScoreLists
 
@@ -91,7 +91,7 @@ def get_dbmdz_bert_vectorizer():
 
 
 def default_named_models(
-    language: str,
+    lang_code: str,
     subject_order: Sequence[str] = None,
     subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
     model_name_subset: Iterable[str] = None
@@ -109,7 +109,7 @@ def default_named_models(
         ("oracle", lambda: OracleModel()),
         ("tfidf knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("dbmdz bert knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
@@ -121,15 +121,15 @@ def default_named_models(
         )),
         ("tfidf knn k=3", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=3),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("tfidf dtree", lambda: ScikitClassifier(
             predictor=DecisionTreeClassifier(max_leaf_nodes=1000),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("tfidf rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("dbmdz bert rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
@@ -137,47 +137,47 @@ def default_named_models(
         )),
         ("tfidf scikit mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("tfidf torch ann", lambda: TorchSingleLayerDenseModel(
-            epochs=10,
-            vectorizer=TfidfVectorizer(),
+            epochs=50,
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("dbmdz bert scikit mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
             vectorizer=dbmdz_bert_vectorizer,
         )),
         ("dbmdz bert torch ann", lambda: TorchSingleLayerDenseModel(
-            epochs=10,
+            epochs=50,
             vectorizer=dbmdz_bert_vectorizer,
         )),
         ("tfidf log_reg", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=LogisticRegression()),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("tfidf nbayes", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=GaussianNB()),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
         ("tfidf svc", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(
                 estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
             ),
-            vectorizer=TfidfVectorizer(),
+            vectorizer=TfidfStemmingVectorizer(lang_code),
         )),
-        ("annif tfidf", lambda: AnnifModel(model_type="tfidf", language=language)),
-        ("annif svc", lambda: AnnifModel(model_type="svc", language=language)),
-        ("annif fasttext", lambda: AnnifModel(model_type="fasttext", language=language)),
-        ("annif omikuji", lambda: AnnifModel(model_type="omikuji", language=language)),
-        ("annif vw_multi", lambda: AnnifModel(model_type="vw_multi", language=language)),
+        ("annif tfidf", lambda: AnnifModel(model_type="tfidf", lang_code=lang_code)),
+        ("annif svc", lambda: AnnifModel(model_type="svc", lang_code=lang_code)),
+        ("annif fasttext", lambda: AnnifModel(model_type="fasttext", lang_code=lang_code)),
+        ("annif omikuji", lambda: AnnifModel(model_type="omikuji", lang_code=lang_code)),
+        ("annif vw_multi", lambda: AnnifModel(model_type="vw_multi", lang_code=lang_code)),
         ("annif mllm", lambda: AnnifModel(
-            model_type="mllm", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+            model_type="mllm", lang_code=lang_code, subject_order=subject_order, subject_hierarchy=subject_hierarchy
         )),
         ("annif yake", lambda: AnnifModel(
-            model_type="yake", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+            model_type="yake", lang_code=lang_code, subject_order=subject_order, subject_hierarchy=subject_hierarchy
         )),
         ("annif stwfsa", lambda: AnnifModel(
-            model_type="stwfsa", language=language, subject_order=subject_order, subject_hierarchy=subject_hierarchy
+            model_type="stwfsa", lang_code=lang_code, subject_order=subject_order, subject_hierarchy=subject_hierarchy
         )),
     ]
 
@@ -314,12 +314,12 @@ def get_split_function_by_name(name: str, n_splits: int, random_state: float = N
 def do_default_score_matrix_evaluation(
     named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchyType[SubjectNodeType]]]],
     split_function: DatasetSplitFunction,
-    language: str,
+    lang_code: str,
     model_name_subset: Iterable[str] = None,
     overall_score_name_subset: Iterable[str] = None,
     per_class_score_name_subset: Iterable[str] = None,
     load_cached_predictions: bool = False,
-    stop_after_evaluating_first_split: bool = False,
+    stop_after_evaluating_split: int = None,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     n_splits = 10
@@ -338,7 +338,7 @@ def do_default_score_matrix_evaluation(
 
         # setup models and scores
         model_lists = default_named_models(
-            language,
+            lang_code,
             model_name_subset=model_name_subset,
             subject_order=subject_order,
             subject_hierarchy=subject_hierarchy
@@ -360,14 +360,14 @@ def do_default_score_matrix_evaluation(
             overall_score_functions=overall_score_lists.functions,
             per_class_score_functions=per_class_score_lists.functions,
             fit_model_and_predict=fit_model_and_predict,
-            stop_after_evaluating_first_split=stop_after_evaluating_first_split,
+            stop_after_evaluating_split=stop_after_evaluating_split,
         )
 
         results.append(DefaultScoreMatrixDatasetResult(
             dataset_name,
+            model_lists.names,
             overall_score_matrix,
             per_class_score_matrix,
-            model_lists,
             overall_score_lists,
             per_class_score_lists
         ))
@@ -436,7 +436,7 @@ def write_multiple_score_matrix_box_plot(
     """Generate the score matrix box plot comparing multiple datasets and write it as html file."""
     score_matrices = [er.overall_score_matrix for er in evaluation_result]
     dataset_names = [er.dataset_name for er in evaluation_result]
-    model_names = evaluation_result[0].model_lists.names
+    model_names = evaluation_result[0].model_names
     score_names = evaluation_result[0].overall_score_lists.names
     score_ranges = evaluation_result[0].overall_score_lists.ranges
 
@@ -460,7 +460,7 @@ def write_score_matrix_box_plot(
     # generate figure
     figure = score_matrix_box_plot(
         evaluation_result.overall_score_matrix,
-        evaluation_result.model_lists.names,
+        evaluation_result.model_names,
         evaluation_result.overall_score_lists.names,
         evaluation_result.overall_score_lists.ranges,
         columns=2
@@ -482,7 +482,7 @@ def write_precision_recall_plot(
 
     figure = precision_recall_plot(
         evaluation_result.overall_score_matrix[:, [precision_idx, recall_idx], :],
-        evaluation_result.model_lists.names,
+        evaluation_result.model_names,
     )
     write_multiple_figure_formats(figure, plot_filepath)
 
@@ -494,7 +494,7 @@ def write_per_subject_score_histograms_plot(
     """Generate the subject score histograms plot from evaluation results and write it as html file."""
     figure = per_subject_score_histograms_plot(
         evaluation_result.per_class_score_matrix,
-        evaluation_result.model_lists.names,
+        evaluation_result.model_names,
         evaluation_result.per_class_score_lists.names,
         evaluation_result.per_class_score_lists.ranges,
     )
@@ -517,6 +517,6 @@ def write_per_subject_precision_recall_vs_samples_plot(
 
     figure = per_subject_precision_recall_vs_samples_plot(
         evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],
-        evaluation_result.model_lists.names,
+        evaluation_result.model_names,
     )
     write_multiple_figure_formats(figure, plot_filepath)

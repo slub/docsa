@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     random_state = 123
     load_cached_predictions = True
-    stop_after_evaluating_first_split = True
+    stop_after_evaluating_split = 2  # 0, 1, 2, 3, None
     dataset_subset = [
         "qucosa_de_titles_langid_rvk",
         "qucosa_de_abstracts_langid_rvk",
@@ -56,10 +56,10 @@ if __name__ == "__main__":
     evaluation_result = do_default_score_matrix_evaluation(
         named_datasets=default_named_qucosa_datasets(dataset_subset),
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
-        language="german",
+        lang_code="de",
         model_name_subset=model_subset,
         load_cached_predictions=load_cached_predictions,
-        stop_after_evaluating_first_split=stop_after_evaluating_first_split,
+        stop_after_evaluating_split=stop_after_evaluating_split,
     )
 
     write_default_plots(evaluation_result, os.path.join(FIGURES_DIR, "qucosa"), filename_suffix)

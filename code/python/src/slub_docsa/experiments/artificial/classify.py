@@ -55,7 +55,7 @@ if __name__ == "__main__":
     evaluation_result = do_default_score_matrix_evaluation(
         named_datasets=named_datasets,
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
-        language="english",
+        lang_code="en",
         model_name_subset=model_name_subset,
         load_cached_predictions=load_cached_predictions,
     )

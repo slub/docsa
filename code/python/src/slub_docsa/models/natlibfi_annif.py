@@ -33,9 +33,9 @@ from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matri
 
 logger = logging.getLogger(__name__)
 
-LANGUAGE_CODES_MAP = {
-    "german": "de",
-    "english": "en",
+SNOWBALL_LANGUAGES_FROM_CODE = {
+    "de": "german",
+    "en": "english"
 }
 
 
@@ -124,7 +124,7 @@ class AnnifModel(Model):
     def __init__(
         self,
         model_type: str,
-        language: str,
+        lang_code: str,
         subject_order: Sequence[str] = None,
         subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
         data_dir: str = None
@@ -140,7 +140,7 @@ class AnnifModel(Model):
             If it is None, a temporary directory is created and deleted as soon as the model instance is deleted.
         """
         self.model_type = model_type
-        self.language = language
+        self.lang_code = lang_code
         self.subject_hierarchy = subject_hierarchy
         self.subject_order = subject_order
         self.subject_skos_graph = None
@@ -157,11 +157,11 @@ class AnnifModel(Model):
 
     def __str__(self):
         """Return string describing the Annif model and its parameters used for predictions."""
-        return f"<AnnifModel type='{self.model_type}' language='{self.language}'>"
+        return f"<AnnifModel type='{self.model_type}' lang_code='{self.lang_code}'>"
 
     def _init_analyzer(self):
         download_nltk("punkt")
-        self.analyzer = SnowballAnalyzer(self.language)
+        self.analyzer = SnowballAnalyzer(SNOWBALL_LANGUAGES_FROM_CODE[self.lang_code])
 
     def _init_data_dir(self):
         if self.data_dir is None:
@@ -175,7 +175,7 @@ class AnnifModel(Model):
 
             self.subject_skos_graph = subject_hierarchy_to_skos_graph(
                 subject_hierarchy=self.subject_hierarchy,
-                language=LANGUAGE_CODES_MAP[self.language],
+                language=self.lang_code,
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
@@ -263,13 +263,13 @@ class AnnifModel(Model):
             backend_id=self.model_type,
             config_params={
                 "limit": len(annif_subject_list),
-                "language": LANGUAGE_CODES_MAP[self.language],
+                "language": self.lang_code,
             },
             project=self.project
         )
 
         params: Mapping[str, Any] = {
-            "language": LANGUAGE_CODES_MAP[self.language],
+            "language": self.lang_code,
         }
 
         if self.model_type == "fasttext":
@@ -337,7 +337,7 @@ class AnnifModel(Model):
         if np.max(probabilities) > 1.0:
             raise RuntimeError("some probabilities above 1.0")
 
-        if np.isnan(np.sum(probabilities)):
+        if np.isnan(np.sum(probabilities)):  # type: ignore
             raise RuntimeError("some probabilities are nan")
 
         return probabilities

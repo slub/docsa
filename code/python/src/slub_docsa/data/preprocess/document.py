@@ -6,6 +6,7 @@ from typing import Callable, List
 
 from nltk.stem import SnowballStemmer
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import SampleIterator
@@ -29,28 +30,49 @@ def document_as_concatenated_string(doc: Document, max_length: int = 2000) -> st
     return text[:max_length]
 
 
-def tokenize_text_function() -> Callable[[str], List[str]]:
+def tokenize_text_function(lang_code: str) -> Callable[[str], List[str]]:
     """Return a function that can be used to tokenize text."""
     download_nltk("punkt")
+    snowball_language = SNOWBALL_LANGUAGE_CODES[lang_code]
 
     def tokenize(text: str) -> List[str]:
-        return word_tokenize(text)
+        return word_tokenize(text, language=snowball_language)
 
     return tokenize
 
 
-def snowball_document_stemming_function(lang_code: str) -> Callable[[Document], Document]:
-    """Return a function that applies the snowball stemmer to both the document title, abstract and fulltext."""
+def snowball_text_stemming_function(
+    lang_code: str,
+    remove_stopwords: bool = True
+) -> Callable[[str], str]:
+    """Return a function that applies the snowball stemmer text."""
     if lang_code not in SNOWBALL_LANGUAGE_CODES:
         raise ValueError(f"language code '{lang_code}' not supported for stemming")
 
-    snowball_language = SNOWBALL_LANGUAGE_CODES[lang_code]
+    if remove_stopwords:
+        download_nltk("stopwords")
 
+    snowball_language = SNOWBALL_LANGUAGE_CODES[lang_code]
     stemmer = SnowballStemmer(snowball_language)
-    tokenize = tokenize_text_function()
+    tokenize = tokenize_text_function(lang_code)
+    stopword_list = stopwords.words(snowball_language)
+
+    def is_stopword(token: str) -> bool:
+        return token in stopword_list
 
     def stem_text(text: str) -> str:
-        return " ".join([stemmer.stem(token) for token in tokenize(text)])
+        filtered_tokens = [token for token in tokenize(text) if not remove_stopwords or not is_stopword(token)]
+        return " ".join([stemmer.stem(token) for token in filtered_tokens])
+
+    return stem_text
+
+
+def snowball_document_stemming_function(
+    lang_code: str,
+    remove_stopwords: bool = True
+) -> Callable[[Document], Document]:
+    """Return a function that applies the snowball stemmer to both the document title, abstract and fulltext."""
+    stem_text = snowball_text_stemming_function(lang_code, remove_stopwords)
 
     def apply_stemming_to_document(doc: Document) -> Document:
         stemmed_title = stem_text(doc.title) if doc.title is not None else None
