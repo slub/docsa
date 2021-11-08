@@ -13,7 +13,7 @@ processing, e.g., when evaluating hierarchical relationships between subjects.
 
 Usually, a dataset implementation should interface with some kind of database that allows to randomly access large
 amounts of documents and their respective subject annotations without loading all of them into main memory. A simple
-database implementation is provided via `slub_docsa.data.store.dataset.DatasetDbmStore`.
+database implementation is provided via `slub_docsa.data.store.dataset.DatasetSqliteStore`.
 """
 
 # pylint: disable=too-few-public-methods
@@ -50,7 +50,7 @@ def dataset_from_samples(samples: SampleIterator) -> Dataset:
 
     .. note::
 
-        This will fail for large datasets that does not fit in main memory!
+        This will fail for large datasets that do not fit in main memory!
     """
     zipped = list(zip(*samples))
     return SimpleDataset(documents=cast(Sequence[Document], zipped[0]), subjects=cast(SubjectTargets, zipped[1]))

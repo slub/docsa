@@ -1,22 +1,26 @@
 """Persistent storage of datasets for fast random access of both documents and subject annotations."""
 
-import dbm.gnu as dbm
 import os
-import pickle  # nosec
-from typing import Callable, Iterable, Sequence, Tuple
+import logging
+
+from typing import Callable, Sequence
+
+from sqlitedict import SqliteDict
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import SampleIterator
-from slub_docsa.common.subject import SubjectTargets, SubjectUriList
+from slub_docsa.common.subject import SubjectUriList
+
+logger = logging.getLogger(__name__)
 
 
-class _DatasetDbmStoreSequence(Sequence):
+class _DatasetSqliteStoreSequence(Sequence):
     """Allows to access documents and subjects via sequence interface in a dbm database."""
 
-    def __init__(self, store, index: int, populate_mode: bool):
+    def __init__(self, store, populate_mode: bool, idx):
         self.store = store
-        self.idx = index
+        self.idx = idx
         self.populate_mode = populate_mode
         self.closed = False
 
@@ -25,7 +29,7 @@ class _DatasetDbmStoreSequence(Sequence):
             raise ValueError("can not access data in populate mode")
         if self.closed:
             raise ValueError("can not access data of closed store")
-        return pickle.loads(self.store[str(key)])[self.idx]  # nosec
+        return self.store[str(key)][self.idx]
 
     def __len__(self):
         if self.populate_mode:
@@ -47,10 +51,10 @@ class _DatasetDbmStoreSequence(Sequence):
         self.closed = True
 
 
-class DatasetDbmStore(Dataset):
-    """Persistent storage for a dataset using the python dbm interface.
+class DatasetSqliteStore(Dataset):
+    """Persistent storage for a dataset as a sqlite database.
 
-    This naive implementation stores documents and subject annotations via `pickle` in a dbm database.
+    This naive implementation stores documents and subject annotations via `pickle` in a sqlite database.
 
     .. note::
 
@@ -60,13 +64,13 @@ class DatasetDbmStore(Dataset):
     --------
     Create a new dataset store and populate a list of documents and subject annotations.
 
-    >>> store = DatasetDbmStore("/tmp/dataset.dbm", populate_mode=True)
+    >>> store = DatasetSqliteStore("/tmp/dataset.sqlite", populate_mode=True)
     >>> store.populate(iter([(Document(uri="doc1", title="Test Document"), ["subject1"])]))
     >>> store.close()
 
     Re-open the database in read-only mode when using it as dataset reference.
 
-    >>> dataset = DatasetDbmStore("/tmp/dataset.dbm", populate_mode=False)
+    >>> dataset = DatasetSqliteStore("/tmp/dataset.sqlite", populate_mode=False)
     >>> dataset.documents[0]
     <slub_docsa.common.document.Document object at 0x7fc3ffe4fa10>
     """
@@ -74,16 +78,16 @@ class DatasetDbmStore(Dataset):
     documents: Sequence[Document]
     """Provides access to documents as sequence interface, loading documents from dbm database."""
 
-    subjects: SubjectTargets
+    subjects: Sequence[SubjectUriList]
     """Provides access to subject annotations as sequence interface, loading them from the dbm database."""
 
     def __init__(self, filepath: str, populate_mode: bool = False, batch_size: int = 1000):
-        """Initialize new dbm database.
+        """Initialize new sqlite database.
 
         Parameters
         ----------
         filepath: str
-            Path to file that is loaded or created as dbm database
+            Path to file that is loaded or created as sqlite database
 
         populate_mode: bool
             If true, allows to call `populate` method, which stores documents and subjects in batch mode.
@@ -94,13 +98,13 @@ class DatasetDbmStore(Dataset):
         """
         self.populate_mode = populate_mode
         self.batch_size = batch_size
-        self.store = dbm.open(filepath, "cf" if populate_mode else "r")
-        self._documents = _DatasetDbmStoreSequence(self.store, 0, populate_mode)
-        self._subjects = _DatasetDbmStoreSequence(self.store, 1, populate_mode)
+        self.store = SqliteDict(filepath, "dataset", autocommit=not populate_mode, flag="w" if populate_mode else "r")
+        self._documents = _DatasetSqliteStoreSequence(self.store, self.populate_mode, 0)
+        self._subjects = _DatasetSqliteStoreSequence(self.store, self.populate_mode, 1)
         self.documents = self._documents
         self.subjects = self._subjects
 
-    def populate(self, samples: Iterable[Tuple[Document, SubjectUriList]]):
+    def populate(self, samples: SampleIterator):
         """Populate the database from an iterator over samples (documents and subjects).
 
         Stores samples one by one, but synchronizes with disc in batches.
@@ -111,15 +115,17 @@ class DatasetDbmStore(Dataset):
         if self.store is None:
             raise ValueError("can not populate already closed store")
         for i, sample in enumerate(samples):
-            self.store[str(i)] = pickle.dumps(sample)  # nosec
+            logger.debug("write example %d", i)
+            self.store[str(i)] = sample
             if i % self.batch_size == 0:
                 # sync data to disc every x-th sample
-                self.store.sync()
+                self.store.commit(True)
 
     def close(self):
-        """Close dbm database. Reads and writes are no longer possible and will result in an exception."""
+        """Close sqlite database. Reads and writes are no longer possible and will result in an exception."""
         if self.store:
-            self.store.sync()
+            if self.populate_mode:
+                self.store.commit()
             self._documents.close()
             self._subjects.close()
             self.store.close()
@@ -132,7 +138,7 @@ def load_persisted_dataset_from_lazy_sample_iterator(
 ) -> Dataset:
     """Return dataset from persistent dbm store, or use sample iterator to populate and return a new dbm store."""
     if not os.path.exists(filepath):
-        store = DatasetDbmStore(filepath, populate_mode=True)
+        store = DatasetSqliteStore(filepath, populate_mode=True)
         store.populate(lazy_sample_iterator())
         store.close()
-    return DatasetDbmStore(filepath)
+    return DatasetSqliteStore(filepath)

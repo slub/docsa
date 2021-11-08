@@ -9,28 +9,25 @@ RUN mkdir -p /home/slub
 
 # install development basics
 RUN apt-get update && \
-    apt-get install -y git vim screen wget make python3-venv python3-gdbm && \
+    apt-get install -y git vim screen wget make python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
 # setup python virtual environment
 RUN python3 -m venv /home/slub/.venv
 ENV PATH="/home/slub/.venv/bin:$PATH"
-RUN python3 -m pip install --upgrade pip
 
-# pre-install test requirements
-COPY code/python/requirements.test.txt /tmp/requirements.test.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.test.txt
-
-# pre-install runtime requirements
-COPY code/python/requirements.runtime.txt /requirements.runtime.txt
-RUN pip install --no-cache-dir -r /requirements.runtime.txt
+# pre-install runtime, test and development requirements
+COPY Makefile /home/slub/workspace/Makefile
+COPY README.md /home/slub/workspace/README.md
+COPY code/python/setup.py /home/slub/workspace/code/python/setup.py
+RUN cd /home/slub/workspace && make install-dev
 
 # copy custom screenrc for convenience
 COPY code/docker/devel/screenrc /root/.screenrc
 
 WORKDIR /home/slub/workspace
 
-ENV PYTHONPATH=/home/slub/workspace/code/python/src
+# ENV PYTHONPATH=/home/slub/workspace/code/python/src
 
 # change to unprivileged user
 # USER slub

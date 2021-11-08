@@ -6,7 +6,6 @@ build:
   image: python:3.6-slim
   script:
     - apt-get update && apt-get install -y make
-    - make deps
-    - make deps-test
+    - make install-test
     - make lint
     - make coverage

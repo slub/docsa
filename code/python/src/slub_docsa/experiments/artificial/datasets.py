@@ -67,7 +67,7 @@ def default_named_artificial_datasets(
         # load and persist each dataset
         logger.info("load and save persisted random dataset %s", dataset_name)
         os.makedirs(ARTIFICIAL_DATASETS_CACHE_DIR, exist_ok=True)
-        dataset_fp = os.path.join(ARTIFICIAL_DATASETS_CACHE_DIR, f"{dataset_name}_dataset.dbm")
+        dataset_fp = os.path.join(ARTIFICIAL_DATASETS_CACHE_DIR, f"{dataset_name}_dataset.sqlite")
         subject_hierarchy_fp = os.path.join(ARTIFICIAL_DATASETS_CACHE_DIR, f"{dataset_name}_subject_hierarchy.dbm")
 
         # if dataset and subject hierarchy are stored, use stub definitions and load from files instead

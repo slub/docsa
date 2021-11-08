@@ -108,13 +108,13 @@ def default_named_qucosa_datasets(
     for dataset_name, lazy_sample_iterator in named_sample_iterators:
         # load and persist each dataset
         logger.info("load and save persisted dataset %s", dataset_name)
-        filepath = os.path.join(QUCOSA_DATASET_CACHE_DIRECTORY, f"{dataset_name}.dbm")
+        filepath = os.path.join(QUCOSA_DATASET_CACHE_DIRECTORY, f"{dataset_name}.sqlite")
         dataset = load_persisted_dataset_from_lazy_sample_iterator(lazy_sample_iterator, filepath)
         yield dataset_name, dataset, rvk
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     # loads all data sets and generates persistent storage for them
     for dn, ds, _ in default_named_qucosa_datasets():

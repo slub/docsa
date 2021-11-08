@@ -5,22 +5,12 @@ RUN apt-get update && \
     apt-get install -y make && \
     rm -rf /var/lib/apt/lists/*
 
-# copy make file and requirements to install deps
-WORKDIR /home/slub/workspace
-COPY code/python/requirements.runtime.txt /home/slub/workspace/code/python/requirements.runtime.txt
-COPY code/python/requirements.test.txt /home/slub/workspace/code/python/requirements.test.txt
-COPY Makefile /home/slub/workspace/Makefile
+# copy all files
+COPY . /home/slub/workspace
 
-# install python requirements
-RUN make deps
-RUN make deps-test
-
-# copy all python src files
-COPY code/python /home/slub/workspace/code/python
+# install slub_docsa and dependencies
+RUN cd /home/slub/workspace && make install-test
 
 # run linting & tests
-RUN make lint
-RUN make coverage
-
-# generate python documentation
-RUN make docs
+RUN cd /home/slub/workspace && make lint
+RUN cd /home/slub/workspace && make coverage
