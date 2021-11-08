@@ -15,7 +15,11 @@ generated as described below.
 ## Installation
 
 This projects requires [Python](https://www.python.org/) v3.6 or above and uses [pip](https://pypi.org/project/pip/) 
-for dependency management.
+for dependency management. Besides, this package uses pyTorch to train 
+[Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) via GPUs. 
+Make sure to install the latest Nvidia graphics drivers and check 
+[further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites).
+
 ### Via Python Package Installer (not available yet)
 
 Once published to PyPI (*not available yet*), install via:
@@ -36,10 +40,6 @@ Use *make* to install python dependencies by executing the following commands:
   (runs tests to verify correct installation, requires test dependencies)
 - `make docs`  
   (generate API documentation, requires test dependencies)
-
-This package uses pyTorch to train [Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) 
-via GPUs. Make sure to install the latest Nvidia graphics drivers and check 
-[further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites).
 
 ### From Source using Ubuntu 18.04
 
@@ -76,8 +76,6 @@ Further documentation of this project can be found at the following locations:
 ## Development
 
 ### Python Virtual Environment
-
-Set up a python virtual environment:
 
 Download all developer dependencies and install the *slub_docsa* package via pip in development mode:
 
