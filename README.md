@@ -15,7 +15,7 @@ generated as described below.
 ## Installation
 
 This projects requires [Python](https://www.python.org/) v3.6 or above and uses [pip](https://pypi.org/project/pip/) 
-for dependency management. Besides, this package uses pyTorch to train 
+for dependency management. Besides, this package uses [pyTorch](https://pytorch.org/) to train 
 [Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) via GPUs. 
 Make sure to install the latest Nvidia graphics drivers and check 
 [further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites).
@@ -124,6 +124,3 @@ Continuous Integration
 [pytest](https://pytest.org/), ensure code guidelines by using [pylint](https://www.pylint.org/) and 
 [flake8](https://flake8.pycqa.org/), and check for common security issues using 
 [bandit](https://github.com/PyCQA/bandit).
-
-
-
