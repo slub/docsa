@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     random_state = 123
     load_cached_predictions = True
-    stop_after_evaluating_split = 2  # 0, 1, 2, 3, None
+    stop_after_evaluating_split = 0  # 0, 1, 2, 3, None
     dataset_subset = [
         "qucosa_de_titles_langid_rvk",
         "qucosa_de_abstracts_langid_rvk",
@@ -32,21 +32,25 @@ if __name__ == "__main__":
         # ### "random", ####
         "oracle",
         "nihilistic",
-        "tfidf knn k=1",
-        "dbmdz bert knn k=1",
-        "tfidf rforest",
-        "dbmdz bert rforest",
-        "tfidf scikit mlp",
-        "tfidf torch ann",
-        "dbmdz bert scikit mlp",
-        "dbmdz bert torch ann",
-        "annif tfidf",
-        "annif svc",
+        "tfidf 10k knn k=1",
+        "tfidf 40k knn k=1",
+        "dbmdz bert sts1 knn k=1",
+        "dbmdz bert sts8 knn k=1",
+        # "tfidf rforest",
+        # "dbmdz bert sts1 rforest",
+        # "tfidf scikit mlp",
+        "tfidf 10k torch ann",
+        "tfidf 40k torch ann",
+        # "dbmdz bert sts1 scikit mlp",
+        "dbmdz bert sts1 torch ann",
+        "dbmdz bert sts8 torch ann",
+        # "annif tfidf",
+        # "annif svc",
         "annif omikuji",
-        "annif vw_multi",
-        "annif mllm",
-        "annif fasttext"
-        "annif yake",
+        # "annif vw_multi",
+        # "annif mllm",
+        # "annif fasttext"
+        # "annif yake",
         # ### "annif stwfsa" ###
     ]
     filename_suffix = f"split={split_function_name}"

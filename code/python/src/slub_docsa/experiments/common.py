@@ -83,11 +83,12 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
 DefaultScoreMatrixResult = Sequence[DefaultScoreMatrixDatasetResult]
 
 
-def get_dbmdz_bert_vectorizer():
+def get_qucosa_dbmdz_bert_vectorizer(subtext_samples: int = 1):
     """Load persisted dbmdz bert vectorizer."""
     os.makedirs(VECTORIZATION_CACHE, exist_ok=True)
-    dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, "dbmdz_bert.sqlite")
-    return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer())
+    filename = f"dbmdz_bert_qucosa_subtext_samples={subtext_samples}.sqlite"
+    dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, filename)
+    return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer(subtext_samples=subtext_samples))
 
 
 def default_named_models(
@@ -97,7 +98,8 @@ def default_named_models(
     model_name_subset: Iterable[str] = None
 ) -> DefaultModelLists:
     """Return a list of default models to use for evaluating model performance."""
-    dbmdz_bert_vectorizer = get_dbmdz_bert_vectorizer()
+    dbmdz_bert_vectorizer_sts_1 = get_qucosa_dbmdz_bert_vectorizer(1)
+    dbmdz_bert_vectorizer_sts_8 = get_qucosa_dbmdz_bert_vectorizer(8)
 
     models = [
         ("random", lambda: ScikitTfidiRandomClassifier()),
@@ -107,63 +109,79 @@ def default_named_models(
             vectorizer=RandomVectorizer(),
         )),
         ("oracle", lambda: OracleModel()),
-        ("tfidf knn k=1", lambda: ScikitClassifier(
+        ("tfidf 10k knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("dbmdz bert knn k=1", lambda: ScikitClassifier(
+        ("tfidf 40k knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=dbmdz_bert_vectorizer,
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=40000),
+        )),
+        ("dbmdz bert sts1 knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=dbmdz_bert_vectorizer_sts_1,
+        )),
+        ("dbmdz bert sts8 knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=dbmdz_bert_vectorizer_sts_8,
         )),
         ("random vectorizer knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
             vectorizer=RandomVectorizer(),
         )),
-        ("tfidf knn k=3", lambda: ScikitClassifier(
+        ("tfidf 10k knn k=3", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=3),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf dtree", lambda: ScikitClassifier(
+        ("tfidf 10k dtree", lambda: ScikitClassifier(
             predictor=DecisionTreeClassifier(max_leaf_nodes=1000),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf rforest", lambda: ScikitClassifier(
+        ("tfidf 10k rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("dbmdz bert rforest", lambda: ScikitClassifier(
+        ("dbmdz bert sts1 rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=dbmdz_bert_vectorizer,
+            vectorizer=dbmdz_bert_vectorizer_sts_1,
         )),
-        ("tfidf scikit mlp", lambda: ScikitClassifier(
+        ("tfidf 10k scikit mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf torch ann", lambda: TorchSingleLayerDenseModel(
+        ("tfidf 10k torch ann", lambda: TorchSingleLayerDenseModel(
             epochs=50,
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("dbmdz bert scikit mlp", lambda: ScikitClassifier(
+        ("tfidf 40k torch ann", lambda: TorchSingleLayerDenseModel(
+            epochs=50,
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=40000),
+        )),
+        ("dbmdz bert sts1 scikit mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=dbmdz_bert_vectorizer,
+            vectorizer=dbmdz_bert_vectorizer_sts_1,
         )),
-        ("dbmdz bert torch ann", lambda: TorchSingleLayerDenseModel(
+        ("dbmdz bert sts1 torch ann", lambda: TorchSingleLayerDenseModel(
             epochs=50,
-            vectorizer=dbmdz_bert_vectorizer,
+            vectorizer=dbmdz_bert_vectorizer_sts_1,
         )),
-        ("tfidf log_reg", lambda: ScikitClassifier(
+        ("dbmdz bert sts8 torch ann", lambda: TorchSingleLayerDenseModel(
+            epochs=50,
+            vectorizer=dbmdz_bert_vectorizer_sts_8,
+        )),
+        ("tfidf 10k log_reg", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=LogisticRegression()),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf nbayes", lambda: ScikitClassifier(
+        ("tfidf 10k nbayes", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=GaussianNB()),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf svc", lambda: ScikitClassifier(
+        ("tfidf 10k svc", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(
                 estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
             ),
-            vectorizer=TfidfStemmingVectorizer(lang_code),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
         ("annif tfidf", lambda: AnnifModel(model_type="tfidf", lang_code=lang_code)),
         ("annif svc", lambda: AnnifModel(model_type="svc", lang_code=lang_code)),

@@ -14,8 +14,6 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
 from torch.optim import Adam
 
-from scipy.sparse.csr import csr_matrix
-
 from slub_docsa.common.model import Model
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
@@ -65,14 +63,11 @@ class AbstractTorchModel(Model):
         """Train the fully connected network for all training documents."""
         # transform documents to feature vectors
         logger.info("train fully connected network with %d examples", len(train_documents))
-        corpus = [document_as_concatenated_string(d) for d in train_documents]
-        self.vectorizer.fit(corpus)
-        features = self.vectorizer.transform(corpus)
+        self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
+        features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in train_documents))
 
         # make sure feature vectors is a full numpy array
-        # TODO: convert sparse matrices to sparse tensors
-        if isinstance(features, csr_matrix):
-            features = features.toarray()
+        features = np.array(features)
 
         # convert to tensors
         features_tensor = torch.from_numpy(features).float()
@@ -122,13 +117,13 @@ class AbstractTorchModel(Model):
             raise ValueError("no model trained yet")
 
         # transform documents to feature vectors
-        corpus = [document_as_concatenated_string(d) for d in test_documents]
-        features = self.vectorizer.transform(corpus)
+        features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in test_documents))
 
         # make sure feature vectors is a full numpy array
         # TODO: convert sparse matrices to sparse tensors
-        if isinstance(features, csr_matrix):
-            features = features.toarray()
+        # if isinstance(features, csr_matrix):
+        #    features = features.toarray()
+        features = np.array(features)
 
         # convert to tensors
         features_tensor = torch.from_numpy(features).float()

@@ -4,8 +4,6 @@ from typing import Iterable, Sequence, Any
 
 import numpy as np
 
-from scipy.sparse.csr import csr_matrix
-from sklearn.naive_bayes import GaussianNB
 from sklearn.dummy import DummyClassifier
 
 from slub_docsa.common.document import Document
@@ -31,20 +29,19 @@ class ScikitClassifier(Model):
         if not self.vectorizer:
             raise RuntimeError("Vectorizer not initialized, execute fit before predict!")
 
-        corpus = [document_as_concatenated_string(d) for d in documents]
-        features = self.vectorizer.transform(corpus)
+        features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in documents))
+        features = np.array(features)
 
         # NaiveBayes classifier requires features as full-size numpy matrix
-        if isinstance(features, csr_matrix) and hasattr(self.predictor, "estimator") \
-                and isinstance(self.predictor.estimator, GaussianNB):
-            features = features.toarray()
+        # if isinstance(features, csr_matrix) and hasattr(self.predictor, "estimator") \
+        #         and isinstance(self.predictor.estimator, GaussianNB):
+        #     features = features.toarray()
 
         return features
 
     def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
         """Fit model with training documents and subjects."""
-        corpus = [document_as_concatenated_string(d) for d in train_documents]
-        self.vectorizer.fit(corpus)
+        self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
         features = self._vectorize(train_documents)
         self.predictor.fit(features, train_targets)
 
