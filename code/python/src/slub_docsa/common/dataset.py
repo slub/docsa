@@ -18,10 +18,10 @@ database implementation is provided via `slub_docsa.data.store.dataset.DatasetSq
 
 # pylint: disable=too-few-public-methods
 
-from typing import Sequence, cast
+from typing import Iterator, Sequence, cast
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.sample import SampleIterator
+from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectTargets
 
 
@@ -45,7 +45,7 @@ class SimpleDataset(Dataset):
         self.subjects = subjects
 
 
-def dataset_from_samples(samples: SampleIterator) -> Dataset:
+def dataset_from_samples(samples: Iterator[Sample]) -> Dataset:
     """Return dataset from an iterator over samples, stored as simple python lists.
 
     .. note::
@@ -56,7 +56,7 @@ def dataset_from_samples(samples: SampleIterator) -> Dataset:
     return SimpleDataset(documents=cast(Sequence[Document], zipped[0]), subjects=cast(SubjectTargets, zipped[1]))
 
 
-def samples_from_dataset(dataset: Dataset) -> SampleIterator:
+def samples_from_dataset(dataset: Dataset) -> Iterator[Sample]:
     """Return an iterator over each sample of a dataset."""
     for i, document in enumerate(dataset.documents):
-        yield document, dataset.subjects[i]
+        yield Sample(document, dataset.subjects[i])

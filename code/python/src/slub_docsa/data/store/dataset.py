@@ -3,13 +3,13 @@
 import os
 import logging
 
-from typing import Callable, Sequence
+from typing import Callable, Iterator, Sequence
 
 from sqlitedict import SqliteDict
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
-from slub_docsa.common.sample import SampleIterator
+from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectUriList
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ class DatasetSqliteStore(Dataset):
         self.documents = self._documents
         self.subjects = self._subjects
 
-    def populate(self, samples: SampleIterator):
+    def populate(self, samples: Iterator[Sample]):
         """Populate the database from an iterator over samples (documents and subjects).
 
         Stores samples one by one, but synchronizes with disc in batches.
@@ -133,7 +133,7 @@ class DatasetSqliteStore(Dataset):
 
 
 def load_persisted_dataset_from_lazy_sample_iterator(
-    lazy_sample_iterator: Callable[[], SampleIterator],
+    lazy_sample_iterator: Callable[[], Iterator[Sample]],
     filepath: str
 ) -> Dataset:
     """Return dataset from persistent dbm store, or use sample iterator to populate and return a new dbm store."""

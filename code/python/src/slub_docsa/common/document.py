@@ -2,14 +2,14 @@
 
 # pylint: disable=too-few-public-methods, too-many-arguments
 
-from typing import Iterable, Any, Optional, Sequence
+from typing import Iterable, Any, Optional
 
 
 class Document:
     """Represents a document and its meta data."""
 
     uri: str
-    """A uri referecing this document."""
+    """A uri referencing this document."""
 
     title: str
     """The title of the document."""
@@ -30,7 +30,3 @@ class Document:
         self.authors = authors if authors is not None else list([])
         self.abstract = abstract
         self.fulltext = fulltext
-
-
-DocumentList = Sequence[Document]
-"""An ordered list of documents"""

@@ -9,13 +9,13 @@ import json
 import logging
 import time
 
-from typing import Callable, Iterable, Mapping, List, Any, Optional, Tuple
+from typing import Callable, Iterable, Iterator, Mapping, List, Any, Optional, Tuple
 
 from elasticsearch import Elasticsearch
 from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.sample import SampleIterator
+from slub_docsa.common.sample import Sample
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
 
@@ -398,7 +398,7 @@ def _get_document_id_from_qucosa_metadate(doc: QucosaDocument) -> str:
 def _read_qucosa_generic_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument],
     create_document_from_qucosa: Callable[[QucosaDocument], Optional[Document]]
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Read qucosa data and extract documents and RVK subjects."""
     logger.debug("load rvk classes and index them by notation")
     rvk_subject_store = get_rvk_subject_store()
@@ -417,13 +417,13 @@ def _read_qucosa_generic_rvk_samples(
         if document is None:
             continue
 
-        yield document, subject_uris_filtered
+        yield Sample(document, subject_uris_filtered)
 
 
 def read_qucosa_titles_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument] = None,
     lang_code: Optional[str] = "de",
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Read qucosa documents and use document titles as training data."""
     if qucosa_iterator is None:
         qucosa_iterator = read_qucosa_documents_from_directory()
@@ -454,7 +454,7 @@ def read_qucosa_titles_rvk_samples(
 def read_qucosa_abstracts_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument] = None,
     lang_code: Optional[str] = "de",
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Read qucosa documents and use document titles and abstracts as training data."""
     if qucosa_iterator is None:
         qucosa_iterator = read_qucosa_documents_from_directory()
@@ -485,7 +485,7 @@ def read_qucosa_abstracts_rvk_samples(
 def read_qucosa_fulltext_rvk_samples(
     qucosa_iterator: Iterable[QucosaDocument] = None,
     lang_code: Optional[str] = "de",
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Read qucosa documents and use document titles and fulltext as training data."""
     if qucosa_iterator is None:
         qucosa_iterator = read_qucosa_documents_from_directory()

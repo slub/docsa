@@ -1,12 +1,11 @@
 """Language related pre-processing methods."""
 
 import logging
+from typing import Iterator
 
 import langid
 
-from slub_docsa.common.document import Document
-from slub_docsa.common.sample import SampleIterator
-from slub_docsa.common.subject import SubjectUriList
+from slub_docsa.common.sample import Sample
 from slub_docsa.data.preprocess.dataset import filter_samples_by_condition
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 
@@ -19,18 +18,18 @@ def detect_language_from_text_via_langid(text: str) -> str:
 
 
 def filter_samples_by_detected_language_via_langid(
-    samples_iterator: SampleIterator,
+    samples_iterator: Iterator[Sample],
     lang_code: str,
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Return sample documents whose language detected by langid matches the expected language."""
-    def condition(document: Document, _: SubjectUriList) -> bool:
-        text = document_as_concatenated_string(document)
+    def condition(sample: Sample) -> bool:
+        text = document_as_concatenated_string(sample.document)
         if text is not None:
             detected_lang_code = detect_language_from_text_via_langid(text)
             if detected_lang_code != lang_code:
                 logger.debug(
                     "document '%s' with unexpected detected language of '%s'",
-                    document.uri,
+                    sample.document.uri,
                     detected_lang_code
                 )
                 logger.debug("document text begins with: %s", text[:100])

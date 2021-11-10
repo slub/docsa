@@ -25,7 +25,15 @@ def generate_hierarchical_subject_token_probabilities(
     root_token_probabilities: TokenProbabilities,
     label_from_tokens: bool = True,
 ) -> Tuple[Mapping[str, TokenProbabilities], SubjectHierarchyType]:
-    """Generate a number of hierarchical subjects each represented by random token probabilities."""
+    """Generate a number of hierarchical subjects each represented by random token probabilities.
+
+    Parameters
+    ----------
+    n_subjects: int
+        the number of subjects to generate
+    root_token_probabilities: TokenProbabilities
+        the base token probabilities used to infer token probabilities
+    """
     subject_token_probabilities = {}
     subject_hierarchy = {}
     parent_backlog: List[Tuple[Optional[str], int, TokenProbabilities]] = [

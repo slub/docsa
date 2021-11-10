@@ -8,7 +8,7 @@ from typing_extensions import Literal
 
 from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_from_dataset
 from slub_docsa.common.paths import CACHE_DIR
-from slub_docsa.common.sample import SampleIterator
+from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchyType
 from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_samples, read_qucosa_fulltext_rvk_samples
 from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory, read_qucosa_titles_rvk_samples
@@ -61,7 +61,7 @@ def _load_qucosa_samples(
     lang_code: str = None,
     langid_check: bool = False,
     stemming: bool = False,
-) -> SampleIterator:
+) -> Iterator[Sample]:
     qucosa_iterator = read_qucosa_documents_from_directory()
     sample_iterator = read_qucosa_titles_rvk_samples(qucosa_iterator, lang_code)
     if text_source == "abstracts":
@@ -88,17 +88,14 @@ def default_named_qucosa_datasets(
     """Return default qucosa dataset variants."""
     rvk = get_rvk_subject_store()
 
-    named_sample_iterators: List[Tuple[str, Callable[[], SampleIterator]]] = [
+    named_sample_iterators: List[Tuple[str, Callable[[], Iterator[Sample]]]] = [
         ("qucosa_all_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", None, False, False)),
         ("qucosa_de_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", False, False)),
         ("qucosa_de_titles_langid_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", True, False)),
-        ("qucosa_de_titles_stemmed_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", True, True)),
         ("qucosa_de_abstracts_rvk", lambda: _load_qucosa_samples(rvk, "abstracts", "de", False, False)),
         ("qucosa_de_abstracts_langid_rvk", lambda: _load_qucosa_samples(rvk, "abstracts", "de", True, False)),
-        ("qucosa_de_abstracts_stemmed_rvk", lambda: _load_qucosa_samples(rvk, "abstracts", "de", True, True)),
         ("qucosa_de_fulltexts_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", False, False)),
-        ("qucosa_de_fulltexts_langid_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", True, False)),
-        ("qucosa_de_fulltexts_stemmed_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", True, True))
+        ("qucosa_de_fulltexts_langid_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", True, False))
     ]
 
     # filter data sets based on name subset parameter

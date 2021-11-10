@@ -2,14 +2,14 @@
 
 import logging
 
-from typing import Callable, List
+from typing import Callable, Iterator, List
 
 from nltk.stem import SnowballStemmer
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.sample import SampleIterator
+from slub_docsa.common.sample import Sample
 from slub_docsa.data.load.nltk import download_nltk
 
 logger = logging.getLogger(__name__)
@@ -91,10 +91,10 @@ def snowball_document_stemming_function(
 
 
 def apply_snowball_stemming_to_document_samples_iterator(
-    samples_iterator: SampleIterator,
+    samples_iterator: Iterator[Sample],
     lang_code: str
-) -> SampleIterator:
+) -> Iterator[Sample]:
     """Apply Snowball stemming to each document of a samples iterator."""
     stemming_function = snowball_document_stemming_function(lang_code)
-    for document, subjects in samples_iterator:
-        yield stemming_function(document), subjects
+    for sample in samples_iterator:
+        yield Sample(stemming_function(sample.document), sample.subjects)

@@ -1,4 +1,8 @@
-"""Base class describing a scoring function for evaluation."""
+"""Base class describing a scoring function for evaluation.
+
+Note: Type aliases `MultiClassScoreFunctionType`, `BinaryClassScoreFunctionType` and `IncidenceDecisionFunctionType`
+are not correctly described in API documentation due to [issue in pdoc](https://github.com/pdoc3/pdoc/issues/229).
+"""
 
 from typing import Callable
 
