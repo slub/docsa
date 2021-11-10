@@ -8,6 +8,7 @@ from typing import Any, Sequence, cast
 
 import numpy as np
 import torch
+import scipy
 
 from torch.nn.modules.activation import ReLU, Tanh
 from torch.utils.data import TensorDataset, DataLoader
@@ -146,7 +147,7 @@ class AbstractTorchModel(Model):
                 arrays.append(array)
 
         # reverse logits and return results
-        return cast(Any, np).exp(np.vstack(arrays))
+        return cast(np.ndarray, cast(Any, scipy).special.expit(np.vstack(arrays)))
 
     def __str__(self):
         """Return representative string for model."""
