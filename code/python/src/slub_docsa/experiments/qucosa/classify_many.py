@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     random_state = 123
     load_cached_predictions = True
-    stop_after_evaluating_split = 0  # 0, 1, 2, 3, None
+    stop_after_evaluating_split = 2  # 0, 1, 2, 3, None
     dataset_subset = [
         "qucosa_de_titles_langid_rvk",
         "qucosa_de_abstracts_langid_rvk",
@@ -32,6 +32,7 @@ if __name__ == "__main__":
         # ### "random", ####
         "oracle",
         "nihilistic",
+        "tfidf 2k knn k=1",
         "tfidf 10k knn k=1",
         "tfidf 40k knn k=1",
         "dbmdz bert sts1 knn k=1",
@@ -39,6 +40,7 @@ if __name__ == "__main__":
         # "tfidf rforest",
         # "dbmdz bert sts1 rforest",
         # "tfidf scikit mlp",
+        "tfidf 2k torch ann",
         "tfidf 10k torch ann",
         "tfidf 40k torch ann",
         # "dbmdz bert sts1 scikit mlp",

@@ -109,6 +109,10 @@ def default_named_models(
             vectorizer=RandomVectorizer(),
         )),
         ("oracle", lambda: OracleModel()),
+        ("tfidf 2k knn k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=2000),
+        )),
         ("tfidf 10k knn k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
@@ -148,6 +152,10 @@ def default_named_models(
         ("tfidf 10k scikit mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
+        )),
+        ("tfidf 2k torch ann", lambda: TorchSingleLayerDenseModel(
+            epochs=50,
+            vectorizer=TfidfStemmingVectorizer(lang_code, max_features=2000),
         )),
         ("tfidf 10k torch ann", lambda: TorchSingleLayerDenseModel(
             epochs=50,
