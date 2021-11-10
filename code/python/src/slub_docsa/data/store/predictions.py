@@ -1,11 +1,13 @@
 """Persistent storage for model predictions."""
 
+# pylint: disable=too-many-arguments
+
 import logging
 import hashlib
 import dbm
 import io
 
-from typing import Sequence, cast
+from typing import Optional, Sequence, cast
 
 import numpy as np
 
@@ -27,8 +29,12 @@ def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool
     store = dbm.open(filepath, "c")
 
     def fit_model_and_predict(
-        model: Model, train_documents: Sequence[Document],
-        train_incidence_matrix: np.ndarray, test_documents: Sequence[Document],
+        model: Model,
+        train_documents: Sequence[Document],
+        train_incidence_matrix: np.ndarray,
+        test_documents: Sequence[Document],
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_incidence_matrix: Optional[np.ndarray] = None,
     ) -> np.ndarray:
 
         # calculate hash over train and test data
@@ -49,7 +55,7 @@ def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool
             return cast(np.ndarray, np.load(data))
 
         logger.info("do training")
-        model.fit(train_documents, train_incidence_matrix)
+        model.fit(train_documents, train_incidence_matrix, validation_documents, validation_incidence_matrix)
 
         logger.info("do prediction")
         predictions = model.predict_proba(test_documents)

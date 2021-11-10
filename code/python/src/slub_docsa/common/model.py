@@ -1,6 +1,6 @@
 """Base class describing a classification model that can be used for training and prediction."""
 
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -14,7 +14,13 @@ class Model:
     instead of raw vectorized feaures.
     """
 
-    def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
+    def fit(
+        self,
+        train_documents: Sequence[Document],
+        train_targets: np.ndarray,
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_targets: Optional[np.ndarray] = None,
+    ):
         """Train a model to fit the training data.
 
         Parameters
@@ -24,6 +30,11 @@ class Model:
         train_targets: numpy.ndarray
             The incidence matrix describing which document of `train_documents` belongs to which subjects. The matrix
             has to have a shape of (n_docs, n_subjects).
+        validation_documents: Optional[Sequence[Document]]
+            A sequence of documents that can be used to validate the trained model, e.g., during training of the
+            epochs of a artificial neural network
+        validation_targets: Optional[numpy.ndarray]
+            The incidence matrix for `validation_documents`
 
         Returns
         -------

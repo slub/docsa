@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     random_state = 123
     load_cached_predictions = True
-    stop_after_evaluating_split = 2  # 0, 1, 2, 3, None
+    stop_after_evaluating_split = 3  # 0, 1, 2, 3, None
     dataset_subset = [
         "qucosa_de_titles_langid_rvk",
         "qucosa_de_abstracts_langid_rvk",

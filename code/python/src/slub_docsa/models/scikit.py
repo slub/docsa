@@ -1,22 +1,30 @@
 """Use scikit-learn methods and algorithms to provide model implementations."""
 
-from typing import Iterable, Sequence, Any
+from typing import Iterable, Optional, Sequence, Any
 
 import numpy as np
-
-from sklearn.dummy import DummyClassifier
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import Model
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, RandomVectorizer
+from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 
 class ScikitClassifier(Model):
     """Model that uses a Scikit-Learn Predictor that supports multiple labels.
 
-    A list of supported multi-label models can be found here: https://scikit-learn.org/stable/modules/multiclass.html
+    A list of supported multi-label models can be found [here](https://scikit-learn.org/stable/modules/multiclass.html).
+
+    Example
+    -------
+    >>> # define a scikit-learn classifier
+    >>> predictor = sklearn.neighbors.KNeighborsClassifier(n_neighbors=1),
+    >>> # define a vectorizer
+    >>> vectorizer = slub_docsa.data.preprocess.vectorizer.TfidfStemmingVectorizer("en", max_features=1000)
+    >>> # initialize both as a classification model
+    >>> ScikitClassifier(predictor, vectorizer)
+    <slub_docsa.models.scikit.ScikitClassifier object at 0x7fc4796b4a20>
     """
 
     def __init__(self, predictor, vectorizer: AbstractVectorizer):
@@ -39,7 +47,13 @@ class ScikitClassifier(Model):
 
         return features
 
-    def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
+    def fit(
+        self,
+        train_documents: Sequence[Document],
+        train_targets: np.ndarray,
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_targets: Optional[np.ndarray] = None,
+    ):
         """Fit model with training documents and subjects."""
         self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
         features = self._vectorize(train_documents)
@@ -69,16 +83,3 @@ class ScikitClassifier(Model):
     def __str__(self):
         """Return string describing meta classifier."""
         return f"<ScikitClassifier predictor={str(self.predictor)} vectorizer={str(self.vectorizer)}>"
-
-
-class ScikitTfidiRandomClassifier(ScikitClassifier):
-    """Predict fully random probabilities for each class."""
-
-    def __init__(self):
-        """Initialize random classifier."""
-        super().__init__(DummyClassifier(strategy="uniform"), vectorizer=RandomVectorizer())
-
-    def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
-        """Predict random probabilities between 0 and 1 for each class individually."""
-        probabilities = super().predict_proba(test_documents)
-        return np.random.random(size=probabilities.shape)

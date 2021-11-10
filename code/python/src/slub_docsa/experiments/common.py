@@ -39,10 +39,10 @@ from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_me
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
-from slub_docsa.models.dummy import NihilisticModel, OracleModel
+from slub_docsa.models.dummy import NihilisticModel, OracleModel, RandomModel
 from slub_docsa.models.ann_torch import TorchSingleLayerDenseModel
 from slub_docsa.models.natlibfi_annif import AnnifModel
-from slub_docsa.models.scikit import ScikitClassifier, ScikitTfidiRandomClassifier
+from slub_docsa.models.scikit import ScikitClassifier
 from slub_docsa.common.model import Model
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import score_models_for_dataset
@@ -102,7 +102,7 @@ def default_named_models(
     dbmdz_bert_vectorizer_sts_8 = get_qucosa_dbmdz_bert_vectorizer(8)
 
     models = [
-        ("random", lambda: ScikitTfidiRandomClassifier()),
+        ("random", lambda: RandomModel()),
         ("nihilistic", lambda: NihilisticModel()),
         ("stratified", lambda: ScikitClassifier(
             predictor=DummyClassifier(strategy="stratified"),

@@ -1,16 +1,75 @@
 """Classification models and similarity metrics.
 
+# Classification
+
+Classification models implement the `slub_docsa.common.model.Model` interface and provide various algorithms for
+multi-class multi-label classification.
+
 ## Dummy Models
+
+Dummy models do not actually perform any intelligent learning process, but are used as a baseline and for testing
+purposes.
 
 ### Oracle
 
+The `slub_docsa.models.dummy.OracleModel` is a model implementation that cheats by getting access to the target
+subjects of the test dataset. Instead of learning a model it simply returns the true subject annotations.
+
+As a result, this model should always outperform any other classification model. This can be useful to determine
+the maximal achievable score in some scenarios where the best score is not known in advance.
+
+For example, when chosing subjects based on the `slub_docsa.evaluation.incidence.positive_top_k_incidence_decision`
+and there are documents that are annotated with more then `k` subjects, even the `slub_docsa.models.dummy.OracleModel`
+will not be able to achieve the maximum `scipy.metrics.f1_score` of `1.0`, since some subjects are not predicted even
+if their test subject probabilities are correctly predicted as `1.0`.
+
+### Nihilistic
+
+The `slub_docsa.models.dummy.NihilisticModel` simply returns a subject probability of `0.0` for all predictions.
+
 ### Random
 
-### Stratified
+The `slub_docsa.models.dummy.RandomModel` returns uniform random subject probabilities between `0.0` and `1.0`.
+
+This means, for example, using the `slub_docsa.evaluation.incidence.threshold_incidence_decision` with `threshold=0.5`,
+it will predict on average half of all available subjects.
+
+Random predictions can be useful as a minimum baseline and to determine minimum score values. Ideally, non-dummy models
+should outperform the random model.
 
 ## Scikit Models
 
+Many classic classification algorithms have already been implemented as part of the [scikit-learn](
+https://scikit-learn.org/) library. The `slub_docsa.models.scikit.ScikitClassifier` model provides an interface to
+these classic algorithms.
+
+Unfortunately, not all classifier can be used since not all of them support multi-class multi-label classifications.
+For example, the [`LogisticRegression`](
+https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html) classifier does not
+support multi-label predictions. However, it can be extended by the [`MultiOutputClassifier`](
+https://scikit-learn.org/stable/modules/generated/sklearn.multioutput.MultiOutputClassifier.html) wrapper, which then
+trains multiple models using the one-vs-rest strategy.
+
+Similarily, not all classifiers support predicting class probabilities. For example, the [`LinearSVC`](
+https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html) does not implement the `predict_proba`
+method, and thus, can not be used to determine class probabilities. However, such classifier can be extended with the
+[`CalibratedClassifierCV`](
+https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html) wrapper, which
+estimates class probabilities via cross validation.
+
+An overview over supported multi-class multi-label classifiers can be found [here](
+https://scikit-learn.org/stable/modules/multiclass.html).
+
+### Dummy Classifier
+
+Similar to the dummy models provided above, [scikit-learn](https://scikit-learn.org/) also provides various dummy
+strategies with the [`DummyClassifier`](
+https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html). Again, these models can be
+useful as a baseline for comparison, or for testing purposes.
+
 ### k-Nearest Neighbor
+
+
 
 ### Decision Tree
 
@@ -124,12 +183,6 @@ requires pip install
 
 requires pip install
 
-## Not Yet Supported Models
-
-The following models are not yet supported or not yet tested.
-
-### Annif Maui
-
 ### Annif Yake
 
 `yake`
@@ -137,6 +190,12 @@ The following models are not yet supported or not yet tested.
 Requirements
 
 - requires skos attribute, uses skos:"prefLabel", but no skos:"broader"
+
+## Not Yet Supported Models
+
+The following models are not yet supported or not yet tested.
+
+### Annif Maui
 
 ### Annif stwfsa
 

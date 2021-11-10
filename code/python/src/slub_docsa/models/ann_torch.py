@@ -1,24 +1,30 @@
 """Torch Models for Classification."""
 
-# pylint: disable=fixme, invalid-name, no-member, too-many-locals
+# pylint: disable=fixme, invalid-name, no-member, too-many-locals, too-many-statements
 
 import logging
+import time
 
-from typing import Any, Sequence, cast
+from typing import Any, Optional, Sequence, cast
 
 import numpy as np
+
 import torch
 import scipy
+
+from sklearn.metrics import f1_score
 
 from torch.nn.modules.activation import ReLU, Tanh
 from torch.utils.data import TensorDataset, DataLoader
 from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
 from torch.optim import Adam
+from torch.optim.lr_scheduler import ExponentialLR
 
 from slub_docsa.common.model import Model
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
+from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 
 logger = logging.getLogger(__name__)
 
@@ -60,41 +66,69 @@ class AbstractTorchModel(Model):
         """Return a torch network that will be trained and evaluated."""
         raise NotImplementedError()
 
-    def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
+    def fit(
+        self,
+        train_documents: Sequence[Document],
+        train_targets: np.ndarray,
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_targets: Optional[np.ndarray] = None,
+    ):
         """Train the fully connected network for all training documents."""
         # transform documents to feature vectors
         logger.info("train fully connected network with %d examples", len(train_documents))
         self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
-        features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in train_documents))
+        train_features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in train_documents))
+        train_features = np.array(train_features)  # make sure feature vectors is a full numpy array
 
-        # make sure feature vectors is a full numpy array
-        features = np.array(features)
+        # extract and prepare validation features
+        validation_features = None
+        if validation_documents is not None:
+            validation_features = list(
+                self.vectorizer.transform(document_as_concatenated_string(d) for d in validation_documents)
+            )
+            validation_features = np.array(validation_features)
 
         # convert to tensors
-        features_tensor = torch.from_numpy(features).float()
-        targets_tensor = torch.from_numpy(train_targets).float()
+        train_features_tensor = torch.from_numpy(train_features).float()
+        train_targets_tensor = torch.from_numpy(train_targets).float()
+
+        validation_features_tensor = None
+        validation_targets_tensor = None
+        if validation_features is not None:
+            validation_features_tensor = torch.from_numpy(validation_features).float()
+            validation_targets_tensor = torch.from_numpy(validation_targets).float()
 
         # setup torch datatsets, such that data can be loaded in batches
-        torch_dataset = TensorDataset(features_tensor, targets_tensor)
-        dataloader = DataLoader(torch_dataset, batch_size=self.batch_size, shuffle=True)
+        train_dataset = TensorDataset(train_features_tensor, train_targets_tensor)
+        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+
+        validation_dataset = None
+        validation_dataloader = None
+        if validation_features_tensor is not None and validation_targets_tensor is not None:
+            validation_dataset = TensorDataset(validation_features_tensor, validation_targets_tensor)
+            validation_dataloader = DataLoader(validation_dataset, batch_size=self.batch_size, shuffle=False)
 
         # initialize network model
         logger.info("initialize torch model on device '%s'", self.device)
-        self.model = self.get_model(int(features.shape[1]), int(train_targets.shape[1]))
+        self.model = self.get_model(int(train_features.shape[1]), int(train_targets.shape[1]))
         self.model.to(self.device)
         self.model.train()
 
         # define loss and optimizer
         criterion = BCEWithLogitsLoss()
-        # optimizer = SGD(self.model.parameters(), lr=self.lr)
         optimizer = Adam(self.model.parameters(), lr=self.lr)
+        scheduler = ExponentialLR(optimizer, gamma=0.99)
+
+        last_validation_time = time.time()
 
         # iterate over epochs and batches
         for epoch in range(self.epochs):
+
+            # do training
             loss: Any = None
             batch = 0
-            epoch_loss = 0
-            for batch, (X, y) in enumerate(dataloader):
+            epoch_train_loss = 0
+            for batch, (X, y) in enumerate(train_dataloader):
                 # send features and targets to device
                 X, y = X.to(self.device), y.to(self.device)
 
@@ -107,10 +141,50 @@ class AbstractTorchModel(Model):
                 loss.backward()
                 optimizer.step()
 
-                epoch_loss += loss.item()
+                epoch_train_loss += loss.item()
 
-            epoch_loss = epoch_loss / batch
-            logger.debug("trained model for epoch %d with %d batches and avg loss of %s", epoch, batch, epoch_loss)
+            epoch_train_loss = epoch_train_loss / (batch + 1)
+
+            # calculate test error on validation data
+            epoch_validation_loss = None
+            epoch_validation_f1_score = None
+            if validation_dataloader is not None and validation_targets is not None \
+                    and time.time() - last_validation_time > 0.0:
+                self.model.eval()
+                output_arrays = []
+                with torch.no_grad():
+                    epoch_validation_loss = 0
+                    batch = 0
+                    for batch, (X, y) in enumerate(validation_dataloader):
+                        X, y = X.to(self.device), y.to(self.device)
+                        output = self.model(X)
+                        loss = criterion(output, y)
+                        epoch_validation_loss += loss.item()
+
+                        output_arrays.append(output.cpu().detach().numpy())
+
+                    epoch_validation_loss = epoch_validation_loss / (batch + 1)
+
+                validation_probabilities = cast(Any, scipy).special.expit(np.vstack(output_arrays))
+                logger.debug(
+                    "validation probabilities shape %s vs validation targets shape %s",
+                    validation_probabilities.shape,
+                    validation_targets.shape
+                )
+                epoch_validation_f1_score = scikit_metric_for_best_threshold_based_on_f1score(
+                    f1_score, average="micro", zero_division=0
+                )(validation_targets, validation_probabilities)
+
+                last_validation_time = time.time()
+                self.model.train()
+
+            logger.debug(
+                "trained model for epoch %d with %d batches, train loss of %s, test loss of %s, test f1_score of %s",
+                epoch, batch, epoch_train_loss, epoch_validation_loss, epoch_validation_f1_score
+            )
+
+            scheduler.step()
+            logger.debug("learning rate is %s", optimizer.param_groups[0]["lr"])
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict class probabilities for all test documents."""
@@ -147,7 +221,9 @@ class AbstractTorchModel(Model):
                 arrays.append(array)
 
         # reverse logits and return results
-        return cast(np.ndarray, cast(Any, scipy).special.expit(np.vstack(arrays)))
+        predictions = cast(np.ndarray, cast(Any, scipy).special.expit(np.vstack(arrays)))
+        logger.debug("predictions shape is %s", predictions.shape)
+        return predictions
 
     def __str__(self):
         """Return representative string for model."""

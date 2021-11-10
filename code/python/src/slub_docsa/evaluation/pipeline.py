@@ -3,7 +3,7 @@
 # pylint: disable=fixme, too-many-locals, too-many-arguments
 
 import logging
-from typing import Callable, Sequence
+from typing import Callable, Optional, Sequence
 
 import numpy as np
 
@@ -19,7 +19,10 @@ from slub_docsa.models.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
 
-FitModelAndPredictCallable = Callable[[Model, Sequence[Document], np.ndarray, Sequence[Document]], np.ndarray]
+FitModelAndPredictCallable = Callable[
+    [Model, Sequence[Document], np.ndarray, Sequence[Document], Optional[Sequence[Document]], Optional[np.ndarray]],
+    np.ndarray
+]
 
 
 def fit_model_and_predict_test_documents(
@@ -27,10 +30,12 @@ def fit_model_and_predict_test_documents(
     train_documents: Sequence[Document],
     train_incidence_matrix: np.ndarray,
     test_documents: Sequence[Document],
+    validation_documents: Optional[Sequence[Document]] = None,
+    validation_incidence_matrix: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Call fit and predict_proba method of model in order to generated predictions."""
     logger.info("do training")
-    model.fit(train_documents, train_incidence_matrix)
+    model.fit(train_documents, train_incidence_matrix, validation_documents, validation_incidence_matrix)
 
     logger.info("do prediction")
     return model.predict_proba(test_documents)
@@ -46,6 +51,7 @@ def score_models_for_dataset(
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
     fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
     stop_after_evaluating_split: int = None,
+    use_test_data_as_validation_data: bool = False,
 ):
     """Evaluate a dataset for a number of models and score functions."""
     # check minimum requirements for cross-validation
@@ -78,9 +84,20 @@ def score_models_for_dataset(
                 # provide predictions to oracle model
                 model.set_test_targets(test_incidence_matrix)
 
+            validation_documents: Optional[Sequence[Document]] = None
+            validation_incidence: Optional[np.ndarray] = None
+            if use_test_data_as_validation_data:
+                validation_documents = test_dataset.documents
+                validation_incidence = test_incidence_matrix
+
             # do predictions
             predicted_subject_probabilities = fit_model_and_predict(
-                model, train_dataset.documents, train_incidence_matrix, test_dataset.documents
+                model,
+                train_dataset.documents,
+                train_incidence_matrix,
+                test_dataset.documents,
+                validation_documents,
+                validation_incidence,
             )
 
             logger.info("do global scoring")

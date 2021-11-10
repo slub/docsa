@@ -2,8 +2,8 @@
 
 export PYTHONPATH="./src"
 
-pylint --max-line-length=120 --extension-pkg-whitelist=lxml ./src/
-pylint --max-line-length=120 --extension-pkg-whitelist=lxml ./tests/
+pylint --max-line-length=120 --min-similarity-lines=8 --extension-pkg-whitelist=lxml ./src/
+pylint --max-line-length=120 --min-similarity-lines=8 --extension-pkg-whitelist=lxml ./tests/
 
 flake8 --max-line-length=120 ./src
 flake8 --max-line-length=120 ./tests

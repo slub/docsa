@@ -107,7 +107,13 @@ class HuggingfaceSequenceClassificationModel(Model):
         )
         return encodings
 
-    def fit(self, train_documents: Sequence[Document], train_targets: np.ndarray):
+    def fit(
+        self,
+        train_documents: Sequence[Document],
+        train_targets: np.ndarray,
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_targets: Optional[np.ndarray] = None,
+    ):
         """Train Huggingface sequence classification network."""
         logger.debug("tokenize documents")
         train_encodings = self._tokenize_documents(train_documents, self.max_train_samples)
