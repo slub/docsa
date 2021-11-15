@@ -53,7 +53,9 @@ class TfidfVectorizer(AbstractVectorizer):
 
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
+        logger.debug("do scikit tfidf vectorization")
         self.vectorizer.fit(list(texts))
+        logger.debug("fitted tfidf vectorizer with vocabulary of %s", str(self.vectorizer.get_feature_names()))
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
@@ -217,7 +219,8 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
         self,
         model_identifier: str = "dbmdz/bert-base-german-uncased",
         batch_size: int = 4,
-        subtext_samples: int = 8,
+        subtext_samples: int = 1,
+        hidden_states: int = 1,
         cache_dir: str = HUGGINGFACE_CACHE_DIR,
     ):
         """Initialize vectorizer.
@@ -236,6 +239,7 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
         self.model_identifier = model_identifier
         self.batch_size = batch_size
         self.subtext_samples = subtext_samples
+        self.hidden_states = hidden_states
         self.cache_dir = cache_dir
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer: Optional[Module] = None
@@ -305,7 +309,8 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
                 output = self.model(**encodings)
 
             # remember model outputs
-            features_chunk = output.last_hidden_state[:, 0, :].cpu().detach().numpy()
+            hidden_states_list = list(range(self.hidden_states))
+            features_chunk = output.last_hidden_state[:, hidden_states_list, :].cpu().detach().numpy()
 
             features_chunk = features_chunk.reshape((len(texts_chunk), -1))
             logger.info("features chunk shape is %s", features_chunk.shape)
@@ -320,4 +325,4 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
     def __str__(self):
         """Return representative string of vectorizer."""
         return f"<HFaceBertVectorizer model=\"{self.model_identifier}\" batch_size={self.batch_size} " \
-            + f"subtext_samples={self.subtext_samples}>"
+            + f"subtext_samples={self.subtext_samples} hidden_states={self.hidden_states}>"
