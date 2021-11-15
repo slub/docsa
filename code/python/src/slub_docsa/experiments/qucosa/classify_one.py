@@ -3,8 +3,10 @@
 # pylint: disable=invalid-name
 
 import logging
+import os
 
 from sklearn.metrics import f1_score
+from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import default_named_qucosa_datasets
@@ -17,6 +19,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     random_state = 123
+    plot_training_history_filepath = os.path.join(FIGURES_DIR, "qucosa/classify_one_ann_history")
     _, dataset, _ = list(default_named_qucosa_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
 
     subject_order = unique_subject_order(dataset.subjects)
@@ -25,10 +28,18 @@ if __name__ == "__main__":
     train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
     test_incidence = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
-    dbmdz_vectorizer = get_qucosa_dbmdz_bert_vectorizer(1)
+    dbmdz_vectorizer = get_qucosa_dbmdz_bert_vectorizer(subtext_samples=1, hidden_states=4)
+    # tfidf_vectorizer = TfidfStemmingVectorizer(lang_code="de", max_features=10000)
 
-    model = TorchBertSequenceClassificationHeadModel(vectorizer=dbmdz_vectorizer, batch_size=16, epochs=10, lr=0.0001)
-    # model = HuggingfaceSequenceClassificationModel("dbmdz/bert-base-german-uncased")
+    # model = TorchSingleLayerDenseTanhModel(
+    model = TorchBertSequenceClassificationHeadModel(
+        vectorizer=dbmdz_vectorizer,
+        batch_size=128,
+        epochs=50,
+        lr=0.001,
+        plot_training_history_filepath=plot_training_history_filepath
+    )
+
     model.fit(train_dataset.documents, train_incidence, test_dataset.documents, test_incidence)
 
     predicted_probabilities = model.predict_proba(test_dataset.documents)

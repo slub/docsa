@@ -249,3 +249,109 @@ def per_subject_score_histograms_plot(
     fig.update_layout(showlegend=False)
 
     return fig
+
+
+def ann_training_history_plot(
+    training_loss: List[float],
+    test_loss: List[float],
+    train_best_threshold_f1_score: List[float],
+    test_best_threshold_f1_score: List[float],
+    train_top3_f1_score: List[float],
+    test_top3_f1_score: List[float],
+) -> Any:
+    """Return a plot of scores that were recorded for each epoch while training a neural network."""
+    fig = cast(Any, make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=["loss", "f1 scores"],
+    ))
+
+    epochs = list(range(len(training_loss)))
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=training_loss,
+            mode="lines",
+            name="training loss",
+            line=dict(color=_get_marker_color(0), width=3),
+        ), row=1, col=1,
+    )
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=test_loss,
+            mode="lines",
+            name="test loss",
+            line=dict(color=_get_marker_color(1), width=3),
+         ), row=1, col=1,
+    )
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=train_best_threshold_f1_score,
+            mode="lines",
+            name="train t=best f1_score",
+            line=dict(color=_get_marker_color(0), width=3),
+        ), row=1, col=2,
+    )
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=test_best_threshold_f1_score,
+            mode="lines",
+            name="test t=best f1_score",
+            line=dict(color=_get_marker_color(1), width=3),
+        ), row=1, col=2,
+    )
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=train_top3_f1_score,
+            mode="lines",
+            name="train top3 f1_score",
+            line=dict(color=_get_marker_color(0), width=3, dash='dot'),
+        ), row=1, col=2,
+    )
+
+    fig.add_trace(
+        cast(Any, go.Scatter)(
+            x=epochs,
+            y=test_top3_f1_score,
+            mode="lines",
+            name="test top3 f1_score",
+            line=dict(color=_get_marker_color(1), width=3, dash='dot'),
+         ), row=1, col=2,
+    )
+
+    max_loss = np.max([np.max(training_loss), np.max(test_loss)])
+
+    fig.update_layout({"yaxis1": {"range": [0.0, max_loss], "title": "loss"}})
+    fig.update_layout({"xaxis1": {"range": [0.0, len(training_loss)-1], "title": "epoch"}})
+    fig.update_layout({"yaxis2": {"range": [0.0, 1.0], "title": "f1 score (micro)"}})
+    fig.update_layout({"xaxis2": {"range": [0.0, len(training_loss)-1], "title": "epoch"}})
+
+    return fig
+
+
+def write_multiple_figure_formats(
+    figure: Any,
+    filepath: str,
+):
+    """Write a plotly figure as a html, pdf and jpg file."""
+    figure.write_html(
+        f"{filepath}.html",
+        include_plotlyjs="cdn",
+    )
+    figure.write_image(
+        f"{filepath}.pdf",
+        width=1600, height=900
+    )
+    figure.write_image(
+        f"{filepath}.jpg",
+        width=1600, height=900
+    )

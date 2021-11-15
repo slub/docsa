@@ -5,7 +5,7 @@
 import os
 import logging
 
-from typing import Any, Callable, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple, cast
+from typing import Callable, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 import numpy as np
 
@@ -31,7 +31,7 @@ from slub_docsa.data.preprocess.vectorizer import PersistedCachedVectorizer
 from slub_docsa.data.store.predictions import persisted_fit_model_and_predict
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
-from slub_docsa.evaluation.plotting import score_matrices_box_plot
+from slub_docsa.evaluation.plotting import score_matrices_box_plot, write_multiple_figure_formats
 from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_samples_plot
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
 from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
@@ -40,7 +40,7 @@ from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_o
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
 from slub_docsa.models.dummy import NihilisticModel, OracleModel, RandomModel
-from slub_docsa.models.ann_torch import TorchSingleLayerDenseModel
+from slub_docsa.models.ann_torch import TorchSingleLayerDenseReluModel, TorchBertSequenceClassificationHeadModel
 from slub_docsa.models.natlibfi_annif import AnnifModel
 from slub_docsa.models.scikit import ScikitClassifier
 from slub_docsa.common.model import Model
@@ -83,10 +83,10 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
 DefaultScoreMatrixResult = Sequence[DefaultScoreMatrixDatasetResult]
 
 
-def get_qucosa_dbmdz_bert_vectorizer(subtext_samples: int = 1):
+def get_qucosa_dbmdz_bert_vectorizer(subtext_samples: int = 1, hidden_states: int = 1):
     """Load persisted dbmdz bert vectorizer."""
     os.makedirs(VECTORIZATION_CACHE, exist_ok=True)
-    filename = f"dbmdz_bert_qucosa_subtext_samples={subtext_samples}.sqlite"
+    filename = f"dbmdz_bert_qucosa_sts={subtext_samples}_hs={hidden_states}.sqlite"
     dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, filename)
     return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer(subtext_samples=subtext_samples))
 
@@ -153,15 +153,15 @@ def default_named_models(
             predictor=MLPClassifier(max_iter=10),
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf 2k torch ann", lambda: TorchSingleLayerDenseModel(
+        ("tfidf 2k torch ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=2000),
         )),
-        ("tfidf 10k torch ann", lambda: TorchSingleLayerDenseModel(
+        ("tfidf 10k torch ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=10000),
         )),
-        ("tfidf 40k torch ann", lambda: TorchSingleLayerDenseModel(
+        ("tfidf 40k torch ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
             vectorizer=TfidfStemmingVectorizer(lang_code, max_features=40000),
         )),
@@ -169,11 +169,11 @@ def default_named_models(
             predictor=MLPClassifier(max_iter=10),
             vectorizer=dbmdz_bert_vectorizer_sts_1,
         )),
-        ("dbmdz bert sts1 torch ann", lambda: TorchSingleLayerDenseModel(
+        ("dbmdz bert sts1 torch ann", lambda: TorchBertSequenceClassificationHeadModel(
             epochs=50,
             vectorizer=dbmdz_bert_vectorizer_sts_1,
         )),
-        ("dbmdz bert sts8 torch ann", lambda: TorchSingleLayerDenseModel(
+        ("dbmdz bert sts8 torch ann", lambda: TorchBertSequenceClassificationHeadModel(
             epochs=50,
             vectorizer=dbmdz_bert_vectorizer_sts_8,
         )),
@@ -434,25 +434,6 @@ def write_default_plots(
             dataset_result,
             os.path.join(plot_directory, f"{prefix}_per_subject_score_{filename_suffix}"),
         )
-
-
-def write_multiple_figure_formats(
-    figure: Any,
-    filepath: str,
-):
-    """Write a plotly figure as a html, pdf and jpg file."""
-    figure.write_html(
-        f"{filepath}.html",
-        include_plotlyjs="cdn",
-    )
-    figure.write_image(
-        f"{filepath}.pdf",
-        width=1600, height=900
-    )
-    figure.write_image(
-        f"{filepath}.jpg",
-        width=1600, height=900
-    )
 
 
 def write_multiple_score_matrix_box_plot(

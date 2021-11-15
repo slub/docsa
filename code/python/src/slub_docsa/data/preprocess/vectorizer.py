@@ -1,5 +1,7 @@
 """Methods to vectorize text."""
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments
+
 import logging
 import os
 
