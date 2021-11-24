@@ -1,4 +1,4 @@
-"""Provides common defaults for experimentation."""
+"""Provides various utilily methods for experimentation."""
 
 # pylint: disable=too-many-arguments, unnecessary-lambda, too-many-locals
 
@@ -89,6 +89,21 @@ def get_qucosa_dbmdz_bert_vectorizer(subtext_samples: int = 1, hidden_states: in
     filename = f"dbmdz_bert_qucosa_sts={subtext_samples}_hs={hidden_states}.sqlite"
     dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, filename)
     return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer(subtext_samples=subtext_samples))
+
+
+def get_qucosa_tfidf_stemming_vectorizer(max_features: int = 10000):
+    """Load the tfidf stemming vectorizer that persists stemmed texts for caching."""
+    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
+    # vectorizer_cache_filename = f"qucosa_tfidf_stemming_max_features={max_features}.sqlite"
+    # vectorizer_cache_filepath = os.path.join(VECTORIZATION_CACHE, vectorizer_cache_filename)
+    tfidf_vectorizer = TfidfStemmingVectorizer(
+        lang_code="de",
+        max_features=max_features,
+        stemming_cache_filepath=stemming_cache_filepath,
+        ngram_range=(1, 1),
+    )
+    # return PersistedCachedVectorizer(vectorizer_cache_filepath, tfidf_vectorizer)
+    return tfidf_vectorizer
 
 
 def default_named_models(

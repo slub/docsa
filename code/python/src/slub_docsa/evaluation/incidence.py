@@ -181,7 +181,25 @@ def extend_incidence_list_to_ancestors(
     subject_order: Sequence[str],
     incidence_list: Sequence[int],
 ) -> Sequence[int]:
-    """Return extended incidence list that marks all ancestors subjects."""
+    """Return an extended incidence list that marks all ancestors subjects.
+
+    An incidence list refers to a row of the document vs. subject incidence matrix.
+
+    Parameters
+    ----------
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+        the subject hierarchy that is used to infer ancestor subjects
+    subject_order: Sequence[str]
+        the subject order that is used to infer which subject is references by which position in the incidence list
+    incidence_list: Sequence[int]
+        the incidence list that is extended with incidences for all ancestor subjects
+
+    Returns
+    -------
+    Sequence[int]
+        a new incidence list that is extended (meaning there are additional 1 entries) for all ancestors of the
+        subjects previously marked in the incidence list
+    """
     extended_incidence: List[int] = list(incidence_list)
     for i, value in enumerate(incidence_list):
         if value == 1:

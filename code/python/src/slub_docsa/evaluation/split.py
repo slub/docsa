@@ -15,14 +15,28 @@ from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_target
 logger = logging.getLogger(__name__)
 
 SequenceType = TypeVar("SequenceType")
+"""An arbitrary type used by `IndexedSequence`."""
+
 DatasetSplitFunction = Callable[[Dataset], Iterable[Tuple[Dataset, Dataset]]]
+"""A splitting function that, given a dataset, returns an iterator over multiple training and test subsets."""
 
 
 class IndexedSequence(Sequence[SequenceType]):
-    """Provides indexed access to a sequence."""
+    """Provides indexed access to an arbitrary sequence.
+
+    Is used to provide transparent access to training and test sets without copying any data.
+    """
 
     def __init__(self, sequence: Sequence[SequenceType], idx: Sequence[int]):
-        """Initialize indexed sequence."""
+        """Initialize indexed sequence.
+
+        Parameters
+        ----------
+        sequence: Sequence[SequenceType]
+            the sequence that is supossed to be access via an index
+        idx: Sequence[int]
+            the index at which sequence is being accessed
+        """
         if len(sequence) < len(idx):
             raise ValueError("index can not be larger than sequence")
         self.sequence = sequence
@@ -54,7 +68,25 @@ def scikit_base_folder_splitter(
     folder: _BaseKFold,
     use_random_targets: bool = False,
 ) -> DatasetSplitFunction:
-    """Apply a scikit `folder` (which implements BaseKFold) to a dataset."""
+    """Return a function that can be used for splitting data in training and test sets using a scikit `folder`.
+
+    The scikit `folder` has to be an implementation of the `_BaseKFold` class of scikit-learn.
+
+    Parameters
+    ----------
+    n_splits: int
+        the number of cross-validation splits
+    folder: _BaseKFold
+        the scikit-learn implementation of `_BaseKFold`
+    use_random_targets: bool = False
+        whether to provide the true subject targets or random targets to the folder
+
+    Returns
+    -------
+    DatasetSplitFunction
+        a function that splits a dataset (only argument) into multiple training and test subsets according to the
+        splitting strategy implemented by the provided `folder`
+    """
 
     def split_function(dataset: Dataset) -> Iterable[Tuple[Dataset, Dataset]]:
         # features should not have any effect on splitting, use artificial features
@@ -86,7 +118,20 @@ def scikit_kfold_splitter(
     n_splits: int,
     random_state: float = None,
 ) -> DatasetSplitFunction:
-    """Split dataset randomly into `n_splits` many training and test datasets using scikit's KFold class."""
+    """Return a function that splits a dataset randomly into `n_splits` using scikit's KFold class.
+
+    Parameters
+    ----------
+    n_splits: int
+        the number of cross-validation splits
+    random_state: float = None
+        the random state that is passed along to the KFold class
+
+    Returns
+    -------
+    DatasetSplitFunction
+        a function that given a dataset returns an iterator over tuples of training and test subsets
+    """
     folder = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     return scikit_base_folder_splitter(n_splits, folder, use_random_targets=True)
 
@@ -95,7 +140,25 @@ def skmultilearn_iterative_stratification_splitter(
     n_splits: int,
     random_state: float = None,
 ) -> DatasetSplitFunction:
-    """Split dataset random into `n_splits` using skmultilearn's IterativeStratification class."""
+    """Return a function that splits a dataset randomly into `n_splits` using skmultilearn's IterativeStratification.
+
+    .. note::
+        The random state does not seem to have any effect on the folder. The resulting splits are not deterministic
+        given a specific random state and the same dataset.
+
+    Parameters
+    ----------
+    n_splits: int
+        the number of cross-validation splits
+    random_state: float = None
+        the random state that is passed along to the skmultilearn's IterativeStratification class (but does not seem to
+        have any effect on it)
+
+    Returns
+    -------
+    DatasetSplitFunction
+        a function that given a dataset returns an iterator over tuples of training and test subsets
+    """
     folder = IterativeStratification(n_splits=n_splits, order=1, random_state=random_state)
     return scikit_base_folder_splitter(n_splits, folder, use_random_targets=False)
 

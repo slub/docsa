@@ -10,7 +10,7 @@ import zipfile
 import io
 import logging
 
-from typing import Iterable, Any, List, Optional
+from typing import Iterable, Any, List, Optional, Tuple
 
 import rdflib
 from lxml import etree  # nosec
@@ -23,9 +23,16 @@ from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
 logger = logging.getLogger(__name__)
 
 RVK_XML_URL = "https://rvk.uni-regensburg.de/downloads/rvko_xml.zip"
+"""URL used to download the RVK xml file"""
+
 RVK_XML_FILE_PATH = os.path.join(RESOURCES_DIR, "rvk/rvko_xml.zip")
+"""Default filepath where downloaded xml file is stored."""
+
 RVK_SUBJECT_STORE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_store.dbm")
+"""Default filepath where processed RVK hierarchy is stored as cache."""
+
 RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
+"""Default filepath where RVK subjects are exported to as TSV file."""
 
 
 class RvkSubjectNode(SubjectNode):
@@ -41,12 +48,15 @@ class RvkSubjectNode(SubjectNode):
         self.notation = notation
 
 
-def _download_rvk_xml() -> None:
+def _download_rvk_xml(
+    download_url: str = RVK_XML_URL,
+    xml_filepath: str = RVK_XML_FILE_PATH,
+) -> None:
     """Download the RVK xml file from rvk.uni-regensburg.de."""
-    os.makedirs(os.path.dirname(RVK_XML_FILE_PATH), exist_ok=True)
-    if not os.path.exists(RVK_XML_FILE_PATH):
-        logger.debug("download RVK classes to %s", RVK_XML_FILE_PATH)
-        with urllib.request.urlopen(RVK_XML_URL) as f_src, open(RVK_XML_FILE_PATH, "wb") as f_dst:  # nosec
+    os.makedirs(os.path.dirname(xml_filepath), exist_ok=True)
+    if not os.path.exists(xml_filepath):
+        logger.debug("download RVK classes to %s", xml_filepath)
+        with urllib.request.urlopen(download_url) as f_src, open(xml_filepath, "wb") as f_dst:  # nosec
             shutil.copyfileobj(f_src, f_dst)
 
 
@@ -77,29 +87,24 @@ def rvk_notation_to_uri(notation: str) -> str:
     return f"https://rvk.uni-regensburg.de/api/xml/node/{notation_encoded}"
 
 
-def read_rvk_subjects(depth: int = None) -> Iterable[RvkSubjectNode]:
-    """Download and read RVK subjects and their labels.
-
-    Subjects are directly read from the xml file, and not cached. Use `get_rvk_subject_store()` for random cached
-    access of RVK subjects.
+def read_rvk_subjects_from_file(
+    filepath: str,
+    depth: int = None
+) -> Iterable[RvkSubjectNode]:
+    """Read classes and their labels from the official RVK xml zip archive file.
 
     Parameters
     ----------
-    depth : int
-            The maximum hieararchy level at which subjects are iterated.
+    filepath: str
+        The path to the RVK xml file
+    depth: int
+        The maximum hieararchy level at which subjects are iterated
 
     Returns
     -------
     Iterable[RvkSubjectNode]
-        A generator of RvkSubjectNodes as parsed from the xml file downloaded via `_download_rvk_xml()`.
+        A generator of RvkSubjectNodes as parsed from the xml file
     """
-    # make sure file is available and download if necessary
-    _download_rvk_xml()
-    return read_rvk_subjects_from_file(RVK_XML_FILE_PATH, depth)
-
-
-def read_rvk_subjects_from_file(filepath: str, depth: int = None) -> Iterable[RvkSubjectNode]:
-    """Read classes and their labels from the official RVK xml zip archive file."""
     with zipfile.ZipFile(filepath, "r") as f_zip:
         for filename in f_zip.namelist():
 
@@ -124,38 +129,115 @@ def read_rvk_subjects_from_file(filepath: str, depth: int = None) -> Iterable[Rv
                     level -= 1
 
 
-def get_rvk_subject_store() -> SubjectHierarchyType[RvkSubjectNode]:
-    """Store all RVK classes in a dictionary indexed by notation."""
-    if not os.path.exists(RVK_SUBJECT_STORE_PATH):
-        logger.debug("create and fill RVK subject store (may take some time)")
-        store = SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH, read_only=False)
+def read_rvk_subjects(
+    depth: int = None,
+    download_url: str = RVK_XML_URL,
+    xml_filepath: str = RVK_XML_FILE_PATH,
+) -> Iterable[RvkSubjectNode]:
+    """Download and read RVK subjects and their labels.
 
-        for i, rvk_subject in enumerate(read_rvk_subjects()):
+    Subjects are directly read from the xml file, and not cached. Use `get_rvk_subject_store()` for random cached
+    access of RVK subjects.
+
+    Parameters
+    ----------
+    depth: int
+        The maximum hieararchy level at which subjects are iterated.
+    download_url: str = RVK_XML_URL
+        The url that is used to download the RVK xml file
+    xml_filepath: str = RVK_XML_FILE_PATH
+        The filepath that is used to store the downloaded RVK xml file
+
+    Returns
+    -------
+    Iterable[RvkSubjectNode]
+        A generator of RvkSubjectNodes as parsed from the xml file downloaded via `_download_rvk_xml()`.
+    """
+    # make sure file is available and download if necessary
+    _download_rvk_xml(download_url, xml_filepath)
+    return read_rvk_subjects_from_file(xml_filepath, depth)
+
+
+def get_rvk_subject_store(
+    store_filepath: str = RVK_SUBJECT_STORE_PATH,
+    depth: int = None,
+    download_url: str = RVK_XML_URL,
+    xml_filepath: str = RVK_XML_FILE_PATH,
+) -> SubjectHierarchyType[RvkSubjectNode]:
+    """Store all RVK classes in a dictionary indexed by notation.
+
+    Parameters
+    ----------
+    store_filepath: str = RVK_SUBJECT_STORE_PATH
+        The path that is used to cache a loaded RVK subject hierarchy
+    depth: int
+        The maximum hieararchy level at which subjects are iterated.
+    download_url: str = RVK_XML_URL
+        The url that is used to download the RVK xml file
+    xml_filepath: str = RVK_XML_FILE_PATH
+        The filepath that is used to store the downloaded RVK xml file
+
+    Returns
+    -------
+    SubjectHierarchyType[RvkSubjectNode]
+        The RVK subject hierarchy loaded from the filepath
+    """
+    if not os.path.exists(store_filepath):
+        logger.debug("create and fill RVK subject store (may take some time)")
+        store = SubjectHierarchyDbmStore[RvkSubjectNode](store_filepath, read_only=False)
+
+        for i, rvk_subject in enumerate(read_rvk_subjects(depth, download_url, xml_filepath)):
             store[rvk_subject.uri] = rvk_subject
             if i % 10000 == 0:
                 logger.debug("Added %d RVK subjects to store so far", i)
 
         store.close()
 
-    return SubjectHierarchyDbmStore[RvkSubjectNode](RVK_SUBJECT_STORE_PATH, read_only=True)
+    return SubjectHierarchyDbmStore[RvkSubjectNode](store_filepath, read_only=True)
 
 
-def convert_rvk_classes_to_annif_tsv():
-    """Convert RVK classes to Tab-separated Values files required by Annif."""
-    if not os.path.exists(RVK_ANNIF_TSV_FILE_PATH):
-        os.makedirs(os.path.dirname(RVK_ANNIF_TSV_FILE_PATH), exist_ok=True)
+def convert_rvk_classes_to_annif_tsv(
+    rvk_subject_hierarchy: SubjectHierarchyType[RvkSubjectNode],
+    tsv_filepath: str = RVK_ANNIF_TSV_FILE_PATH,
+):
+    """Convert RVK classes to tab-separated values file required by Annif.
 
-        rvk_subject_hierarchy = get_rvk_subject_store()
+    Parameters
+    ----------
+    rvk_subject_hierarchy: SubjectHierarchyType[RvkSubjectNode]
+        The RVK subject hierarchy as loaded via e.g. `get_rvk_subject_store`
+    tsv_filepath: str = RVK_ANNIF_TSV_FILE_PATH,
+        The path to a file where RVK subjects are stored in tab-separated format
+
+    Returns
+    -------
+    None
+    """
+    if not os.path.exists(tsv_filepath):
+        os.makedirs(os.path.dirname(tsv_filepath), exist_ok=True)
 
         logger.debug("convert RVK classes to annif tsv format")
-        with open(RVK_ANNIF_TSV_FILE_PATH, "w", encoding="utf8") as f_tsv:
+        with open(tsv_filepath, "w", encoding="utf8") as f_tsv:
             for uri, rvk_subject_node in rvk_subject_hierarchy.items():
                 breadcrumb = subject_label_breadcrumb(rvk_subject_node, rvk_subject_hierarchy)
                 f_tsv.write(f"<{uri}>\t{breadcrumb}\n")
 
 
-def generate_rvk_custom_skos_triples(subject_node: RvkSubjectNode) -> List[Any]:
-    """Return additional skos triples that should be added to an SKOS graph for each subject node."""
+def generate_rvk_custom_skos_triples(subject_node: RvkSubjectNode) -> List[Tuple[Any, Any, Any]]:
+    """Return additional skos triples that should be added to an SKOS graph for each subject node.
+
+    Is only used in combination with `slub_docsa.data.preprocess.skos.subject_hierarchy_to_skos_graph`.
+
+    Parameters
+    ----------
+    subject_node: RvkSubjectNode
+        The RVK subject node that is being transformed to a SKOS format
+
+    Returns
+    -------
+    List[Tuple[Any, Any, Any]]
+        A list of additional triples, in this case only the triple describing the subject notation.
+    """
     return [(rdflib.URIRef(subject_node.uri), SKOS.notation, rdflib.Literal(subject_node.notation))]
 
 

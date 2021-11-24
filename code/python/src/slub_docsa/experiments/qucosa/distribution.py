@@ -1,4 +1,4 @@
-"""Generates various statistics and figures of Qucosa as part of an exploratory data analysis."""
+"""Generates a plot illustrating the subject distribution of the Qucosa dataset."""
 
 import os
 import logging

@@ -1,14 +1,24 @@
-"""Methods to generate simple artificial data."""
+"""Methods to generate simple artificial random data.
+
+This module provides various methods that allow to generate artificial random documents and their subject annotations
+based on trivial hypotheses, e.g., that there is no correlation between the tokens of a document and its subject
+annotations (fully random), or that there is a correlation based on token probabilities.
+
+As a consequence, these datasets can be used to validate various properties of different models, e.g.:
+- a model should not outperform random predictions if the data was generated fully randomly and does not contain any
+  correlations between documents and their subject annotations
+- a model should outperform random predictions if there are simple correlations based on token occurance probabilities
+"""
 
 # pylint: disable=too-many-locals
 
 import logging
 
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Tuple
 
 import numpy as np
 
-from slub_docsa.common.dataset import SimpleDataset
+from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.common.document import Document
 from slub_docsa.data.artificial.tokens import TokenProbabilities, generate_random_token_probabilties
 from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
@@ -17,7 +27,22 @@ logger = logging.getLogger(__name__)
 
 
 def generate_random_text(n_tokens: int, tokens: Sequence[str], probabilities: Sequence[float]) -> str:
-    """Return random text with tokens chosen based on token probabilities."""
+    """Return random text with tokens chosen based on token probabilities.
+
+    Parameters
+    ----------
+    n_tokens: int
+        the length of the text in number of tokens
+    tokens: Sequence[str]
+        the list of tokens as sequence, list ordering must match `probabilities` parameter
+    probabilities: Sequence[float]
+        the occurance probabilities for each token, list ordering must match `tokens` parameter
+
+    Returns
+    -------
+    str
+        The random text that was generated
+    """
     token_list = np.random.choice(
         tokens,
         size=n_tokens,
@@ -30,21 +55,47 @@ def generate_random_text(n_tokens: int, tokens: Sequence[str], probabilities: Se
 def generate_random_dataset_from_token_probabilities(
     token_probabilties: TokenProbabilities,
     n_docs: int,
+    n_subjects: int,
+    n_subjects_per_document_interval: Tuple[int, int] = (1, 4),
+    n_title_tokens_interval: Tuple[int, int] = (5, 20),
+) -> Dataset:
+    """Return a random dataset by generating random documents according to token probabilties.
+
+    However, documents are assigned randomly to subjects. Therefore, there is not correlation between subjects and
+    documents, and thus, no model should be able to learn any relationship and outperform random predictions.
+
+    Parameters
+    ----------
+    token_probabilities: TokenProbabilities
+        base tokens and their probabilities used to describe subjects
+    n_docs: int
+        the number of documents to generate
     n_subjects: int
-):
-    """Return a random dataset by generating random documents according to token probabilties."""
+        the number of subjects to generate
+    n_subjects_per_document_interval: Tuple[int, int] = (1, 4)
+        an interval (min, max+1) describing the number of subjects each document is generated from. The exact number is
+        drawn randomly from this interval for each document.
+    n_title_tokens_interval: Tuple[int, int] = (5, 20)
+        an interval (min, max+1) describing how many tokens are used to generate a title for each document. The exact
+        number is drawn randomly from this interval for each document.
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
     token_list = list(token_probabilties.keys())
     token_probabilty_list = list(map(lambda t: token_probabilties[t], token_list))
 
     title_length_array = np.random.default_rng().integers(
-        low=5,
-        high=20,
+        low=n_title_tokens_interval[0],
+        high=n_title_tokens_interval[1],
         size=n_docs
     )
 
     subject_count_array = np.random.default_rng().integers(
-        low=1,
-        high=4,
+        low=n_subjects_per_document_interval[0],
+        high=n_subjects_per_document_interval[1],
         size=n_docs
     )
 
@@ -74,8 +125,27 @@ def generate_easy_random_dataset_from_token_probabilities(
     token_probabilties: TokenProbabilities,
     n_docs: int,
     n_subjects: int
-):
-    """Return a easy random dataset that is easy to predict because subjects area assigned a unique vocabulary."""
+) -> Dataset:
+    """Return a random dataset that is very easy to predict because subjects area assigned a unique vocabulary.
+
+    Each token of `token_probabilities` is assigned to one subject. Documents are generated from these non-overlapping
+    token sets. Therefore, predicting a document's subject is as simple as creating a reverse lookup table from tokens
+    to subjects. Most models should achieve a high performance for this data.
+
+    Parameters
+    ----------
+    token_probabilities: TokenProbabilities
+        base token occurance probabilities that are divided into distinct subsets
+    n_docs: int
+        the number of documents to generate
+    n_subjects: int
+        the number of subjects to generate
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
     if n_subjects > len(token_probabilties):
         raise ValueError("can not assign tokens to subjects if there are more subjects than tokens")
 
@@ -135,32 +205,110 @@ def generate_easy_random_dataset_from_token_probabilities(
     return SimpleDataset(documents=documents, subjects=subject_targets)
 
 
-def generate_random_dataset(n_tokens: int, n_docs: int, n_subjects: int):
-    """Generate random dataset with tokens from exponential distribution."""
+def generate_random_dataset(n_tokens: int, n_docs: int, n_subjects: int) -> Dataset:
+    """Generate random uncorrelated dataset with tokens from exponential distribution.
+
+    Wrapper around `generate_random_dataset_from_token_probabilities` with token probabilities from
+    `generate_random_token_probabilties`.
+
+    Parameters
+    ----------
+    n_tokens: int
+        The number of tokens to generate
+    n_docs: int
+        The number of documents to generate
+    n_subjects: int
+        The number of subjects to generate
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
     token_probabilities = generate_random_token_probabilties(n_tokens)
     return generate_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
 
 
 def generate_easy_random_dataset(n_tokens: int, n_docs: int, n_subjects: int):
-    """Generate random dataset that is easy to predict with tokens from exponential distribution."""
+    """Generate random dataset that is easy to predict with tokens from exponential distribution.
+
+    Wrapper around `generate_easy_random_dataset_from_token_probabilities` with token probabilities from
+    `generate_random_token_probabilties`.
+
+    Parameters
+    ----------
+    n_tokens: int
+        The number of tokens to generate
+    n_docs: int
+        The number of documents to generate
+    n_subjects: int
+        The number of subjects to generate
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
     token_probabilities = generate_random_token_probabilties(n_tokens)
     return generate_easy_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
 
 
-def generate_random_dataset_from_dbpedia(language: str, n_docs: int, n_subjects: int):
-    """Generate random dataset from with tokens from DBpedia."""
-    token_probabilities = token_probabilities_from_dbpedia(language)
+def generate_random_dataset_from_dbpedia(lang_code: str, n_docs: int, n_subjects: int):
+    """Generate random uncorrelated dataset with tokens from DBpedia.
+
+    Wrapper around `generate_random_dataset_from_token_probabilities` with token probabilities from
+    `token_probabilities_from_dbpedia`.
+
+    Parameters
+    ----------
+    lang_code: str
+        The language code of dbpedia resources that are used to extract token probabilities
+    n_docs: int
+        The number of documents to generate
+    n_subjects: int
+        The number of subjects to generate
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
+    token_probabilities = token_probabilities_from_dbpedia(lang_code)
     return generate_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
 
 
-def generate_easy_random_dataset_from_dbpedia(language: str, n_docs: int, n_subjects: int):
-    """Generate random dataset that is easy to predict from with tokens from DBpedia."""
-    token_probabilities = token_probabilities_from_dbpedia(language)
+def generate_easy_random_dataset_from_dbpedia(lang_code: str, n_docs: int, n_subjects: int):
+    """Generate random dataset that is easy to predict from with tokens from DBpedia.
+
+    Wrapper around `generate_easy_random_dataset_from_token_probabilities` with token probabilities from
+    `token_probabilities_from_dbpedia`.
+
+    Parameters
+    ----------
+    lang_code: str
+        The language code of dbpedia resources that are used to extract token probabilities
+    n_docs: int
+        The number of documents to generate
+    n_subjects: int
+        The number of subjects to generate
+
+    Returns
+    -------
+    Dataset
+        the dataset containing all generated documents and their corresponding subject annotations
+    """
+    token_probabilities = token_probabilities_from_dbpedia(lang_code)
     return generate_easy_random_dataset_from_token_probabilities(token_probabilities, n_docs, n_subjects)
 
 
-def get_static_mini_dataset():
-    """Return a collection of 5 documents and their target subjects."""
+def get_static_mini_dataset() -> Dataset:
+    """Return a collection of 10 documents and their target subjects of 4 different subjects.
+
+    Returns
+    -------
+    Dataset
+        the static dataset consisting of 10 documents and 4 subjects
+    """
     documents = [
         Document(uri="uri://test_document1", title="This is a document"),
         Document(uri="uri://test_document2", title="Another document with interesting topics"),

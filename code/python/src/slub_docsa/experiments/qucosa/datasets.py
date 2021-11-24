@@ -14,7 +14,7 @@ from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_samples, read_
 from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory, read_qucosa_titles_rvk_samples
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
-from slub_docsa.data.preprocess.document import apply_snowball_stemming_to_document_samples_iterator
+from slub_docsa.data.preprocess.document import apply_nltk_snowball_stemming_to_document_samples_iterator
 from slub_docsa.data.preprocess.language import filter_samples_by_detected_language_via_langid
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
 from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sample_iterator
@@ -77,7 +77,7 @@ def _load_qucosa_samples(
     if stemming:
         if lang_code is None:
             raise ValueError("lang code can not be None when stemming is requested")
-        sample_iterator = apply_snowball_stemming_to_document_samples_iterator(sample_iterator, lang_code)
+        sample_iterator = apply_nltk_snowball_stemming_to_document_samples_iterator(sample_iterator, lang_code)
 
     return _default_pruning(sample_iterator, 10, subject_hierarchy)
 

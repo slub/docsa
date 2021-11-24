@@ -31,8 +31,8 @@ class Model:
             The incidence matrix describing which document of `train_documents` belongs to which subjects. The matrix
             has to have a shape of (n_docs, n_subjects).
         validation_documents: Optional[Sequence[Document]]
-            A sequence of documents that can be used to validate the trained model, e.g., during training of the
-            epochs of a artificial neural network
+            A sequence of documents that can be used to validate the trained model during training, e.g., for each
+            epoch when training an artificial neural network
         validation_targets: Optional[numpy.ndarray]
             The incidence matrix for `validation_documents`
 

@@ -24,7 +24,6 @@ General Preprocessing Methods:
 
 ### Metadaten Feature Extraction
 
-
 ## Multi-label Text Classification
 
 Approaches
@@ -36,6 +35,7 @@ Approaches
   - Convolutional Networks, see [Mullenbach et al.](https://aclanthology.org/N18-1100.pdf) (2018) and [Liu et al.](https://dl.acm.org/doi/pdf/10.1145/3077136.3080834) (2017)
   - BiGRU (Bi-directional Gated Recurrent) + Attention Networks, see [Chalkidis et al.](https://aclanthology.org/P19-1636.pdf) (2019) and [Xu et. al](http://proceedings.mlr.press/v37/xuc15.pdf) (2015)
   - BERT (Bi-directional Encoder Representations from Transformers), see [Chalkidis et al.](https://aclanthology.org/P19-1636.pdf) (2019), [code](https://github.com/iliaschalkidis/lmtc-eurlex57k)
+  - X-BERT: eXtreme Multi-Label Text Classification with BERT by [Chang et al.](https://arxiv.org/pdf/1905.02331.pdf) (2019)
   - Overview Paper by [Minaee et al.](https://arxiv.org/pdf/2004.03705.pdf) (2021)
 
 ## Hierarchical Classification
@@ -106,8 +106,7 @@ Closed-Source Projects
 # Relevant Programming Libraries
 
 Bibliographic Classification
-- [Annif](https://annif.org/) -
-Tool for automated subject indexing and classification
+- [Annif](https://annif.org/) - Tool for automated subject indexing and classification
 
 Preprocessing
 - [nltk](https://www.nltk.org/) - Natural Language Toolkit

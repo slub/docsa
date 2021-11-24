@@ -59,5 +59,5 @@ def test_generate_easy_random_dataset():
 def test_generate_easy_random_dataset_from_dbpedia():
     """Test easy random dataset and verify that documents do not share any tokens."""
     _check_dataset_documents_do_not_share_tokens(
-        generate_easy_random_dataset_from_dbpedia("english", 100, 10)
+        generate_easy_random_dataset_from_dbpedia("en", 100, 10)
     )

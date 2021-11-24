@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class _DatasetSqliteStoreSequence(Sequence):
-    """Allows to access documents and subjects via sequence interface in a dbm database."""
+    """Allows to access documents and subjects via a sequence interface from a sqlite database.
+
+    Is used by `DatasetSqliteStore` to provide convenient access to documents and subjects.
+    """
 
     def __init__(self, store, populate_mode: bool, idx):
         self.store = store
@@ -115,11 +118,12 @@ class DatasetSqliteStore(Dataset):
         if self.store is None:
             raise ValueError("can not populate already closed store")
         for i, sample in enumerate(samples):
-            logger.debug("write example %d", i)
             self.store[str(i)] = sample
             if i % self.batch_size == 0:
                 # sync data to disc every x-th sample
                 self.store.commit(True)
+        # do a final commit to save last samples
+        self.store.commit(True)
 
     def close(self):
         """Close sqlite database. Reads and writes are no longer possible and will result in an exception."""
@@ -136,7 +140,15 @@ def load_persisted_dataset_from_lazy_sample_iterator(
     lazy_sample_iterator: Callable[[], Iterator[Sample]],
     filepath: str
 ) -> Dataset:
-    """Return dataset from persistent dbm store, or use sample iterator to populate and return a new dbm store."""
+    """Return dataset from persistent sqlite store, or use sample iterator to populate and return a new sqlite store.
+
+    Parameters
+    ----------
+    lazy_sample_iterator: Callable[[], Iterator[Sample]]
+        a method that can be called to retrieve a sample iterator that is used to populate
+        a not yet existing dataset store; if the dataset store already exists, this method is not called
+    filepath
+    """
     if not os.path.exists(filepath):
         store = DatasetSqliteStore(filepath, populate_mode=True)
         store.populate(lazy_sample_iterator())

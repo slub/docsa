@@ -1,9 +1,9 @@
-"""Provides basic evaluation pipeline for multiple models."""
+"""Provides a basic evaluation pipeline for multiple models."""
 
 # pylint: disable=fixme, too-many-locals, too-many-arguments
 
 import logging
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -23,6 +23,7 @@ FitModelAndPredictCallable = Callable[
     [Model, Sequence[Document], np.ndarray, Sequence[Document], Optional[Sequence[Document]], Optional[np.ndarray]],
     np.ndarray
 ]
+"""Type alias for a function that does the basic fit and predict logic."""
 
 
 def fit_model_and_predict_test_documents(
@@ -33,7 +34,33 @@ def fit_model_and_predict_test_documents(
     validation_documents: Optional[Sequence[Document]] = None,
     validation_incidence_matrix: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Call fit and predict_proba method of model in order to generated predictions."""
+    """Call fit and predict_proba method of a model in order to generated predictions.
+
+    This is the default implementation of a fit and predict logic, which can be overwritten in order to, e.g., save
+    predictions to a database, load predictions from a database, etc.
+
+    Parameters
+    ----------
+    model: Model
+        the initialized model that can be fitted and used for predictions afterwards
+    train_documents: Sequence[Document]
+        the sequence of training documents
+    train_incidence_matrix: np.ndarray
+        the subject incidence matrix for the training documents
+    test_documents: Sequence[Document],
+        the sequence of test documents
+    validation_documents: Optional[Sequence[Document]] = None
+        an optional sequence of validation documents
+        (used by the torch ann model to generate evaluation scores during training)
+    validation_incidence_matrix: Optional[np.ndarray] = None
+        an optional subject incidence matrix for the validation documents
+        (used by the torch ann model to generate evaluation scores during training)
+
+    Returns
+    -------
+    numpy.ndarray
+        the subject prediction probability matrix as returned by the `predict_proba` method of the model
+    """
     logger.info("do training")
     model.fit(train_documents, train_incidence_matrix, validation_documents, validation_incidence_matrix)
 
@@ -52,8 +79,49 @@ def score_models_for_dataset(
     fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
     stop_after_evaluating_split: int = None,
     use_test_data_as_validation_data: bool = False,
-):
-    """Evaluate a dataset for a number of models and score functions."""
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Evaluate a dataset using cross-validation for a number of models and score functions.
+
+    Parameters
+    ----------
+    n_splits: int
+        the number of splits of the cross-validation
+    dataset: Dataset
+        the full dataset that is then being split into training and test sets during evaluation
+    subject_order: Sequence[str]
+        a subject order list describing a unique order of subjects, which is used as index for incidence and
+        probability matrices (column ordering)
+    models: Sequence[Model]
+        the list of models that are evaluated
+    split_function: DatasetSplitFunction,
+        the function that can be used to split the full dataset into `n_splits` different sets of training and test
+        data sets, e.g., `slub_docsa.evaluation.split.scikit_base_folder_splitter`.
+    overall_score_functions: Sequence[MultiClassScoreFunctionType]
+        the list of score functions that are applied to the full probability matrices after predicting the full test
+        data set
+    per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
+        the list of score functions that are applied on a per subject basis (one vs. rest) in order to evaluate the
+        prediction quality of every subject
+    fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
+        a function that allows to overwrite the basic fit and predict logic, e.g., by caching model predictions
+    stop_after_evaluating_split: int = None,
+        a flag that allows to stop the evaluation early, but still return the full score matrices (e.g. in order to
+        test parameters settings without calculting all `n_splits` splits, which can take a long time)
+    use_test_data_as_validation_data: bool = False
+        a flag that if true provides the test data as validation data to the model's fit method, e.g., in order to
+        evaluate the fitting behaviour of ann algorithms over multiple epochs of training
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        A tuple of both score matrices, the overall score matrix and the per-subject score matrix.
+        The overall score matrix will have a shape of `(len(models), len(overall_score_functions), n_splits)` and
+        contains all score values calculated for every model over the test data of every split.
+        The per subject score matrix will have shape of
+        `(len(models), len(per_class_score_functions), n_splits, len(subject_order))` and contains score values for
+        every subject calculated for every model, score function and split.
+
+    """
     # check minimum requirements for cross-validation
     if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
         raise ValueError("dataset contains subjects with insufficient number of samples")

@@ -18,7 +18,8 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
 
 from slub_docsa.common.paths import CACHE_DIR
-from slub_docsa.data.preprocess.document import snowball_text_stemming_function
+from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
+from slub_docsa.data.preprocess.document import persisted_nltk_snowball_text_stemming_function
 from slub_docsa.data.store.array import bytes_to_numpy_array, numpy_array_to_bytes
 from slub_docsa.data.store.document import sha1_hash_from_text
 
@@ -31,11 +32,32 @@ class AbstractVectorizer:
     """Represents a vectorizer model that can be fitted to a corpus."""
 
     def fit(self, texts: Iterator[str]):
-        """Optinally train a vectorizer model using the provided texts."""
+        """Optionally train a vectorizer model using the provided texts.
+
+        Parameters
+        ----------
+        texts: Iterator[str]
+            the texts that are used to build a vectorization model
+
+        Returns
+        -------
+        None
+        """
         raise NotImplementedError()
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
-        """Return vector representation of texts as array."""
+        """Return vector representation of texts as array.
+
+        Parameters
+        ----------
+        texts: Iterator[str]
+            the texts that are vectorized
+
+        Returns
+        -------
+        Iterator[np.ndarray]
+            an iterator over the vectorized texts as numpy array
+        """
         raise NotImplementedError()
 
 
@@ -49,6 +71,8 @@ class TfidfVectorizer(AbstractVectorizer):
         ----------
         max_features: int = 10000
             The maximum number of unique tokens to extract from text during fit.
+        kwargs: Any
+            additional arguments that are passed to the scikit tfidf vectorizer
         """
         self.max_features = max_features
         self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
@@ -72,7 +96,14 @@ class TfidfVectorizer(AbstractVectorizer):
 class TfidfStemmingVectorizer(TfidfVectorizer):
     """Apply nltk stemming and stopword removal before vectorizing with Scikit TfidfVectorizer."""
 
-    def __init__(self, lang_code: str, remove_stopwords: bool = True, max_features=10000, **kwargs):
+    def __init__(
+        self,
+        lang_code: str,
+        remove_stopwords: bool = True,
+        max_features=10000,
+        stemming_cache_filepath: str = None,
+        **kwargs
+    ):
         """Initialize vectorizer.
 
         Parameters
@@ -83,19 +114,32 @@ class TfidfStemmingVectorizer(TfidfVectorizer):
             Whether to remove stopwords
         max_features: int = 10000
             The maximum number of unique tokens to extract from text during fit.
+        stemming_cache_filepath: str = None
+            Optional file path to a file that is used to persist stemmed text for caching
+        kwargs: Any
+            additional arguments that are passed to the scikit tfidf vectorizer
         """
         super().__init__(max_features=max_features, **kwargs)
         self.lang_code = lang_code
         self.remove_stopwords = remove_stopwords
-        self.stemming = snowball_text_stemming_function(lang_code, remove_stopwords)
+        if stemming_cache_filepath is not None:
+            self.stemming = persisted_nltk_snowball_text_stemming_function(
+                stemming_cache_filepath,
+                lang_code,
+                remove_stopwords
+            )
+        else:
+            self.stemming = nltk_snowball_text_stemming_function(lang_code, remove_stopwords)
 
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
+        logger.debug("do stemming for fitting of tfidf vectorizer")
         stemmed_texts = [self.stemming(t) for t in texts]
         super().fit(iter(stemmed_texts))
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
+        logger.debug("do stemming for transforming with tfidf vectorizer")
         stemmed_texts = [self.stemming(t) for t in texts]
         yield from super().transform(iter(stemmed_texts))
 
@@ -158,7 +202,7 @@ class PersistedCachedVectorizer(AbstractVectorizer):
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts from cache or by calling parent vectorizer."""
         vectorizer_str = str(self.vectorizer)
-        # check which texts needs vectorizing
+        total = 0
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -166,6 +210,7 @@ class PersistedCachedVectorizer(AbstractVectorizer):
             if not texts_chunk:
                 break
 
+            # check which texts needs vectorizing
             texts_chunk_hashes = [sha1_hash_from_text(vectorizer_str + t) for t in texts_chunk]
             uncached_texts = [t for i, t in enumerate(texts_chunk) if texts_chunk_hashes[i] not in self.store]
 
@@ -178,6 +223,9 @@ class PersistedCachedVectorizer(AbstractVectorizer):
 
             for text_hash in texts_chunk_hashes:
                 yield bytes_to_numpy_array(self.store[text_hash])
+
+            total += len(texts_chunk)
+            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
     def __str__(self):
         """Return representative string of vectorizer."""
@@ -200,7 +248,7 @@ def _extract_subtext_samples(text: str, samples: int) -> Iterator[str]:
             start_idx += 1
 
         sub_text = text[start_idx:]
-        logger.debug("subtext is %s", sub_text[:100])
+        # logger.debug("subtext is %s", sub_text[:100].strip())
         yield sub_text
 
 
@@ -229,12 +277,15 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
 
         Parameters
         ----------
-        model_identifier: str
+        model_identifier: str = "dbmdz/bert-base-german-uncased"
             The Huggingface model path of a pre-trained Bert model
-        batch_size: int
+        batch_size: int = 4
             The number of texts that are vectorized in one batch
-        subtext_samples: int
+        subtext_samples: int = 1
             The number of text samples to use from the text
+        hidden_states: int = 1
+            The number of hidden states that is extracted from the bert model and used as vectorizations.
+            Multiple hidden state vectors are simply concatenated.
         cache_dir: str
             The directory storing pre-trained Huggingface models
         """
@@ -315,7 +366,7 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
             features_chunk = output.last_hidden_state[:, hidden_states_list, :].cpu().detach().numpy()
 
             features_chunk = features_chunk.reshape((len(texts_chunk), -1))
-            logger.info("features chunk shape is %s", features_chunk.shape)
+            # logger.info("features chunk shape is %s", features_chunk.shape)
             features_chunks.append(features_chunk)
 
             for features in features_chunk:

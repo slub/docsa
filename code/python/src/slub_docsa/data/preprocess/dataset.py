@@ -15,17 +15,43 @@ def filter_samples_by_condition(
     samples_iterator: Iterator[Sample],
     condition: Callable[[Sample], bool]
 ) -> Iterator[Sample]:
-    """Return a new dataset that contains only samples matching a condition."""
+    """Return a new dataset that contains only samples matching a condition.
+
+    Parameters
+    ----------
+    samples_iterator: Iterator[Sample]
+        An iterator of samples that is being filtered for samples that match a condition
+    condition: Callable[[Sample], bool]
+        A function that decides whether a sample should be filtered or not. If the function returns false, the sample
+        is filtered (meaning it is not passed along).
+
+    Returns
+    -------
+    Iterator[Sample]
+        An iterator over non-filtered samples, meaning samples for which the condition function returned true
+    """
     for sample in samples_iterator:
         if condition(sample):
             yield sample
 
 
 def filter_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dataset:
-    """Remove subjects from dataset.
+    """Return a new dataset which does not contain the specified subjects.
 
-    Samples are only removed if all subject annotations will be removed, such that it can not be considered as a
-    training example any more.
+    The resulting dataset may contain less samples, in case removing the specified subjects leaves a document without
+    any subject annotations, such that it can not be considered as a training example any more.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        The dataset that is used as the source of samples
+    subject_set: Set[str]
+        The set of subjects, which will be removed form the dataset
+
+    Returns
+    -------
+    Dataset
+        A new dataset that does not contain the specified subjects.
     """
     new_documents = []
     new_targets = []
@@ -44,10 +70,21 @@ def filter_subjects_from_dataset(dataset: Dataset, subject_set: Set[str]) -> Dat
 
 
 def filter_subjects_with_insufficient_samples(dataset: Dataset, minimum_samples: int = 1) -> Dataset:
-    """Remove subjects from a dataset that do not meet the minimum required number of samples.
+    """Return a new dataset which only contains subjects that meet the required minimum number of samples.
 
-    Samples are only removed if all subject annotations will be removed, such that it can not be considered as a
-    training example any more.
+    The resulting dataset may contain less samples, in case a all subject annotations for a document need to be
+    removed, such that it can not be considered as a training example any more.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        The dataset that is the source of samples and use to generate a new filtered dataset
+    minimum_samples: int = 1
+        The number of minimum samples required for each subject
+
+    Returns
+    -------
+        A new dataset that does not contain subjects that do not meet the required minimum number of samples.
     """
     # count number of samples by subjects
     subject_counts = count_number_of_samples_by_subjects(dataset.subjects)

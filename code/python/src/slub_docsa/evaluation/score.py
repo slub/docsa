@@ -22,7 +22,43 @@ def scikit_incidence_metric(
     metric_function,
     **kwargs
 ) -> Callable[[np.ndarray, np.ndarray], float]:
-    """Return a scikit-learn metric transformed to score lists of subject URIs."""
+    """Return a function that can be used to score a subject probability matrix against a target incidence matrix.
+
+    This score function is based on a scikit-learn metric passes as argument `metric_function`. In order to apply this
+    metric, first, subject probabilities are converted to an incidence matrix using the provided
+    `incidence_decision_function`.
+
+    Parameters
+    ----------
+    incidence_decision_function: IncidenceDecisionFunctionType
+        a function that transforms a subject probability matrix (as numpy.ndarray) to an incidence matrix (binary
+        matrix of same shape) using some decision logic, e.g., a threshold decision via
+        `slub_docsa.evaluation.incidence.threshold_incidence_decision`
+    metric_function
+        a function that scores the resulting incidence matrix (after applying the decision function), e.g., scikit's
+        `precision_score` function
+    kwargs
+        any additional arguments that are passed to the `metric_function`
+
+    Returns
+    -------
+    Callable[[np.ndarray, np.ndarray], float]
+        a function with matrices `true_subject_incidence` and `predicted_subject_probabitlies` as parameters that
+        scores the subject probabilitiy matrix against the true target subject incidence matrix by first applying the
+        `incidence_decision_function` and then calling `metric_function` with its result
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from sklearn.metrics import precision_score
+    >>> from slub_docsa.evaluation.incidence import threshold_incidence_decision
+    >>> target_incidence = np.array([[0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
+    >>> subject_probabilities = np.array([[0.1, 0.2, 0.9], [0.3, 0.7, 0.1]])
+    >>> threshold_function = threshold_incidence_decision(0.5)
+    >>> score_function = scikit_incidence_metric(threshold_function, precision_score, average="micro")
+    >>> score_function(target_incidence, subject_probabilities)
+    1.0
+    """
 
     def _metric(
         true_subject_incidence: np.ndarray,
@@ -45,7 +81,28 @@ def scikit_metric_for_best_threshold_based_on_f1score(
     metric_function,
     **kwargs
 ) -> Callable[[np.ndarray, np.ndarray], float]:
-    """Return a scikit-learn metric using the best threshold incidence by comparing f1_score."""
+    """Return a function that can be used to score a subject probability matrix against a target incidence matrix.
+
+    Instead of an arbitrary incidence decision function as can be provided in `scikit_incidence_metric`, this function
+    finds the best threshold that maximizes the f1 score by evaluating different thresholds. Only thresholds 0.1, 0.2,
+    ..., 0.9 are checked, though.
+
+    Parameters
+    ----------
+    metric_function
+        a function that scores the resulting incidence matrix (after finding the best threshold), e.g., scikit's
+        `precision_score` function
+    kwargs
+        any additional arguments that are passed to the `metric_function`
+
+    Returns
+    -------
+    Callable[[np.ndarray, np.ndarray], float]
+        a function with matrices `true_subject_incidence` and `predicted_subject_probabitlies` as parameters that
+        scores the subject probabilitiy matrix against the true target subject incidence matrix by first finding the
+        best incidence threshold (by chosing a threshold that maximizes the f1 score) and then applying the metric
+        function
+    """
 
     def _decision(true_incidence, predicted_probabilities: np.ndarray) -> np.ndarray:
         best_score = -1
@@ -87,7 +144,21 @@ def scikit_metric_for_best_threshold_based_on_f1score(
 
 
 def absolute_confusion_from_incidence(true_incidence, predicted_incidence) -> Tuple[float, float, float, float]:
-    """Return the absolute number of true positives, true negatives, false positives and false negatives."""
+    """Return the absolute number of true positives, true negatives, false positives and false negatives.
+
+    Parameters
+    ----------
+    true_incidence: numpy.ndarray
+        the true target incidence matrix
+    predicted_incidence: numpy.ndarray
+        the predicted incidence matrix
+
+    Returns
+    -------
+    Tuple[float, float, float, float]
+        a tuple of four values that contain the the absolute number of true positives, true negatives, false positives
+        and false negatives (in that order)
+    """
     bool_true_incidence = true_incidence > 0.0
     bool_predicted_incidence = predicted_incidence > 0.0
 
@@ -104,7 +175,35 @@ def cesa_bianchi_h_loss(
     subject_order: Optional[Sequence[str]],
     log_factor: Optional[float] = None,
 ) -> Callable[[np.ndarray, np.ndarray], float]:
-    """Calculate h-loss according to cesa-bianchi et al."""
+    """Return function that calculates the h-loss according to cesa-bianchi et al.
+
+    The h-loss is a hierarchical score that considers not only whether subjects are predicted correctly, but also uses
+    the subject hierarchy to weigh mistakes based on their severness. Mistakes near the root of the hierarchy are
+    judged to be more severe, and thus, add a higher loss to the overall score.
+
+    A detailed description can be found in:
+
+    N. Cesa-Bianchi, C. Gentile, and L. Zaniboni.
+    [Hierarchical classification: Combining Bayes with SVM](
+        http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.98.7332&rep=rep1&type=pdf) (2006)
+
+    Parameters
+    ----------
+    subject_hierarchy: Optional[SubjectHierarchyType[SubjectNodeType]]
+        the subject hierarchy used to evaluate the serverness of prediction mistakes; if no subject hierarchy is
+        provided, a score of `numpy.nan` is returned
+    subject_order: Optional[Sequence[str]]
+        an subject list mapping subject URIs to the columns of the provided target / predicted incidence matrices; if
+        no subject order is provided, a score of `numpy.nan` is returned
+    log_factor: Optional[float] = None
+        factor used for logartihmic scaling, which helps to visualize the h-loss in plots
+
+    Returns
+    -------
+    Callable[[np.ndarray, np.ndarray], float]
+        a function that scores two incidence matrices (target incidence, predicted incidence) using the cesa-bianchi
+        h-loss given the provided subject hierarchy and subject order
+    """
 
     def _nan_results(_true_incidence: np.ndarray, _predicted_incidence: np.ndarray) -> float:
         return np.nan

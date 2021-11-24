@@ -28,6 +28,3 @@ def download_nltk(name: str):
         os.makedirs(NLTK_PATH, exist_ok=True)
         nltk.download(name, download_dir=NLTK_PATH)
         NLTK_ALREADY_DOWNLOADED[name] = True
-
-
-download_nltk("stopwords")

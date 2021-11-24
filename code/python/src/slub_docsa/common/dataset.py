@@ -33,7 +33,10 @@ class Dataset:
     """
 
     documents: Sequence[Document]
+    """the sequence of documents"""
+
     subjects: SubjectTargets
+    """the matching sequence of subject lists for each document"""
 
 
 class SimpleDataset(Dataset):
@@ -51,12 +54,33 @@ def dataset_from_samples(samples: Iterator[Sample]) -> Dataset:
     .. note::
 
         This will fail for large datasets that do not fit in main memory!
+
+    Parameters
+    ----------
+    samples: Iterable[Sample]
+        an iterator over samples that is converted to a dataset consisting of simple lists of documents and subjects
+
+    Returns
+    -------
+    Dataset
+        the generated dataset
     """
     zipped = list(zip(*samples))
     return SimpleDataset(documents=cast(Sequence[Document], zipped[0]), subjects=cast(SubjectTargets, zipped[1]))
 
 
 def samples_from_dataset(dataset: Dataset) -> Iterator[Sample]:
-    """Return an iterator over each sample of a dataset."""
+    """Return an iterator over each sample of a dataset.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        the dataset that is iterated over
+
+    Returns
+    -------
+    Iterator[Sample]
+        an iterator over all samples (pairs of documents and their subject annotations) of the dataset
+    """
     for i, document in enumerate(dataset.documents):
         yield Sample(document, dataset.subjects[i])

@@ -16,8 +16,16 @@ logger = logging.getLogger(__name__)
 class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
     """Stores a subject hierarchy in a python dbm database."""
 
-    def __init__(self, filepath, read_only=True):
-        """Initialize store with a filepath."""
+    def __init__(self, filepath: str, read_only: bool = True):
+        """Initialize store with a filepath.
+
+        Parameters
+        ----------
+        filepath: str
+            the path to the database file
+        read_only: bool = True
+            whether to open the database in read-only mode
+        """
         flag = "r" if read_only else "c"
         self.store = dbm.open(filepath, flag)
 
@@ -67,7 +75,20 @@ def load_persisted_subject_hierarchy_from_lazy_subject_generator(
     lazy_subject_generator: Callable[[], Iterable[SubjectNodeType]],
     filepath: str,
 ) -> SubjectHierarchyType[SubjectNodeType]:
-    """Load a subject hierarchy if it was stored before, or otherwise store it using the provided subject generator."""
+    """Load a subject hierarchy if it was stored before, or otherwise store it using the provided subject generator.
+
+    Parameters
+    ----------
+    lazy_subject_generator: Callable[[], Iterable[SubjectNodeType]]
+        a function that returns an iterator over subjects, which are stored in case the database does not exist yet
+    filepath: str
+        the path to the database file
+
+    Returns
+    -------
+    SubjectHierarchyType[SubjectNodeType]
+        the subject hierarchy as loaded from the persisted database
+    """
     if not os.path.exists(filepath):
         store = SubjectHierarchyDbmStore[SubjectNodeType](filepath, read_only=False)
 

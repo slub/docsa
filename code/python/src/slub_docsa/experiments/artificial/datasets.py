@@ -28,14 +28,14 @@ def generate_pruned_random_no_correlations_dataset(n_token, n_docs, n_subjects, 
 
 def generate_pruned_easy_random_dataset_from_dbpedia(n_docs, n_subjects, min_samples):
     """Generate easy to predict random data that is pruned to have minimum samples per subject."""
-    dataset = generate_easy_random_dataset_from_dbpedia("english", n_docs, n_subjects)
+    dataset = generate_easy_random_dataset_from_dbpedia("en", n_docs, n_subjects)
     return filter_subjects_with_insufficient_samples(dataset, min_samples), None
 
 
 def generate_pruned_hierarchical_random_dataset(n_token, n_docs, n_subjects, min_samples):
     """Generate hierarchical random that that is hierarchical pruned to have minimum samples per subject."""
     dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_dbpedia(
-            "english", n_token, n_docs, n_subjects
+            "en", n_token, n_docs, n_subjects
     )
     dataset.subjects = prune_subject_targets_to_minimum_samples(min_samples, dataset.subjects, subject_hierarchy)
     dataset = filter_subjects_with_insufficient_samples(dataset, min_samples)

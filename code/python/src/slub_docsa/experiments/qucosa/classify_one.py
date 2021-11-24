@@ -1,4 +1,4 @@
-"""Runs a single model for a specfiic dataset."""
+"""Runs a single model for a specfiic qucosa dataset variant."""
 
 # pylint: disable=invalid-name
 
@@ -6,20 +6,22 @@ import logging
 import os
 
 from sklearn.metrics import f1_score
-from slub_docsa.common.paths import FIGURES_DIR
+from slub_docsa.common.paths import CACHE_DIR, FIGURES_DIR
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import default_named_qucosa_datasets
 from slub_docsa.evaluation.incidence import unique_subject_order, subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import scikit_kfold_train_test_split
-from slub_docsa.experiments.common import get_qucosa_dbmdz_bert_vectorizer
-from slub_docsa.models.ann_torch import TorchBertSequenceClassificationHeadModel
+from slub_docsa.experiments.common import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.models.ann_torch import TorchSingleLayerDenseReluModel
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     random_state = 123
     plot_training_history_filepath = os.path.join(FIGURES_DIR, "qucosa/classify_one_ann_history")
+    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
     _, dataset, _ = list(default_named_qucosa_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
 
     subject_order = unique_subject_order(dataset.subjects)
@@ -28,15 +30,17 @@ if __name__ == "__main__":
     train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
     test_incidence = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
-    dbmdz_vectorizer = get_qucosa_dbmdz_bert_vectorizer(subtext_samples=1, hidden_states=4)
-    # tfidf_vectorizer = TfidfStemmingVectorizer(lang_code="de", max_features=10000)
+    # vectorizer = get_qucosa_dbmdz_bert_vectorizer(subtext_samples=1, hidden_states=1)
+    vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000)
 
+    # model = AnnifModel(model_type="omikuji", lang_code="de")
     # model = TorchSingleLayerDenseTanhModel(
-    model = TorchBertSequenceClassificationHeadModel(
-        vectorizer=dbmdz_vectorizer,
-        batch_size=128,
+    # model = TorchBertSequenceClassificationHeadModel(
+    model = TorchSingleLayerDenseReluModel(
+        vectorizer=vectorizer,
+        batch_size=16,
         epochs=50,
-        lr=0.001,
+        lr=0.0001,
         plot_training_history_filepath=plot_training_history_filepath
     )
 

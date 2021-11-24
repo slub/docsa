@@ -1,4 +1,4 @@
-"""Base classes describing a document consisting of an URI, title, abstract, etc."""
+"""Base class describing a document consisting of an URI, title, abstract, etc."""
 
 # pylint: disable=too-few-public-methods, too-many-arguments
 

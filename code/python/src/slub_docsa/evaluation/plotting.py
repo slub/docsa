@@ -1,4 +1,4 @@
-"""Generates plots for evaluation."""
+"""Methods to generate various plots for evaluation."""
 
 # pylint: disable=dangerous-default-value, too-many-arguments, too-many-locals
 
@@ -24,7 +24,29 @@ def score_matrix_box_plot(
     score_ranges: List[Tuple[float, float]],
     columns: int = 1
 ) -> Any:
-    """Return box plot for score matrix."""
+    """Return box plot visualizing the overall score matrix.
+
+    Shows one plot for each score. Each model is represented by a box plot visualizing all scores for each
+    cross-validation split.
+
+    Parameters
+    ----------
+    score_matrix: numpy.ndarray
+        the score matrix of shape `(len(models), len(scores), n_splits)`
+    model_names: List[str]
+        the labels for each model
+    score_names: List[str]
+        the labels for each score function
+    score_ranges: List[Tuple[float, float]]
+        min-max ranges for the y-axis of each score
+    columns: int = 1
+        the number of columns for the grid layout that is used to show each plot for each score function
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     _, n_scores, _ = score_matrix.shape
 
     fig = cast(Any, make_subplots(
@@ -59,7 +81,31 @@ def score_matrices_box_plot(
     score_ranges: List[Tuple[float, float]],
     columns: int = 1
 ) -> Any:
-    """Return box plot for multiple score matrix evaluated for different datasets."""
+    """Return box plot for multiple score matrices evaluated for different datasets.
+
+    Shows one plot for each score function. Datasets are represented by boxes of different colors. Models are sorted on
+    the x-axis.
+
+    Parameters
+    ----------
+    score_matrices: List[np.ndarray]
+        list of score matrices of shape `(len(models), len(scores), n_splits)` for each dataset
+    dataset_names: List[str]
+        the labels for each dataset
+    model_names: List[str]
+        the labels for each model
+    score_names: List[str]
+        the labels for each score
+    score_ranges: List[Tuple[float, float]]
+        min-max ranges for the y-axis of each score
+    columns: int = 1
+        the number of columns for the grid layout that is used to show each plot for each score function
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     n_models, n_scores, n_splits = score_matrices[0].shape
 
     fig = cast(Any, make_subplots(
@@ -119,7 +165,21 @@ def precision_recall_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
 ) -> Any:
-    """Return a precision recall scatter plot."""
+    """Return a precision recall scatter plot.
+
+    Parameters
+    ----------
+    score_matrix: numpy.ndarray
+        the score matrix that contains both precision (first index) and recall (second index) in a matrix of shape
+        `(len(models), 2, n_splits)`
+    model_names: List[str]
+        the list of model labels
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     n_models, _, _ = score_matrix.shape
 
     fig = cast(Any, go.Figure)()
@@ -135,8 +195,8 @@ def precision_recall_plot(
         )
 
     fig.update_layout(
-        xaxis_title="top3 precision micro",
-        yaxis_title="top3 recall micro",
+        xaxis_title="precision micro",
+        yaxis_title="recall micro",
         xaxis_range=[0, 1],
         yaxis_range=[0, 1],
     )
@@ -148,7 +208,21 @@ def per_subject_precision_recall_vs_samples_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
 ) -> Any:
-    """Return plot showing precision vs number of test examples per subject."""
+    """Return plot showing precision vs. number of test examples per subject.
+
+    Parameters
+    ----------
+    score_matrix: numpy.ndarray
+        the per-subject score matrix that contains both precision (first index) and recall (second index) for every
+        subject in a matrix of shape `(len(models), 2, n_splits, len(subjects))`
+    model_names: List[str]
+        the list of model labels
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     n_models, _, _, _ = score_matrix.shape
 
     fig = cast(Any, make_subplots(
@@ -204,7 +278,25 @@ def per_subject_score_histograms_plot(
     score_names: List[str],
     score_ranges: List[Tuple[float, float]],
 ) -> Any:
-    """Return a plot of score histograms showing score distribution for over all subjects individually."""
+    """Return a plot of score histograms illustrating the score distribution for all subjects individually.
+
+    Parameters
+    ----------
+    score_matrix: numpy.ndarray
+        the per-subject score matrix that contains all scores for every subject in a matrix of shape
+        `(len(models), len(scores_functions), n_splits, len(subjects))`
+    model_names: List[str]
+        the list of model labels
+    score_names: List[str]
+        the list of score labels
+    score_ranges: List[Tuple[float, float]]
+        min-max ranges for each score
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     n_models, n_scores, _, _ = score_matrix.shape
 
     if n_scores != len(score_names):
@@ -259,7 +351,28 @@ def ann_training_history_plot(
     train_top3_f1_score: List[float],
     test_top3_f1_score: List[float],
 ) -> Any:
-    """Return a plot of scores that were recorded for each epoch while training a neural network."""
+    """Return a illustration of scores that were recorded for each epoch while training a neural network.
+
+    Parameters
+    ----------
+    training_loss: List[float]
+        the training loss over all epochs
+    test_loss: List[float]
+        the test loss over all epochs
+    train_best_threshold_f1_score: List[float]
+        the best-threshold f1 score for training data over all epochs
+    test_best_threshold_f1_score: List[float]
+        the best-threshold f1 score for test data over all epochs
+    train_top3_f1_score: List[float]
+        the top3 f1 score for training data over all epochs
+    test_top3_f1_score: List[float]
+        the top3 f1 score for test data over all epochs
+
+    Returns
+    -------
+    plotly.Figure
+        the plotly figure that can be save to a file, etc.
+    """
     fig = cast(Any, make_subplots(
         rows=1,
         cols=2,
@@ -342,7 +455,23 @@ def write_multiple_figure_formats(
     figure: Any,
     filepath: str,
 ):
-    """Write a plotly figure as a html, pdf and jpg file."""
+    """Write a plotly figure as a html, pdf and jpg file.
+
+    Can be used to export any of the plotly figures returned by the plotting methods of this module, e.g.,
+    `score_matrix_box_plot`.
+
+    Parameters
+    ----------
+    figure: plotly.Figure
+        the plotly figure that is being exported
+    filepath: str
+        the filepath where the figure is being saved to; an appropriate file extension is added (html, pdf, jpg) for
+        each of the three export formats
+
+    Returns
+    -------
+    None
+    """
     figure.write_html(
         f"{filepath}.html",
         include_plotlyjs="cdn",

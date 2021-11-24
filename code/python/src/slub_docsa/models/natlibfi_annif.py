@@ -175,7 +175,7 @@ class AnnifModel(Model):
 
             self.subject_skos_graph = subject_hierarchy_to_skos_graph(
                 subject_hierarchy=self.subject_hierarchy,
-                language=self.lang_code,
+                lang_code=self.lang_code,
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:

@@ -10,13 +10,39 @@ from slub_docsa.data.preprocess.dataset import count_number_of_samples_by_subjec
 logger = logging.getLogger(__name__)
 
 
-def check_dataset_subjects_have_minimum_samples(dataset: Dataset, minimum_samples: int = 1):
-    """Check and fails if some subjects do not have the required minimum number of samples."""
+def check_dataset_subjects_have_minimum_samples(dataset: Dataset, minimum_samples: int = 1) -> bool:
+    """Check and fails if some subjects do not have the required minimum number of samples.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        the dataset to be checked for minimum number of samples per subject
+    minimum_samples: int = 1
+        the required minimum number of samples per subject
+
+    Returns
+    -------
+    bool
+        true if all subjects have the specified minimum number of samples, else false
+    """
     return check_subject_targets_have_minimum_samples(dataset.subjects, minimum_samples)
 
 
-def check_subject_targets_have_minimum_samples(targets: SubjectTargets, minimum_samples: int = 1):
-    """Check and fails if some subjects do not have the required minimum number of samples."""
+def check_subject_targets_have_minimum_samples(targets: SubjectTargets, minimum_samples: int = 1) -> bool:
+    """Check and fails if some subjects do not have the required minimum number of samples.
+
+    Parameters
+    ----------
+    targets: SubjectTargets
+        subject target list to be checked for minimum number of samples per subject
+    minimum_samples: int = 1
+        the required minimum number of samples per subject
+
+    Returns
+    -------
+    bool
+        true if all subjects have the specified minimum number of samples, else false
+    """
     subject_counts = count_number_of_samples_by_subjects(targets)
 
     subjects_below_minimum = {s_uri for s_uri, c in subject_counts.items() if c < minimum_samples}
@@ -39,7 +65,22 @@ def check_subject_targets_distribution(
     test_targets: SubjectTargets,
     target_ratio_interval: Tuple[float, float]
 ) -> bool:
-    """Check whether training and test split has a good balance for each subject."""
+    """Check whether training and test split has a good balance for each subject.
+
+    Parameters
+    ----------
+    train_targets: SubjectTargets
+        the training subject target list
+    test_targets: SubjectTargets
+        the test subject target list
+    target_ratio_interval: Tuple[float, float]
+        the expected target ratio interval which is checked for every subject
+
+    Returns
+    -------
+    bool
+        true if all ratios for all subjects are between the specified target ratio interval, else false
+    """
     well_balanced = True
 
     train_counts = count_number_of_samples_by_subjects(train_targets)
@@ -82,7 +123,24 @@ def check_dataset_subject_distribution(
     test_dataset: Dataset,
     target_ratio_interval: Tuple[float, float]
 ) -> bool:
-    """Check whether training and test dataset split has a good balance."""
+    """Check whether training and test dataset split has a good balance.
+
+    Uses `check_subject_targets_distribution` to check for the ratio between training and test samples for each subject.
+
+    Parameters
+    ----------
+    train_dataset: Dataset
+        the training dataset to check
+    test_dataset: Dataset
+        the test dataset to check
+    target_ratio_interval: Tuple[float, float]
+        the expected target ratio interval which is checked for every subject
+
+    Returns
+    -------
+    bool
+        true if all ratios for all subjects are between the specified target ratio interval, else false
+    """
     return check_subject_targets_distribution(
         train_dataset.subjects,
         test_dataset.subjects,

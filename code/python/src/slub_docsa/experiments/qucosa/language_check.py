@@ -1,4 +1,4 @@
-"""Compares qucosa language annotations with from fulltext detected languages."""
+"""Compares qucosa language annotations with automatically detected fulltext languages."""
 
 # pylint: disable=invalid-name
 

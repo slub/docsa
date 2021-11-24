@@ -25,6 +25,18 @@ def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool
     Stored predictions are only used if the exact same training and test data is used for the same model.
     This is checked by calculating a hash function over both the training and test data, as well as the descriptive
     string `__str__()` of the model class.
+
+    Parameters
+    ----------
+    filepath: str
+        The path to the dbm database where predictions are stored
+    load_cached_predictions: bool = False
+        A flag to prevent loading predictions from cache in case it is disabled, e.g., upon user request
+
+    Returns
+    -------
+    FitModelAndPredictCallable
+        a function that calculates predictions based on the training data, test data and model
     """
     store = dbm.open(filepath, "c")
 

@@ -13,6 +13,9 @@ from slub_docsa.data.load.dbpedia import read_dbpedia_abstracts
 logger = logging.getLogger(__name__)
 
 TokenProbabilities = Mapping[str, float]
+"""A mapping describing the occurance probability for each available token.
+The sum of all probabilities should equal 1.
+"""
 
 
 def generate_random_token_probabilties(n_tokens: int, token_length=10, exp_scale=1.0) -> TokenProbabilities:
@@ -85,10 +88,23 @@ def token_probabilities_from_corpus(corpus: Iterable[str]) -> TokenProbabilities
     return {t: c / count_sum for t, c in token_counts.items()}
 
 
-def token_probabilities_from_dbpedia(language: str, n_docs=10000) -> TokenProbabilities:
-    """Return token probabilities by counting tokens in DBpedia abstracts."""
-    logger.debug("extract token probabilties from %s dbpedia abstracts", language)
-    corpus = read_dbpedia_abstracts(language, limit=n_docs)
+def token_probabilities_from_dbpedia(lang_code: str, n_docs=10000) -> TokenProbabilities:
+    """Return token probabilities by counting tokens in DBpedia abstracts.
+
+    Parameters
+    ----------
+    lang_code: str
+        the language code of dbpedia resources, which are used to extract token probabilities
+    n_docs: int = 10000
+        the maximum number of dbpedia documents to process and collect tokens from
+
+    Returns
+    -------
+    TokenProbabilities
+        the token probabilities as extracted from Dbpedia
+    """
+    logger.debug("extract token probabilties from %s dbpedia abstracts", lang_code)
+    corpus = read_dbpedia_abstracts(lang_code, limit=n_docs)
     return token_probabilities_from_corpus(corpus)
 
 
@@ -96,7 +112,22 @@ def choose_tokens_by_probabilities(
     k: int,
     token_probabilities: TokenProbabilities,
 ) -> TokenProbabilities:
-    """Select k tokens from according to their probability."""
+    """Select `k` tokens according to their probability and return a subset of token probabilities.
+
+    The resulting token probabilities are normalized again to achieve a sum of 1.
+
+    Parameters
+    ----------
+    k: int
+        the number of tokens to randomly select from `token_probabilities`
+    token_probabilities: TokenProbabilities
+        the based token probabilities from which tokens are sampled
+
+    Returns
+    -------
+    TokenProbabilities
+        a subset of `k` tokens and their occurance probabilities normalized to 1
+    """
     tokens = list(token_probabilities.keys())
     probabilities = list(map(lambda t: token_probabilities[t], tokens))
     tokens_idx = list(range(len(tokens)))
@@ -119,7 +150,20 @@ def choose_tokens_by_probabilities(
 def combine_token_probabilities(
     token_probabilities_list: Iterable[TokenProbabilities]
 ) -> TokenProbabilities:
-    """Add token probabilities from a list of token probabilities."""
+    """Add token probabilities from a list of token probabilities.
+
+    Normalizes the union of all token probabilities to a sum of 1.
+
+    Parameters
+    ----------
+    token_probabilities_list: Iterable[TokenProbabilities]
+        the list of token probablities that will be combined into one
+
+    Returns
+    -------
+    TokenProbabilities
+        the combined token probablities
+    """
     new_token_probabilities = {}
     for token_probabilities in token_probabilities_list:
         for token, probability in token_probabilities.items():

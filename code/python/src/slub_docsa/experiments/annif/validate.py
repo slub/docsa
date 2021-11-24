@@ -12,7 +12,7 @@ from slub_docsa.common.dataset import dataset_from_samples
 from slub_docsa.common.paths import ANNIF_DIR
 from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_samples, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
-from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_targets_as_annif_tsv
+from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(ANNIF_DIR, "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")
-    save_subject_targets_as_annif_tsv(
+    save_subject_labels_as_annif_tsv(
         rvk_labels,
         os.path.join(ANNIF_DIR, "comparison_experiment/subjects.tsv"),
     )
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     logger.info("save subject hierarchy as skos turtle file")
     rvk_skos_graph = subject_hierarchy_to_skos_graph(
         subject_hierarchy=rvk_hierarchy,
-        language=LANG_CODE,
+        lang_code=LANG_CODE,
         mandatory_subject_list=subject_order
     )
     with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.hierarchical.ttl"), "wb") as f:

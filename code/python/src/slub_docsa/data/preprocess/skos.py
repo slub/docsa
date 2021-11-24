@@ -1,7 +1,7 @@
 """Convert between subject hierarchy and skos using rdflib."""
 
 import logging
-from typing import Any, Callable, List, Mapping, Optional, Sequence
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Tuple
 
 import rdflib
 from rdflib.namespace import SKOS, RDF
@@ -15,27 +15,58 @@ logger = logging.getLogger(__name__)
 
 def subject_labels_to_skos_graph(
     subject_labels: Mapping[str, str],
-    language: str,
-):
-    """Convert subject labels without hierarchical relationships to an rdflib SKOS graph."""
+    lang_code: str,
+) -> rdflib.Graph:
+    """Convert subject labels without hierarchical relationships to an rdflib SKOS graph.
+
+    Parameters
+    ----------
+    subject_labels: Mapping[str, str]
+        a map containing labels for each subject
+    lang_code: str
+        a two-letter language code representing the language of all labels
+
+    Returns
+    -------
+    rdflib.Graph
+        an rdflib graph containing all subjects as SKOS concepts and their labels as `prefLabel`
+    """
     graph = rdflib.Graph()
     graph.namespace_manager.bind('skos', SKOS)
 
     for uri, label in subject_labels.items():
         subject_uri_ref = rdflib.URIRef(uri)
         graph.add((subject_uri_ref, RDF.type, SKOS.Concept))
-        graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, language)))
+        graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, lang_code)))
 
     return graph
 
 
 def subject_hierarchy_to_skos_graph(
     subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
-    language: str,
-    generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Any]]] = None,
+    lang_code: str,
+    generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Tuple[Any, Any, Any]]]] = None,
     mandatory_subject_list: Sequence[str] = None,
-):
-    """Convert subject hierarchy to an rdflib graph using SKOS triples."""
+) -> rdflib.Graph:
+    """Convert a subject hierarchy to an rdflib graph using SKOS triples.
+
+    Parameters
+    ----------
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+        the subject hierarchy that is being converted to a SKOS rdflib graph
+    lang_code: str
+        a two-letter language code represeting the language of labels in the subject hierarchy
+    generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Tuple[Any, Any, Any]]]] = None
+        an optional function that returns additional triples given a specific subject of the subject hierarchy
+    mandatory_subject_list: Sequence[str] = None
+        an optional list of subjects; if provided, only these subjects and their ancestors are converted to SKOS,
+        otherwise all subjects of the hierarchy are added
+
+    Returns
+    -------
+    rdflib.Graph
+        an rdflib graph that represents the subject hieararchy with SKOS triples
+    """
     logger.debug("convert subject hierarchy to rdflib skos graph")
     graph = rdflib.Graph()
     graph.namespace_manager.bind('skos', SKOS)
@@ -59,7 +90,7 @@ def subject_hierarchy_to_skos_graph(
         parent_uri = subject_hierarchy[subject_uri].parent_uri
 
         graph.add((subject_uri_ref, RDF.type, SKOS.Concept))
-        graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, language)))
+        graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, lang_code)))
 
         if generate_custom_triples is not None:
             for custom_triple in generate_custom_triples(subject_hierarchy[subject_uri]):

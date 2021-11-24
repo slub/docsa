@@ -15,11 +15,6 @@ logger = logging.getLogger(__name__)
 
 RESOURCE_DIR = os.path.join(RESOURCES_DIR, "dbpedia")
 
-LANGUAGE_CODES = {
-    "english": "en",
-    "german": "de",
-}
-
 
 def _get_dbpedia_download_url(lang_code):
     filename = f"short-abstracts_lang={lang_code}.ttl.bz2"
@@ -30,12 +25,13 @@ def _get_dbpedia_abstracts_filepath(lang_code):
     return os.path.join(RESOURCE_DIR, f"short-abstracts_lang={lang_code}.ttl.bz2")
 
 
-def _download_dbpedia_abstracts(lang_code):
+def _download_dbpedia_abstracts(lang_code: str, filepath: str = None):
     # create resources dir if not exists
     os.makedirs(RESOURCE_DIR, exist_ok=True)
 
-    # abstracts
-    filepath = _get_dbpedia_abstracts_filepath(lang_code)
+    if filepath is None:
+        filepath = _get_dbpedia_abstracts_filepath(lang_code)
+
     if not os.path.exists(filepath):
         logging.info("downloading dbpedia abstracts, this may take a while ... ")
         url = _get_dbpedia_download_url(lang_code)
@@ -43,27 +39,26 @@ def _download_dbpedia_abstracts(lang_code):
             shutil.copyfileobj(request, file)
 
 
-def read_dbpedia_abstracts(language: str, limit=None) -> Iterator[str]:
+def read_dbpedia_abstracts(lang_code: str, limit=None, filepath: str = None) -> Iterator[str]:
     """Return an iteator of dbpedia abstracts.
 
     Parameters
     ----------
-    language: str
-        The language of DBpedia resources to load.
+    lang_code: str
+        The language code of DBpedia resources to load.
     limit: int | None
         The maximum number of abstracts to return. Returns all abstracts if None.
+    filepath: str | None
+        The path to the dbpedia abstracts resource file. Is set to a default path relative to the
+        `slub_docsa.common.paths.RESOURCES_DIR` if set to None.
+        File will be downloaded unless it already exists.
 
     Returns
     -------
     Iterator[str]
         Each abstract as string.
     """
-    if language not in LANGUAGE_CODES:
-        raise ValueError(f"language {language} not supported")
-
-    lang_code = LANGUAGE_CODES[language]
-
-    _download_dbpedia_abstracts(lang_code)
+    _download_dbpedia_abstracts(lang_code, filepath)
 
     line_pattern_str = r"^<([^>]+)> <http://www.w3.org/2000/01/rdf-schema#comment> \"(.*)\"@" + lang_code + r" .$"
     line_pattern = re.compile(line_pattern_str)

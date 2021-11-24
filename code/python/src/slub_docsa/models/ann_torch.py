@@ -339,6 +339,7 @@ class TorchSingleLayerDenseReluModel(AbstractTorchModel):
         return Sequential(
             Linear(n_inputs, 1024),
             ReLU(),
+            Dropout(p=0.0),
             Linear(1024, n_outputs),
         )
 

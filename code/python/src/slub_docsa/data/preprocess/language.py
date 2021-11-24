@@ -13,7 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 def detect_language_from_text_via_langid(text: str) -> str:
-    """Return language code for language detected by langid."""
+    """Return language code for language detected by langid.
+
+    Parameters
+    ----------
+    text: str
+        The text that is analyzed for its language
+
+    Returns
+    -------
+    str
+        The two-letter language code detected by langid
+    """
     return langid.classify(text)[0]
 
 
@@ -21,7 +32,23 @@ def filter_samples_by_detected_language_via_langid(
     samples_iterator: Iterator[Sample],
     lang_code: str,
 ) -> Iterator[Sample]:
-    """Return sample documents whose language detected by langid matches the expected language."""
+    """Return sample documents whose language detected by langid matches the expected language.
+
+    Documents are converted to a simple text via the method
+    `slub_docsa.data.preprocess.document.document_as_concatenated_string`.
+
+    Parameters
+    ----------
+    samples_iterator: Iterator[Sample]
+        an iterator over samples that is being filtered
+    lang_code: str
+        the expected language
+
+    Returns
+    -------
+    Iterator[Sample]
+        an iterator over samples only including samples that match the expected language
+    """
     def condition(sample: Sample) -> bool:
         text = document_as_concatenated_string(sample.document)
         if text is not None:

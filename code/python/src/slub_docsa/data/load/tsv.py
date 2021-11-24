@@ -8,11 +8,23 @@ from slub_docsa.data.preprocess.document import document_as_concatenated_string
 
 def save_dataset_as_annif_tsv(
     dataset: Dataset,
-    document_tsv_filepath: str,
+    tsv_filepath: str,
 ):
-    """Save both documents and subjects to two TSV files that can be loaded by Annif."""
+    """Save both documents and subjects to two TSV files that can be loaded by Annif.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        The dataset that is being saved as tsv file
+    tsv_filepath: str
+        the path to the tsv file that is being written
+
+    Returns
+    -------
+    None
+    """
     # write documents
-    with open(document_tsv_filepath, "w", encoding="utf8") as f_tsv:
+    with open(tsv_filepath, "w", encoding="utf8") as f_tsv:
         for i, doc in enumerate(dataset.documents):
             text = document_as_concatenated_string(doc)
             text = text.replace("\n", " ").replace("\r", "").replace("\t", " ").replace("  ", " ")
@@ -21,11 +33,23 @@ def save_dataset_as_annif_tsv(
             f_tsv.write(f"{text}\t{labels_str}\n")
 
 
-def save_subject_targets_as_annif_tsv(
+def save_subject_labels_as_annif_tsv(
     subject_labels: Mapping[str, str],
-    subject_tsv_filepath: str,
+    tsv_filepath: str,
 ):
-    """Write subject targets to Annif tsv file."""
-    with open(subject_tsv_filepath, "w", encoding="utf8") as f_tsv:
+    """Write subject labels to Annif tsv file.
+
+    Parameters
+    ----------
+    subject_labels: Mapping[str, str]
+        A map of subects and their corresponding labels that will be saved as tsv file
+    tsv_filepath: str
+        The path to the tsv file that is being written
+
+    Returns
+    -------
+    None
+    """
+    with open(tsv_filepath, "w", encoding="utf8") as f_tsv:
         for uri, label in subject_labels.items():
             f_tsv.write(f"<{uri}>\t{label}\n")
