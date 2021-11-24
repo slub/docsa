@@ -39,11 +39,12 @@ from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_me
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
-from slub_docsa.models.dummy import NihilisticModel, OracleModel, RandomModel
-from slub_docsa.models.ann_torch import TorchSingleLayerDenseReluModel, TorchBertSequenceClassificationHeadModel
-from slub_docsa.models.natlibfi_annif import AnnifModel
-from slub_docsa.models.scikit import ScikitClassifier
-from slub_docsa.common.model import Model
+from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel, RandomModel
+from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann_torch import TorchBertSequenceClassificationHeadModel
+from slub_docsa.models.classification.natlibfi_annif import AnnifModel
+from slub_docsa.models.classification.scikit import ScikitClassifier
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import score_models_for_dataset
 
@@ -58,7 +59,7 @@ class DefaultModelLists(NamedTuple):
     """Stores names and classes for default models."""
 
     names: List[str]
-    classes: List[Model]
+    classes: List[ClassificationModel]
 
 
 class DefaultScoreLists(NamedTuple):
@@ -227,7 +228,7 @@ def default_named_models(
 
     model_names, model_classes = list(zip(*models))
     model_names = cast(List[str], model_names)
-    model_classes = cast(List[Model], [cls() for cls in model_classes])
+    model_classes = cast(List[ClassificationModel], [cls() for cls in model_classes])
 
     return DefaultModelLists(model_names, model_classes)
 

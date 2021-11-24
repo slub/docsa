@@ -1,4 +1,4 @@
-"""Base class describing a classification model that can be used for training and prediction."""
+"""Base classes describing both classification and clustering models that can be used for training and prediction."""
 
 from typing import Optional, Sequence
 
@@ -7,8 +7,8 @@ import numpy as np
 from slub_docsa.common.document import Document
 
 
-class Model:
-    """Represents a model similar to a scikit-learn estimator and predictor interface.
+class ClassificationModel:
+    """Represents a classification model similar to a scikit-learn estimator and predictor interface.
 
     However, the input of both fit and predict_proba methods are a collection of `Document` instances,
     instead of raw vectorized feaures.
@@ -56,5 +56,29 @@ class Model:
         numpy.ndarray
             The matrix of subject probabilities with a shape of (n_docs, n_subjects). The column order has to match
             the order that was provided as `train_targets` to the `fit` method.
+        """
+        raise NotImplementedError()
+
+
+class ClusteringModel:
+    """Represents a clustering model similar to the scikit-learn fit and predict clustering model.
+
+    However, the input of both fit and predict methods are a collection of `Document` instances,
+    instead of raw vectorized feaures.
+    """
+
+    def fit(self, documents: Sequence[Document]):
+        """Train a clustering model in case the clustering algorithm is based on some kind of model."""
+        raise NotImplementedError()
+
+    def predict(self, documents: Sequence[Document]) -> np.ndarray:
+        """Predict cluster assignments as a membership matrix of shape (len(documents), len(clusters)).
+
+        The membership matrix may resemble an exact clustering, meaning each document is assigned to exactly one
+        cluster. Alternatively, it may contain membership degrees, meaning each document can be part of multiple
+        clusters to a certain degree, such that their degrees sum up to 1. Otherwise, the membership matrix may
+        have arbitrary membership degrees, e.g., to represent a hierarchical clustering.
+
+        In all cases, the maximum value of membership matrix elements is 1.
         """
         raise NotImplementedError()

@@ -13,7 +13,7 @@ from slub_docsa.experiments.qucosa.datasets import default_named_qucosa_datasets
 from slub_docsa.evaluation.incidence import unique_subject_order, subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import scikit_kfold_train_test_split
 from slub_docsa.experiments.common import get_qucosa_tfidf_stemming_vectorizer
-from slub_docsa.models.ann_torch import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
 
 
 if __name__ == "__main__":

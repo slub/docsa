@@ -5,13 +5,13 @@ from typing import Iterable, Optional, Sequence, Any
 import numpy as np
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 
-class ScikitClassifier(Model):
+class ScikitClassifier(ClassificationModel):
     """Model that uses a Scikit-Learn Predictor that supports multiple labels.
 
     A list of supported multi-label models can be found [here](https://scikit-learn.org/stable/modules/multiclass.html).

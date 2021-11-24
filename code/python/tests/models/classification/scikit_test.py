@@ -7,7 +7,7 @@ from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
 
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 from slub_docsa.data.artificial.simple import get_static_mini_dataset
-from slub_docsa.models.scikit import ScikitClassifier
+from slub_docsa.models.classification.scikit import ScikitClassifier
 
 
 def test_scikit_tfidf_model_nearest_neighbor_overfitting():

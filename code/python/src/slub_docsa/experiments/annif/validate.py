@@ -20,7 +20,7 @@ from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_target
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
 from slub_docsa.evaluation.split import scikit_kfold_train_test_split
-from slub_docsa.models.natlibfi_annif import AnnifModel
+from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 
 logger = logging.getLogger(__name__)
 

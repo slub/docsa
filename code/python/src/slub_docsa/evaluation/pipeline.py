@@ -9,25 +9,32 @@ import numpy as np
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.evaluation.condition import check_dataset_subject_distribution
 from slub_docsa.evaluation.condition import check_dataset_subjects_have_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import DatasetSplitFunction
-from slub_docsa.models.dummy import OracleModel
+from slub_docsa.models.classification.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
 
 FitModelAndPredictCallable = Callable[
-    [Model, Sequence[Document], np.ndarray, Sequence[Document], Optional[Sequence[Document]], Optional[np.ndarray]],
+    [
+        ClassificationModel,
+        Sequence[Document],
+        np.ndarray,
+        Sequence[Document],
+        Optional[Sequence[Document]],
+        Optional[np.ndarray]
+    ],
     np.ndarray
 ]
 """Type alias for a function that does the basic fit and predict logic."""
 
 
 def fit_model_and_predict_test_documents(
-    model: Model,
+    model: ClassificationModel,
     train_documents: Sequence[Document],
     train_incidence_matrix: np.ndarray,
     test_documents: Sequence[Document],
@@ -72,7 +79,7 @@ def score_models_for_dataset(
     n_splits: int,
     dataset: Dataset,
     subject_order: Sequence[str],
-    models: Sequence[Model],
+    models: Sequence[ClassificationModel],
     split_function: DatasetSplitFunction,
     overall_score_functions: Sequence[MultiClassScoreFunctionType],
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],

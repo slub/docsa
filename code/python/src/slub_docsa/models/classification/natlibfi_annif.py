@@ -23,7 +23,7 @@ from annif.analyzer.snowball import SnowballAnalyzer
 import rdflib
 from rdflib.namespace import SKOS
 
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
@@ -118,7 +118,7 @@ class _CustomAnnifDocumentCorpus:
             return True
 
 
-class AnnifModel(Model):
+class AnnifModel(ClassificationModel):
     """Interfaces with Annif to train various models and allow predictions."""
 
     def __init__(

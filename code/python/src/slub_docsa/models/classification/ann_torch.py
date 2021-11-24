@@ -18,7 +18,7 @@ from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
 
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
@@ -29,7 +29,7 @@ from slub_docsa.evaluation.plotting import ann_training_history_plot, write_mult
 logger = logging.getLogger(__name__)
 
 
-class AbstractTorchModel(Model):
+class AbstractTorchModel(ClassificationModel):
     """A abstract torch model.
 
     Implement the `get_model` method to provide your custom network model.
@@ -314,7 +314,7 @@ class AbstractTorchModel(Model):
 
 
 class TorchBertSequenceClassificationHeadModel(AbstractTorchModel):
-    """A torch model that is follows the classification head of a Bert Sequence Classification network.
+    """A torch model that follows the classification head of a Bert Sequence Classification network.
 
     See HuggingFace: https://huggingface.co/transformers/_modules/transformers/modeling_bert.html
     """

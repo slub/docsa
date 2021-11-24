@@ -5,10 +5,10 @@ from typing import Optional, Sequence
 import numpy as np
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 
 
-class OracleModel(Model):
+class OracleModel(ClassificationModel):
     """Models that knows the true subjects and perfectly predicts subjects.
 
     In order to gain access to the target subjects, which is usually not possible for a model implementation,
@@ -47,7 +47,7 @@ class OracleModel(Model):
         return "<OracleModel>"
 
 
-class NihilisticModel(Model):
+class NihilisticModel(ClassificationModel):
     """Model that always predicts 0 probabilitiy."""
 
     def __init__(self):
@@ -76,7 +76,7 @@ class NihilisticModel(Model):
         return "<NihilisticModel>"
 
 
-class RandomModel(Model):
+class RandomModel(ClassificationModel):
     """Predict fully random probabilities for each class."""
 
     def __init__(self):

@@ -12,7 +12,7 @@ from typing import Optional, Sequence, cast
 import numpy as np
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import Model
+from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.pipeline import FitModelAndPredictCallable
 
@@ -41,7 +41,7 @@ def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool
     store = dbm.open(filepath, "c")
 
     def fit_model_and_predict(
-        model: Model,
+        model: ClassificationModel,
         train_documents: Sequence[Document],
         train_incidence_matrix: np.ndarray,
         test_documents: Sequence[Document],
