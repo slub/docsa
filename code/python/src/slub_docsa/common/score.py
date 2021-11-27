@@ -4,9 +4,12 @@ Note: Type aliases `MultiClassScoreFunctionType`, `BinaryClassScoreFunctionType`
 are not correctly described in API documentation due to [issue in pdoc](https://github.com/pdoc3/pdoc/issues/229).
 """
 
-from typing import Callable
+from typing import Callable, Optional, Sequence
 
 import numpy as np
+
+from slub_docsa.common.document import Document
+from slub_docsa.common.subject import SubjectTargets
 
 
 MultiClassScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
@@ -17,3 +20,6 @@ BinaryClassScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
 
 IncidenceDecisionFunctionType = Callable[[np.ndarray], np.ndarray]
 """Convert a subject probabilities matrix to an incidence matrix by applying some decision."""
+
+ClusteringScoreFunction = Callable[[Sequence[Document], np.ndarray, Optional[SubjectTargets]], float]
+"""Score function type used to evaluate a clustering of documents."""

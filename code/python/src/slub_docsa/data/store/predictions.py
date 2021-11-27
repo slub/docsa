@@ -14,12 +14,15 @@ import numpy as np
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.evaluation.pipeline import FitModelAndPredictCallable
+from slub_docsa.evaluation.pipeline import FitClassificationModelAndPredictCallable
 
 logger = logging.getLogger(__name__)
 
 
-def persisted_fit_model_and_predict(filepath: str, load_cached_predictions: bool = False) -> FitModelAndPredictCallable:
+def persisted_fit_classification_model_and_predict(
+    filepath: str,
+    load_cached_predictions: bool = False
+) -> FitClassificationModelAndPredictCallable:
     """Load model predictions from a dbm database if they have been stored previously.
 
     Stored predictions are only used if the exact same training and test data is used for the same model.

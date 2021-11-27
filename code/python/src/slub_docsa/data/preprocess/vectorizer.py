@@ -79,9 +79,11 @@ class TfidfVectorizer(AbstractVectorizer):
 
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
-        logger.debug("do scikit tfidf vectorization")
-        self.vectorizer.fit(list(texts))
-        logger.debug("fitted tfidf vectorizer with vocabulary of %s", str(self.vectorizer.get_feature_names()))
+        corpus = list(texts)
+        logger.debug("do scikit tfidf vectorization of %d texts and %d features", len(corpus), self.max_features)
+        self.vectorizer.fit(corpus)
+        logger.debug("done with scikit tfidf vectorization")
+        # logger.debug("fitted tfidf vectorizer with vocabulary of %s", str(self.vectorizer.get_feature_names()))
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
@@ -133,13 +135,13 @@ class TfidfStemmingVectorizer(TfidfVectorizer):
 
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
-        logger.debug("do stemming for fitting of tfidf vectorizer")
+        # logger.debug("do stemming for fitting of tfidf vectorizer")
         stemmed_texts = [self.stemming(t) for t in texts]
         super().fit(iter(stemmed_texts))
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
-        logger.debug("do stemming for transforming with tfidf vectorizer")
+        # logger.debug("do stemming for transforming with tfidf vectorizer")
         stemmed_texts = [self.stemming(t) for t in texts]
         yield from super().transform(iter(stemmed_texts))
 
@@ -173,6 +175,64 @@ class RandomVectorizer(AbstractVectorizer):
     def __str__(self):
         """Return representative string of vectorizer."""
         return "<RandomVectorizer>"
+
+
+class CachedVectorizer(AbstractVectorizer):
+    """Caches vectorizations for fast repeated transforms."""
+
+    def __init__(self, vectorizer: AbstractVectorizer, batch_size: int = 1000, fit_only_once: bool = False):
+        """Initialize vectorizer.
+
+        Parameters
+        ----------
+        vectorizer: AbstractVectorizer
+            The parent vectorizer used to vectorize texts in case texts can not be found in cache.
+        batch_size: int
+            The number of text to process in one batch
+        fit_only_once: bool
+            Skip additional fit calls after fitting once
+        """
+        self.vectorizer = vectorizer
+        self.batch_size = batch_size
+        self.fit_only_once = fit_only_once
+        self.fitted_once = False
+        self.store = {}
+
+    def fit(self, texts: Iterator[str]):
+        """Fit parent vectorizer."""
+        if not self.fitted_once or not self.fit_only_once:
+            self.vectorizer.fit(texts)
+        self.fitted_once = True
+
+    def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
+        """Return vectorized texts from cache or by calling parent vectorizer."""
+        total = 0
+
+        while True:
+            texts_chunk = list(islice(texts, self.batch_size))
+
+            if not texts_chunk:
+                break
+
+            # check which texts needs vectorizing
+            texts_chunk_hashes = [sha1_hash_from_text(t) for t in texts_chunk]
+            uncached_texts = [t for i, t in enumerate(texts_chunk) if texts_chunk_hashes[i] not in self.store]
+
+            # do vectorization for not yet known texts
+            if len(uncached_texts) > 0:
+                for i, uncached_features in enumerate(self.vectorizer.transform(iter(uncached_texts))):
+                    uncached_hash = sha1_hash_from_text(uncached_texts[i])
+                    self.store[uncached_hash] = uncached_features
+
+            for text_hash in texts_chunk_hashes:
+                yield self.store[text_hash]
+
+            total += len(texts_chunk)
+            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+
+    def __str__(self):
+        """Return representative string of vectorizer."""
+        return f"<CachedVectorizer of={str(self.vectorizer)}>"
 
 
 class PersistedCachedVectorizer(AbstractVectorizer):

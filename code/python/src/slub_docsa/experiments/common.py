@@ -26,9 +26,9 @@ from sklearn.svm import LinearSVC
 from slub_docsa.common.paths import ANNIF_DIR, CACHE_DIR
 from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
-from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, RandomVectorizer, TfidfStemmingVectorizer
-from slub_docsa.data.preprocess.vectorizer import PersistedCachedVectorizer
-from slub_docsa.data.store.predictions import persisted_fit_model_and_predict
+from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, PersistedCachedVectorizer
+from slub_docsa.data.preprocess.vectorizer import RandomVectorizer, TfidfStemmingVectorizer
+from slub_docsa.data.store.predictions import persisted_fit_classification_model_and_predict
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.plotting import score_matrices_box_plot, write_multiple_figure_formats
@@ -46,7 +46,7 @@ from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.dataset import Dataset
-from slub_docsa.evaluation.pipeline import score_models_for_dataset
+from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class DefaultScoreLists(NamedTuple):
     """Stores names, ranges and functions of default scores (both multi-class and binary)."""
 
     names: List[str]
-    ranges: List[Tuple[float, float]]
+    ranges: List[Tuple[Optional[float], Optional[float]]]
     functions: List[Callable]
 
 
@@ -90,21 +90,6 @@ def get_qucosa_dbmdz_bert_vectorizer(subtext_samples: int = 1, hidden_states: in
     filename = f"dbmdz_bert_qucosa_sts={subtext_samples}_hs={hidden_states}.sqlite"
     dbmdz_bert_cache_fp = os.path.join(VECTORIZATION_CACHE, filename)
     return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer(subtext_samples=subtext_samples))
-
-
-def get_qucosa_tfidf_stemming_vectorizer(max_features: int = 10000):
-    """Load the tfidf stemming vectorizer that persists stemmed texts for caching."""
-    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
-    # vectorizer_cache_filename = f"qucosa_tfidf_stemming_max_features={max_features}.sqlite"
-    # vectorizer_cache_filepath = os.path.join(VECTORIZATION_CACHE, vectorizer_cache_filename)
-    tfidf_vectorizer = TfidfStemmingVectorizer(
-        lang_code="de",
-        max_features=max_features,
-        stemming_cache_filepath=stemming_cache_filepath,
-        ngram_range=(1, 1),
-    )
-    # return PersistedCachedVectorizer(vectorizer_cache_filepath, tfidf_vectorizer)
-    return tfidf_vectorizer
 
 
 def default_named_models(
@@ -298,7 +283,7 @@ def default_named_multiclass_scores(
 
     score_names, score_ranges, score_functions = list(zip(*scores))
     score_names = cast(List[str], score_names)
-    score_ranges = cast(List[Tuple[float, float]], score_ranges)
+    score_ranges = cast(List[Tuple[Optional[float], Optional[float]]], score_ranges)
     score_functions = cast(List[MultiClassScoreFunctionType], score_functions)
 
     return DefaultScoreLists(score_names, score_ranges, score_functions)
@@ -337,7 +322,7 @@ def default_named_binary_scores(
 
     score_names, score_ranges, score_functions = list(zip(*scores))
     score_names = cast(List[str], score_names)
-    score_ranges = cast(List[Tuple[float, float]], score_ranges)
+    score_ranges = cast(List[Tuple[Optional[float], Optional[float]]], score_ranges)
     score_functions = cast(List[BinaryClassScoreFunctionType], score_functions)
 
     return DefaultScoreLists(score_names, score_ranges, score_functions)
@@ -370,7 +355,7 @@ def do_default_score_matrix_evaluation(
     for dataset_name, dataset, subject_hierarchy in named_datasets:
         # load predictions cache
         os.makedirs(PREDICTIONS_CACHE, exist_ok=True)
-        fit_model_and_predict = persisted_fit_model_and_predict(
+        fit_and_predict = persisted_fit_classification_model_and_predict(
             os.path.join(PREDICTIONS_CACHE, dataset_name + ".dbm"),
             load_cached_predictions,
         )
@@ -393,7 +378,7 @@ def do_default_score_matrix_evaluation(
         per_class_score_lists = default_named_binary_scores(per_class_score_name_subset)
 
         # do evaluate
-        overall_score_matrix, per_class_score_matrix = score_models_for_dataset(
+        overall_score_matrix, per_class_score_matrix = score_classification_models_for_dataset(
             n_splits=n_splits,
             dataset=dataset,
             subject_order=subject_order,
@@ -401,7 +386,7 @@ def do_default_score_matrix_evaluation(
             split_function=split_function,
             overall_score_functions=overall_score_lists.functions,
             per_class_score_functions=per_class_score_lists.functions,
-            fit_model_and_predict=fit_model_and_predict,
+            fit_and_predict=fit_and_predict,
             stop_after_evaluating_split=stop_after_evaluating_split,
         )
 

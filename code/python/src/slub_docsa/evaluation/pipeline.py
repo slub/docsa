@@ -9,8 +9,9 @@ import numpy as np
 
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import ClassificationModel
-from slub_docsa.common.score import MultiClassScoreFunctionType, BinaryClassScoreFunctionType
+from slub_docsa.common.model import ClassificationModel, ClusteringModel
+from slub_docsa.common.score import ClusteringScoreFunction, MultiClassScoreFunctionType, BinaryClassScoreFunctionType
+from slub_docsa.common.subject import SubjectTargets
 from slub_docsa.evaluation.condition import check_dataset_subject_distribution
 from slub_docsa.evaluation.condition import check_dataset_subjects_have_minimum_samples
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
@@ -19,7 +20,7 @@ from slub_docsa.models.classification.dummy import OracleModel
 
 logger = logging.getLogger(__name__)
 
-FitModelAndPredictCallable = Callable[
+FitClassificationModelAndPredictCallable = Callable[
     [
         ClassificationModel,
         Sequence[Document],
@@ -33,7 +34,7 @@ FitModelAndPredictCallable = Callable[
 """Type alias for a function that does the basic fit and predict logic."""
 
 
-def fit_model_and_predict_test_documents(
+def fit_classification_model_and_predict_test_documents(
     model: ClassificationModel,
     train_documents: Sequence[Document],
     train_incidence_matrix: np.ndarray,
@@ -75,7 +76,7 @@ def fit_model_and_predict_test_documents(
     return model.predict_proba(test_documents)
 
 
-def score_models_for_dataset(
+def score_classification_models_for_dataset(
     n_splits: int,
     dataset: Dataset,
     subject_order: Sequence[str],
@@ -83,7 +84,7 @@ def score_models_for_dataset(
     split_function: DatasetSplitFunction,
     overall_score_functions: Sequence[MultiClassScoreFunctionType],
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
-    fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
+    fit_and_predict: FitClassificationModelAndPredictCallable = fit_classification_model_and_predict_test_documents,
     stop_after_evaluating_split: int = None,
     use_test_data_as_validation_data: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -109,7 +110,7 @@ def score_models_for_dataset(
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
         the list of score functions that are applied on a per subject basis (one vs. rest) in order to evaluate the
         prediction quality of every subject
-    fit_model_and_predict: FitModelAndPredictCallable = fit_model_and_predict_test_documents,
+    fit_and_predict: FitClassificationModelAndPredictCallable = fit_classification_model_and_predict_test_documents,
         a function that allows to overwrite the basic fit and predict logic, e.g., by caching model predictions
     stop_after_evaluating_split: int = None,
         a flag that allows to stop the evaluation early, but still return the full score matrices (e.g. in order to
@@ -166,7 +167,7 @@ def score_models_for_dataset(
                 validation_incidence = test_incidence_matrix
 
             # do predictions
-            predicted_subject_probabilities = fit_model_and_predict(
+            predicted_subject_probabilities = fit_and_predict(
                 model,
                 train_dataset.documents,
                 train_incidence_matrix,
@@ -198,3 +199,51 @@ def score_models_for_dataset(
             break
 
     return overall_score_matrix, per_class_score_matrix
+
+
+def score_clustering_models_for_documents(
+    documents: Sequence[Document],
+    subject_targets: Optional[SubjectTargets],
+    models: Sequence[ClusteringModel],
+    scores: Sequence[ClusteringScoreFunction],
+    repeats: int = 10,
+) -> np.ndarray:
+    """Evaluate clustering models by fitting, predicting and scoring them on a single dataset.
+
+    Parameters
+    ----------
+    documents: Sequence[Document]
+        the list of documents that is being clustered
+    subject_targets: Optional[SubjectTargets]
+        an optional list of subject targets, which may be used to evaluate and score the resulting clusterings against
+        known subject annotations
+    models: Sequence[ClusteringModel]
+        the sequence of models being evaluated
+    scores: Sequence[ClusteringScoreFunction]
+        the sequence of scores being calculated for each model
+    repeats: int = 10
+        how often each clustering model is fitted in order to analyze the variance of clustering scores
+
+    Returns
+    -------
+    numpy.ndarray
+        a score matrix of shape `(len(models), len(scores), repeats)`, which contains every score for every evaluated
+        clustering model
+    """
+    score_matrix = np.empty((len(models), len(scores), repeats))
+    score_matrix[:, :, :] = np.NaN
+
+    for i in range(repeats):
+        for j, model in enumerate(models):
+            logger.info("fit clustering model %s for repetition %d", str(model), i+1)
+            model.fit(documents)
+
+            logger.info("predict clustering model %s for repetition %d", str(model), i+1)
+            membership = model.predict(documents)
+
+            logger.info("score clustering result from model %s for repetition %d", str(model), i+1)
+            for k, score_function in enumerate(scores):
+                score = score_function(documents, membership, subject_targets)
+                score_matrix[j, k, i] = score
+
+    return score_matrix

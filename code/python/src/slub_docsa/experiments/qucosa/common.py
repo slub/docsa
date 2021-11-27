@@ -17,12 +17,15 @@ from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient
 from slub_docsa.data.preprocess.document import apply_nltk_snowball_stemming_to_document_samples_iterator
 from slub_docsa.data.preprocess.language import filter_samples_by_detected_language_via_langid
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
+from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
+from slub_docsa.data.preprocess.vectorizer import CachedVectorizer
 from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sample_iterator
 from slub_docsa.evaluation.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
 
 QUCOSA_DATASET_CACHE_DIRECTORY = os.path.join(CACHE_DIR, "qucosa")
+VECTORIZATION_CACHE = os.path.join(CACHE_DIR, "vectorizer")
 
 
 def _prune_hierarchical_min_samples(samples_iterator, min_samples, subject_hierarchy):
@@ -108,6 +111,22 @@ def default_named_qucosa_datasets(
         filepath = os.path.join(QUCOSA_DATASET_CACHE_DIRECTORY, f"{dataset_name}.sqlite")
         dataset = load_persisted_dataset_from_lazy_sample_iterator(lazy_sample_iterator, filepath)
         yield dataset_name, dataset, rvk
+
+
+def get_qucosa_tfidf_stemming_vectorizer(max_features: int = 10000, cache_vectors=False, fit_only_once: bool = False):
+    """Load the tfidf stemming vectorizer that persists stemmed texts for caching."""
+    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
+
+    tfidf_vectorizer = TfidfStemmingVectorizer(
+        lang_code="de",
+        max_features=max_features,
+        stemming_cache_filepath=stemming_cache_filepath,
+        ngram_range=(1, 1),
+    )
+    if not cache_vectors:
+        return tfidf_vectorizer
+
+    return CachedVectorizer(tfidf_vectorizer, fit_only_once=fit_only_once)
 
 
 if __name__ == "__main__":

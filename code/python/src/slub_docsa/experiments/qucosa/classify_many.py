@@ -10,7 +10,7 @@ from slub_docsa.data.load.rvk import get_rvk_subject_store
 
 from slub_docsa.experiments.common import do_default_score_matrix_evaluation, get_split_function_by_name
 from slub_docsa.experiments.common import write_default_plots
-from slub_docsa.experiments.qucosa.datasets import default_named_qucosa_datasets
+from slub_docsa.experiments.qucosa.common import default_named_qucosa_datasets
 
 logger = logging.getLogger(__name__)
 

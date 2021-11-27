@@ -3,7 +3,7 @@
 # pylint: disable=dangerous-default-value, too-many-arguments, too-many-locals
 
 import math
-from typing import cast, Any, List, Tuple
+from typing import Optional, cast, Any, List, Tuple
 
 import numpy as np
 
@@ -21,7 +21,7 @@ def score_matrix_box_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
     score_names: List[str],
-    score_ranges: List[Tuple[float, float]],
+    score_ranges: List[Tuple[Optional[float], Optional[float]]],
     columns: int = 1
 ) -> Any:
     """Return box plot visualizing the overall score matrix.
@@ -78,7 +78,7 @@ def score_matrices_box_plot(
     dataset_names: List[str],
     model_names: List[str],
     score_names: List[str],
-    score_ranges: List[Tuple[float, float]],
+    score_ranges: List[Tuple[Optional[float], Optional[float]]],
     columns: int = 1
 ) -> Any:
     """Return box plot for multiple score matrices evaluated for different datasets.
@@ -276,7 +276,7 @@ def per_subject_score_histograms_plot(
     score_matrix: np.ndarray,
     model_names: List[str],
     score_names: List[str],
-    score_ranges: List[Tuple[float, float]],
+    score_ranges: List[Tuple[Optional[float], Optional[float]]],
 ) -> Any:
     """Return a plot of score histograms illustrating the score distribution for all subjects individually.
 
