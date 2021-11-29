@@ -17,8 +17,6 @@ from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient
 from slub_docsa.data.preprocess.document import apply_nltk_snowball_stemming_to_document_samples_iterator
 from slub_docsa.data.preprocess.language import filter_samples_by_detected_language_via_langid
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
-from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
-from slub_docsa.data.preprocess.vectorizer import CachedVectorizer
 from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sample_iterator
 from slub_docsa.evaluation.incidence import unique_subject_order
 
@@ -85,7 +83,7 @@ def _load_qucosa_samples(
     return _default_pruning(sample_iterator, 10, subject_hierarchy)
 
 
-def default_named_qucosa_datasets(
+def qucosa_named_datasets(
     name_subset: List[str] = None
 ) -> Iterator[Tuple[str, Dataset, SubjectHierarchyType[RvkSubjectNode]]]:
     """Return default qucosa dataset variants."""
@@ -113,27 +111,11 @@ def default_named_qucosa_datasets(
         yield dataset_name, dataset, rvk
 
 
-def get_qucosa_tfidf_stemming_vectorizer(max_features: int = 10000, cache_vectors=False, fit_only_once: bool = False):
-    """Load the tfidf stemming vectorizer that persists stemmed texts for caching."""
-    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
-
-    tfidf_vectorizer = TfidfStemmingVectorizer(
-        lang_code="de",
-        max_features=max_features,
-        stemming_cache_filepath=stemming_cache_filepath,
-        ngram_range=(1, 1),
-    )
-    if not cache_vectors:
-        return tfidf_vectorizer
-
-    return CachedVectorizer(tfidf_vectorizer, fit_only_once=fit_only_once)
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     # loads all data sets and generates persistent storage for them
-    for dn, ds, _ in default_named_qucosa_datasets():
+    for dn, ds, _ in qucosa_named_datasets():
         n_unique_subjects = len(unique_subject_order(ds.subjects))
         logger.info(
             "dataset %s has %d documents and %d unique subjects",

@@ -16,8 +16,8 @@ from slub_docsa.evaluation.pipeline import score_clustering_models_for_documents
 from slub_docsa.evaluation.plotting import score_matrix_box_plot, write_multiple_figure_formats
 from slub_docsa.evaluation.score import clustering_membership_score_function, scikit_clustering_label_score_function
 from slub_docsa.evaluation.similarity import indexed_document_distance_generator_from_vectorizer, intra_cluster_distance
-from slub_docsa.experiments.qucosa.common import default_named_qucosa_datasets
-from slub_docsa.experiments.qucosa.common import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
 from slub_docsa.models.clustering.dummy import RandomClusteringModel
 from slub_docsa.models.clustering.scikit import ScikitClusteringModel
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     repeats = 1
     n_clusters = 20
 
-    _, dataset, _ = list(default_named_qucosa_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
+    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
     vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
 
     documents = [dataset.documents[i] for i in range(5000)]

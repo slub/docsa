@@ -9,8 +9,8 @@ from sklearn.metrics import f1_score
 from slub_docsa.common.paths import CACHE_DIR, FIGURES_DIR
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 
-from slub_docsa.experiments.qucosa.common import default_named_qucosa_datasets
-from slub_docsa.experiments.qucosa.common import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
 from slub_docsa.evaluation.incidence import unique_subject_order, subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     random_state = 123
     plot_training_history_filepath = os.path.join(FIGURES_DIR, "qucosa/classify_one_ann_history")
     stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
-    _, dataset, _ = list(default_named_qucosa_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
+    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
 
     subject_order = unique_subject_order(dataset.subjects)
 

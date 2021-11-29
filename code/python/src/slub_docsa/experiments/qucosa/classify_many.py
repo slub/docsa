@@ -7,10 +7,15 @@ import os
 
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.load.rvk import get_rvk_subject_store
+from slub_docsa.experiments.annif.models import default_annif_named_model_list
+from slub_docsa.experiments.common.models import initialize_models_from_tuple_list
 
-from slub_docsa.experiments.common import do_default_score_matrix_evaluation, get_split_function_by_name
-from slub_docsa.experiments.common import write_default_plots
-from slub_docsa.experiments.qucosa.common import default_named_qucosa_datasets
+from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
+from slub_docsa.experiments.common.pipeline import get_split_function_by_name
+from slub_docsa.experiments.common.plots import write_default_classification_plots
+from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.models import default_qucosa_named_model_list
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +33,7 @@ if __name__ == "__main__":
     ]
     split_function_name = "random"  # either: random, stratified
     n_splits = 10
-    model_subset = [
+    model_name_subset = [
         # ### "random", ####
         "oracle",
         "nihilistic",
@@ -59,13 +64,18 @@ if __name__ == "__main__":
 
     rvk_hierarchy = get_rvk_subject_store()
 
-    evaluation_result = do_default_score_matrix_evaluation(
-        named_datasets=default_named_qucosa_datasets(dataset_subset),
+    def _model_list_generator(subject_order, subject_hierarchy):
+        model_list = default_dummy_named_model_list() \
+            + default_qucosa_named_model_list() \
+            + default_annif_named_model_list("de", subject_order, subject_hierarchy)
+        return initialize_models_from_tuple_list(model_list, model_name_subset)
+
+    evaluation_result = do_default_score_matrix_classification_evaluation(
+        named_datasets=qucosa_named_datasets(dataset_subset),
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
-        lang_code="de",
-        model_name_subset=model_subset,
+        named_models_generator=_model_list_generator,
         load_cached_predictions=load_cached_predictions,
         stop_after_evaluating_split=stop_after_evaluating_split,
     )
 
-    write_default_plots(evaluation_result, os.path.join(FIGURES_DIR, "qucosa"), filename_suffix)
+    write_default_classification_plots(evaluation_result, os.path.join(FIGURES_DIR, "qucosa"), filename_suffix)
