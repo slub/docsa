@@ -8,10 +8,10 @@ from slub_docsa.data.preprocess.vectorizer import RandomVectorizer
 from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel, RandomModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
-from slub_docsa.experiments.common.models import NamedModelTupleList
+from slub_docsa.experiments.common.models import NamedClassificationModelTupleList
 
 
-def default_dummy_named_model_list() -> NamedModelTupleList:
+def default_dummy_named_model_list() -> NamedClassificationModelTupleList:
     """Return a list of common dummy models."""
     models = [
         ("random", lambda: RandomModel()),

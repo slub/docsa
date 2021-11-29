@@ -33,4 +33,4 @@ class RandomClusteringModel(ClusteringModel):
 
     def __str__(self):
         """Return string describing model."""
-        return "<RandomClusteringModel>"
+        return f"<RandomClusteringModel n_clusters={self.n_clusters}>"

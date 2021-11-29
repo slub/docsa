@@ -4,16 +4,16 @@ from typing import Sequence
 
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
-from slub_docsa.experiments.common.models import NamedModelTupleList
+from slub_docsa.experiments.common.models import NamedClassificationModelTupleList
 
 
 def default_annif_named_model_list(
     lang_code: str,
     subject_order: Sequence[str],
     subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
-) -> NamedModelTupleList:
+) -> NamedClassificationModelTupleList:
     """Return a list of common annif models."""
-    models = [
+    models: NamedClassificationModelTupleList = [
         ("annif tfidf", lambda: AnnifModel(model_type="tfidf", lang_code=lang_code)),
         ("annif svc", lambda: AnnifModel(model_type="svc", lang_code=lang_code)),
         ("annif fasttext", lambda: AnnifModel(model_type="fasttext", lang_code=lang_code)),

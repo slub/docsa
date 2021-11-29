@@ -5,77 +5,62 @@
 import logging
 import os
 
-from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.metrics import mutual_info_score, adjusted_mutual_info_score, rand_score, adjusted_rand_score
-from sklearn.metrics import homogeneity_score, completeness_score
-
-from scipy.spatial.distance import cosine
-
 from slub_docsa.common.paths import FIGURES_DIR
-from slub_docsa.evaluation.pipeline import score_clustering_models_for_documents
-from slub_docsa.evaluation.plotting import score_matrix_box_plot, write_multiple_figure_formats
-from slub_docsa.evaluation.score import clustering_membership_score_function, scikit_clustering_label_score_function
-from slub_docsa.evaluation.similarity import indexed_document_distance_generator_from_vectorizer, intra_cluster_distance
+from slub_docsa.experiments.common.models import initialize_clustering_models_from_tuple_list
+from slub_docsa.experiments.common.pipeline import do_default_score_matrix_clustering_evaluation
+from slub_docsa.experiments.common.plots import write_default_clustering_plots
+from slub_docsa.experiments.common.scores import default_named_clustering_score_list, initialize_named_score_tuple_list
+
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
-from slub_docsa.models.clustering.dummy import RandomClusteringModel
-from slub_docsa.models.clustering.scikit import ScikitClusteringModel
+
 
 logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    repeats = 1
-    n_clusters = 20
+    repeats = 10
+    max_documents = 2000
 
-    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
+    dataset_subset = [
+        "qucosa_de_titles_langid_rvk",
+        "qucosa_de_abstracts_langid_rvk",
+        "qucosa_de_fulltexts_langid_rvk",
+    ]
+    model_subset = [
+        "random c=10",
+        "random c=subjects",
+        "tfidf 10k kMeans c=10",
+        "tfidf 10k kMeans c=subjects",
+        # "tfidf 10k agg cl cosine c=subjects",
+        "tfidf 10k agg ward eucl c=subjects"
+    ]
+
     vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
 
-    documents = [dataset.documents[i] for i in range(5000)]
-    subject_targets = [dataset.subjects[i] for i in range(5000)]
-
-    models = [
-        RandomClusteringModel(n_clusters=n_clusters),
-        ScikitClusteringModel(KMeans(n_clusters=n_clusters), vectorizer),
-        ScikitClusteringModel(
-            AgglomerativeClustering(n_clusters=n_clusters, affinity="cosine", linkage="complete"),
-            vectorizer
-        ),
-        ScikitClusteringModel(
-            AgglomerativeClustering(n_clusters=n_clusters, affinity="euclidean", linkage="ward"),
-            vectorizer
-        ),
-    ]
-
-    scores = [
-        scikit_clustering_label_score_function(mutual_info_score),
-        scikit_clustering_label_score_function(adjusted_mutual_info_score),
-        scikit_clustering_label_score_function(rand_score),
-        scikit_clustering_label_score_function(adjusted_rand_score),
-        scikit_clustering_label_score_function(homogeneity_score),
-        scikit_clustering_label_score_function(completeness_score),
-        clustering_membership_score_function(
-            indexed_document_distance_generator_from_vectorizer(vectorizer, cosine),
-            intra_cluster_distance
+    def _model_generator(subject_order):
+        return initialize_clustering_models_from_tuple_list(
+            default_qucosa_named_clustering_models_tuple_list(n_subjects=len(subject_order)),
+            model_subset
         )
-    ]
 
-    score_matrix = score_clustering_models_for_documents(
-        documents,
-        subject_targets,
-        models,
-        scores,
-        repeats,
+    def _score_generator():
+        return initialize_named_score_tuple_list(
+            default_named_clustering_score_list(vectorizer)
+        )
+
+    evaluation_result = do_default_score_matrix_clustering_evaluation(
+        named_datasets=qucosa_named_datasets(dataset_subset),
+        named_models_generator=_model_generator,
+        named_scores_generator=_score_generator,
+        repeats=repeats,
+        max_documents=max_documents
     )
 
-    print(score_matrix)
-
-    figure = score_matrix_box_plot(
-        score_matrix,
-        ["random", "kmeans", "agg cosine cl", "agg eucl ward"],
-        ["mutual info", "adj mutual info", "rand", "adj rand", "homogeneity", "completeness", "intra cluster distance"],
-        [(0.0, None), (0.0, None), (None, None), (None, None), (None, None), (None, None), (None, None)],
-        columns=2
+    write_default_clustering_plots(
+        evaluation_result,
+        os.path.join(FIGURES_DIR, "qucosa/"),
+        f"repeats={repeats}_max_docs={max_documents}"
     )
-    write_multiple_figure_formats(figure, os.path.join(FIGURES_DIR, "qucosa_cluster_score_plot"))

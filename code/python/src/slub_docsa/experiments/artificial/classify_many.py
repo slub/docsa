@@ -8,7 +8,7 @@ import os
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
 from slub_docsa.experiments.artificial.datasets import default_named_artificial_datasets
-from slub_docsa.experiments.common.models import initialize_models_from_tuple_list
+from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
 from slub_docsa.experiments.common.pipeline import get_split_function_by_name
 from slub_docsa.experiments.common.plots import write_default_classification_plots
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     def _model_list_generator(subject_order, subject_hierarchy):
         model_list = default_dummy_named_model_list() \
             + default_annif_named_model_list("en", subject_order, subject_hierarchy)
-        return initialize_models_from_tuple_list(model_list, model_name_subset)
+        return initialize_classification_models_from_tuple_list(model_list, model_name_subset)
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
         named_datasets=named_datasets,

@@ -12,6 +12,8 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectTargets
 
 
+GenericScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
+
 MultiClassScoreFunctionType = Callable[[np.ndarray, np.ndarray], float]
 """Score function comparing true and predicted subject probabilities for multiple classes for each document."""
 

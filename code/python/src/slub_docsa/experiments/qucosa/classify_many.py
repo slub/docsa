@@ -8,7 +8,7 @@ import os
 from slub_docsa.common.paths import FIGURES_DIR
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
-from slub_docsa.experiments.common.models import initialize_models_from_tuple_list
+from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
 
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
 from slub_docsa.experiments.common.pipeline import get_split_function_by_name
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         model_list = default_dummy_named_model_list() \
             + default_qucosa_named_model_list() \
             + default_annif_named_model_list("de", subject_order, subject_hierarchy)
-        return initialize_models_from_tuple_list(model_list, model_name_subset)
+        return initialize_classification_models_from_tuple_list(model_list, model_name_subset)
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
         named_datasets=qucosa_named_datasets(dataset_subset),

@@ -207,6 +207,7 @@ def score_clustering_models_for_documents(
     models: Sequence[ClusteringModel],
     scores: Sequence[ClusteringScoreFunction],
     repeats: int = 10,
+    max_documents: int = None,
 ) -> np.ndarray:
     """Evaluate clustering models by fitting, predicting and scoring them on a single dataset.
 
@@ -223,6 +224,9 @@ def score_clustering_models_for_documents(
         the sequence of scores being calculated for each model
     repeats: int = 10
         how often each clustering model is fitted in order to analyze the variance of clustering scores
+    max_documents: int = None
+        if set to a number, a random of selection of documents is used instead of all documents; the random selection
+        is repeated for each iteration
 
     Returns
     -------
@@ -234,16 +238,27 @@ def score_clustering_models_for_documents(
     score_matrix[:, :, :] = np.NaN
 
     for i in range(repeats):
+
+        sampled_documents = documents
+        sampled_subject_targets = subject_targets
+
+        # choose max_documents many random documents for clustering
+        if max_documents is not None:
+            sampled_idx = np.random.choice(range(len(documents)), size=max_documents, replace=False)
+            sampled_documents = [documents[i] for i in sampled_idx]
+            if subject_targets is not None:
+                sampled_subject_targets = [subject_targets[i] for i in sampled_idx]
+
         for j, model in enumerate(models):
             logger.info("fit clustering model %s for repetition %d", str(model), i+1)
-            model.fit(documents)
+            model.fit(sampled_documents)
 
             logger.info("predict clustering model %s for repetition %d", str(model), i+1)
-            membership = model.predict(documents)
+            membership = model.predict(sampled_documents)
 
             logger.info("score clustering result from model %s for repetition %d", str(model), i+1)
             for k, score_function in enumerate(scores):
-                score = score_function(documents, membership, subject_targets)
+                score = score_function(sampled_documents, membership, sampled_subject_targets)
                 score_matrix[j, k, i] = score
 
     return score_matrix

@@ -8,17 +8,18 @@ import logging
 from typing import Callable, Iterable, Iterator, Optional, Tuple
 
 from slub_docsa.common.paths import ANNIF_DIR, CACHE_DIR
+from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.data.store.predictions import persisted_fit_classification_model_and_predict
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
-from slub_docsa.experiments.common.models import NamedClassificationModels
-from slub_docsa.experiments.common.plots import DefaultScoreMatrixDatasetResult, DefaultScoreMatrixResult
-from slub_docsa.experiments.common.scores import default_named_binary_classification_scores
-from slub_docsa.experiments.common.scores import default_named_multiclass_scores
-from slub_docsa.common.dataset import Dataset
 from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
+from slub_docsa.evaluation.pipeline import score_clustering_models_for_documents
+from slub_docsa.experiments.common.models import NamedClassificationModels, NamedClusteringModels
+from slub_docsa.experiments.common.plots import DefaultScoreMatrixDatasetResult, DefaultScoreMatrixResult
+from slub_docsa.experiments.common.scores import NamedScoreLists, default_named_binary_class_score_list
+from slub_docsa.experiments.common.scores import default_named_multiclass_score_list, initialize_named_score_tuple_list
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,14 @@ def do_default_score_matrix_classification_evaluation(
 
         # setup models and scores
         model_lists = named_models_generator(subject_order, subject_hierarchy)
-        overall_score_lists = default_named_multiclass_scores(
-            subject_order,
-            subject_hierarchy,
+        overall_score_lists = initialize_named_score_tuple_list(
+            default_named_multiclass_score_list(subject_order, subject_hierarchy),
             overall_score_name_subset
         )
-        per_class_score_lists = default_named_binary_classification_scores(per_class_score_name_subset)
+        per_class_score_lists = initialize_named_score_tuple_list(
+            default_named_binary_class_score_list(),
+            per_class_score_name_subset
+        )
 
         # do evaluate
         overall_score_matrix, per_class_score_matrix = score_classification_models_for_dataset(
@@ -92,6 +95,48 @@ def do_default_score_matrix_classification_evaluation(
             per_class_score_matrix,
             overall_score_lists,
             per_class_score_lists
+        ))
+
+    return results
+
+
+def do_default_score_matrix_clustering_evaluation(
+    named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchyType[SubjectNodeType]]]],
+    named_models_generator: Callable[[Iterable[str]], NamedClusteringModels],
+    named_scores_generator: Callable[[], NamedScoreLists],
+    repeats: int = 10,
+    max_documents: int = None,
+) -> DefaultScoreMatrixResult:
+    """Run clustering algorithms on each dataset and calculate multiple scores."""
+    results: DefaultScoreMatrixResult = []
+
+    for dataset_name, dataset, _ in named_datasets:
+
+        documents = [dataset.documents[i] for i in range(2000)]
+        subject_targets = [dataset.subjects[i] for i in range(2000)]
+
+        # define subject ordering
+        subject_order = list(sorted(unique_subject_order(subject_targets)))
+
+        model_lists = named_models_generator(subject_order)
+        score_lists = named_scores_generator()
+
+        score_matrix = score_clustering_models_for_documents(
+            documents,
+            subject_targets,
+            model_lists.classes,
+            score_lists.functions,
+            repeats,
+            max_documents,
+        )
+
+        results.append(DefaultScoreMatrixDatasetResult(
+            dataset_name,
+            model_lists.names,
+            overall_score_matrix=score_matrix,
+            per_class_score_matrix=None,
+            overall_score_lists=score_lists,
+            per_class_score_lists=None,
         ))
 
     return results

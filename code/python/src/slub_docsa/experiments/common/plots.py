@@ -1,7 +1,7 @@
 """Common plots that are can be printed as part of an evaluation experiment."""
 
 import os
-from typing import List, NamedTuple, Sequence
+from typing import List, NamedTuple, Optional, Sequence
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from slub_docsa.evaluation.plotting import score_matrices_box_plot, write_multip
 from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_samples_plot
 from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
 from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
-from slub_docsa.experiments.common.scores import DefaultScoreLists
+from slub_docsa.experiments.common.scores import NamedScoreLists
 
 
 class DefaultScoreMatrixDatasetResult(NamedTuple):
@@ -18,9 +18,9 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
     dataset_name: str
     model_names: List[str]
     overall_score_matrix: np.ndarray
-    per_class_score_matrix: np.ndarray
-    overall_score_lists: DefaultScoreLists
-    per_class_score_lists: DefaultScoreLists
+    per_class_score_matrix: Optional[np.ndarray]
+    overall_score_lists: NamedScoreLists
+    per_class_score_lists: Optional[NamedScoreLists]
 
 
 DefaultScoreMatrixResult = Sequence[DefaultScoreMatrixDatasetResult]
@@ -58,6 +58,26 @@ def write_default_classification_plots(
         write_per_subject_score_histograms_plot(
             dataset_result,
             os.path.join(plot_directory, f"{prefix}_per_subject_score_{filename_suffix}"),
+        )
+
+
+def write_default_clustering_plots(
+    evaluation_result: DefaultScoreMatrixResult,
+    plot_directory: str,
+    filename_suffix: str,
+):
+    """Write all default clusterings plots to files."""
+    write_multiple_score_matrix_box_plot(
+        evaluation_result,
+        os.path.join(plot_directory, f"overall_clustering_score_plot_{filename_suffix}"),
+    )
+
+    for dataset_result in evaluation_result:
+        prefix = f"{dataset_result.dataset_name}"
+
+        write_score_matrix_box_plot(
+            dataset_result,
+            os.path.join(plot_directory, f"{prefix}_score_plot_{filename_suffix}"),
         )
 
 
@@ -124,6 +144,8 @@ def write_per_subject_score_histograms_plot(
     plot_filepath: str
 ):
     """Generate the subject score histograms plot from evaluation results and write it as html file."""
+    if evaluation_result.per_class_score_matrix is None or evaluation_result.per_class_score_lists is None:
+        raise ValueError("per class score matrix or score lists can not be None")
     figure = per_subject_score_histograms_plot(
         evaluation_result.per_class_score_matrix,
         evaluation_result.model_names,
@@ -138,6 +160,8 @@ def write_per_subject_precision_recall_vs_samples_plot(
     plot_filepath: str
 ):
     """Generate the per subject precision vs samples plot from evaluation results and write it as html file."""
+    if evaluation_result.per_class_score_matrix is None or evaluation_result.per_class_score_lists is None:
+        raise ValueError("per class score matrix or score lists can not be None")
     score_names = evaluation_result.per_class_score_lists.names
     if "t=0.5 precision" not in score_names or "t=0.5 recall" not in score_names \
             or "# test samples" not in score_names:
