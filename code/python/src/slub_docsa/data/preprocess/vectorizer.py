@@ -88,6 +88,9 @@ class TfidfVectorizer(AbstractVectorizer):
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
         for row in self.vectorizer.transform(list(texts)).toarray():
+            if not np.any(row):
+                # add random value if row is all zero, so cosine distance is well defined
+                row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
             yield row
 
     def __str__(self):
