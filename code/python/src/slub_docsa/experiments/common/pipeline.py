@@ -112,18 +112,15 @@ def do_default_score_matrix_clustering_evaluation(
 
     for dataset_name, dataset, _ in named_datasets:
 
-        documents = [dataset.documents[i] for i in range(2000)]
-        subject_targets = [dataset.subjects[i] for i in range(2000)]
-
         # define subject ordering
-        subject_order = list(sorted(unique_subject_order(subject_targets)))
+        subject_order = list(sorted(unique_subject_order(dataset.subjects)))
 
         model_lists = named_models_generator(subject_order)
         score_lists = named_scores_generator()
 
         score_matrix = score_clustering_models_for_documents(
-            documents,
-            subject_targets,
+            dataset.documents,
+            dataset.subjects,
             model_lists.classes,
             score_lists.functions,
             repeats,

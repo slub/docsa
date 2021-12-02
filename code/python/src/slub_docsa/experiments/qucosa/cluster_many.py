@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     repeats = 10
-    max_documents = 2000
+    max_documents = 5000
 
     dataset_subset = [
         "qucosa_de_titles_langid_rvk",
@@ -30,15 +30,18 @@ if __name__ == "__main__":
         "qucosa_de_fulltexts_langid_rvk",
     ]
     model_subset = [
-        "random c=10",
+        "random c=20",
         "random c=subjects",
-        "tfidf 10k kMeans c=10",
+        "tfidf 10k kMeans c=20",
         "tfidf 10k kMeans c=subjects",
-        # "tfidf 10k agg cl cosine c=subjects",
-        "tfidf 10k agg ward eucl c=subjects"
+        "tfidf 10k agg sl cosine c=subjects",
+        "tfidf 10k agg sl eucl c=subjects",
+        "tfidf 10k agg ward eucl c=subjects",
+        "bert kMeans c=20",
+        "bert kMeans c=subjects",
+        "bert kMeans agg sl eucl c=subjects",
+        "bert kMeans agg ward eucl c=subjects"
     ]
-
-    vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
 
     def _model_generator(subject_order):
         return initialize_clustering_models_from_tuple_list(
@@ -47,6 +50,7 @@ if __name__ == "__main__":
         )
 
     def _score_generator():
+        vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
         return initialize_named_score_tuple_list(
             default_named_clustering_score_list(vectorizer)
         )

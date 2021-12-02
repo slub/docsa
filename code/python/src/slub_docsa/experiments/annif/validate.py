@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 from slub_docsa.common.dataset import dataset_from_samples
 
 from slub_docsa.common.paths import ANNIF_DIR
-from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_samples, read_qucosa_documents_from_directory
+from slub_docsa.data.load.qucosa import read_qucosa_samples, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     LANG_CODE = "de"
 
     # load data
-    dataset = dataset_from_samples(read_qucosa_abstracts_rvk_samples(read_qucosa_documents_from_directory()))
+    dataset = dataset_from_samples(read_qucosa_samples(read_qucosa_documents_from_directory(), "abstracts", "rvk"))
     rvk_hierarchy = get_rvk_subject_store()
 
     # do pruning

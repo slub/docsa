@@ -10,8 +10,8 @@ from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_fro
 from slub_docsa.common.paths import CACHE_DIR
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchyType
-from slub_docsa.data.load.qucosa import read_qucosa_abstracts_rvk_samples, read_qucosa_fulltext_rvk_samples
-from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory, read_qucosa_titles_rvk_samples
+from slub_docsa.data.load.qucosa import read_qucosa_samples
+from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.document import apply_nltk_snowball_stemming_to_document_samples_iterator
@@ -64,11 +64,11 @@ def _load_qucosa_samples(
     stemming: bool = False,
 ) -> Iterator[Sample]:
     qucosa_iterator = read_qucosa_documents_from_directory()
-    sample_iterator = read_qucosa_titles_rvk_samples(qucosa_iterator, lang_code)
+    sample_iterator = read_qucosa_samples(qucosa_iterator, "titles", "rvk", lang_code)
     if text_source == "abstracts":
-        sample_iterator = read_qucosa_abstracts_rvk_samples(qucosa_iterator, lang_code)
+        sample_iterator = read_qucosa_samples(qucosa_iterator, "abstracts", "rvk", lang_code)
     if text_source == "fulltexts":
-        sample_iterator = read_qucosa_fulltext_rvk_samples(qucosa_iterator, lang_code)
+        sample_iterator = read_qucosa_samples(qucosa_iterator, "fulltexts", "rvk", lang_code)
 
     if langid_check:
         if lang_code is None:
@@ -83,13 +83,11 @@ def _load_qucosa_samples(
     return _default_pruning(sample_iterator, 10, subject_hierarchy)
 
 
-def qucosa_named_datasets(
-    name_subset: List[str] = None
-) -> Iterator[Tuple[str, Dataset, SubjectHierarchyType[RvkSubjectNode]]]:
-    """Return default qucosa dataset variants."""
+def qucosa_named_datasets_tuple_list():
+    """Return list of qucosa datasets as tuples."""
     rvk = get_rvk_subject_store()
 
-    named_sample_iterators: List[Tuple[str, Callable[[], Iterator[Sample]]]] = [
+    datasets: List[Tuple[str, Callable[[], Iterator[Sample]]]] = [
         ("qucosa_all_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", None, False, False)),
         ("qucosa_de_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", False, False)),
         ("qucosa_de_titles_langid_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", True, False)),
@@ -99,11 +97,21 @@ def qucosa_named_datasets(
         ("qucosa_de_fulltexts_langid_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", True, False))
     ]
 
+    return datasets
+
+
+def qucosa_named_datasets(
+    name_subset: List[str] = None
+) -> Iterator[Tuple[str, Dataset, SubjectHierarchyType[RvkSubjectNode]]]:
+    """Return default qucosa dataset variants."""
+    rvk = get_rvk_subject_store()
+    dataset_list = qucosa_named_datasets_tuple_list()
+
     # filter data sets based on name subset parameter
     if name_subset is not None:
-        named_sample_iterators = list(filter(lambda i: i[0] in name_subset, named_sample_iterators))
+        dataset_list = list(filter(lambda i: i[0] in name_subset, dataset_list))
 
-    for dataset_name, lazy_sample_iterator in named_sample_iterators:
+    for dataset_name, lazy_sample_iterator in dataset_list:
         # load and persist each dataset
         logger.info("load and save persisted dataset %s", dataset_name)
         filepath = os.path.join(QUCOSA_DATASET_CACHE_DIRECTORY, f"{dataset_name}.sqlite")

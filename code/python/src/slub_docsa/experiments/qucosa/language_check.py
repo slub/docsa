@@ -4,7 +4,7 @@
 
 import logging
 
-from slub_docsa.data.load.qucosa import read_qucosa_fulltext_rvk_samples
+from slub_docsa.data.load.qucosa import read_qucosa_samples, read_qucosa_documents_from_directory
 from slub_docsa.data.preprocess.language import detect_language_from_text_via_langid
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     lang_code = "de"
 
-    sample_iterator = read_qucosa_fulltext_rvk_samples(lang_code=lang_code)
+    sample_iterator = read_qucosa_samples(read_qucosa_documents_from_directory(), "fulltexts", "rvk", lang_code)
 
     total = 0
     count = 0

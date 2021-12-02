@@ -126,6 +126,7 @@ def default_qucosa_named_clustering_models_tuple_list(
 ) -> NamedClusteringModelTupleList:
     """Return default qucosa clustering models."""
     tfidf_vectorizer_10k = get_qucosa_tfidf_stemming_vectorizer(max_features=10000)
+    dbmdz_bert_vectorizer_sts_1 = get_qucosa_dbmdz_bert_vectorizer(1)
 
     models = [
         ("random c=20", lambda: RandomClusteringModel(n_clusters=20)),
@@ -138,13 +139,33 @@ def default_qucosa_named_clustering_models_tuple_list(
             model=MiniBatchKMeans(n_clusters=n_subjects),
             vectorizer=tfidf_vectorizer_10k
         )),
-        ("tfidf 10k agg cl cosine c=subjects", lambda: ScikitClusteringModel(
-            model=AgglomerativeClustering(n_clusters=n_subjects, affinity="cosine", linkage="complete"),
+        ("tfidf 10k agg sl cosine c=subjects", lambda: ScikitClusteringModel(
+            model=AgglomerativeClustering(n_clusters=n_subjects, affinity="cosine", linkage="single"),
+            vectorizer=tfidf_vectorizer_10k
+        )),
+        ("tfidf 10k agg sl eucl c=subjects", lambda: ScikitClusteringModel(
+            model=AgglomerativeClustering(n_clusters=n_subjects, affinity="euclidean", linkage="single"),
             vectorizer=tfidf_vectorizer_10k
         )),
         ("tfidf 10k agg ward eucl c=subjects", lambda: ScikitClusteringModel(
             model=AgglomerativeClustering(n_clusters=n_subjects, affinity="euclidean", linkage="ward"),
             vectorizer=tfidf_vectorizer_10k
+        )),
+        ("bert kMeans c=20", lambda: ScikitClusteringModel(
+            model=MiniBatchKMeans(n_clusters=20),
+            vectorizer=dbmdz_bert_vectorizer_sts_1
+        )),
+        ("bert kMeans c=subjects", lambda: ScikitClusteringModel(
+            model=MiniBatchKMeans(n_clusters=n_subjects),
+            vectorizer=dbmdz_bert_vectorizer_sts_1
+        )),
+        ("bert kMeans agg sl eucl c=subjects", lambda: ScikitClusteringModel(
+            model=AgglomerativeClustering(n_clusters=n_subjects, affinity="euclidean", linkage="single"),
+            vectorizer=dbmdz_bert_vectorizer_sts_1
+        )),
+        ("bert kMeans agg ward eucl c=subjects", lambda: ScikitClusteringModel(
+            model=AgglomerativeClustering(n_clusters=n_subjects, affinity="euclidean", linkage="ward"),
+            vectorizer=dbmdz_bert_vectorizer_sts_1
         )),
     ]
 

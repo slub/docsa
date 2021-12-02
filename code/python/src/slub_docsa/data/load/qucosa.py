@@ -1,7 +1,7 @@
 """Reads qucosa documents from jsonl files and the SLUB ElasticSearch server."""
 
 # pylint: disable=unexpected-keyword-arg, too-many-arguments, broad-except, too-many-branches
-# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-return-statements, unnecessary-lambda
 
 import os
 import gzip
@@ -9,13 +9,16 @@ import json
 import logging
 import time
 
-from typing import Callable, Iterable, Iterator, Mapping, List, Any, Optional, Tuple
+from typing import Callable, Iterable, Iterator, Mapping, List, Any, Optional, Tuple, Union
+from typing_extensions import Literal
 
 from elasticsearch import Elasticsearch
 from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
 
@@ -213,7 +216,7 @@ def read_qucosa_documents_from_directory(
 
 
 def _get_rvk_notations_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
-    """Return the list of RVK notations from a qucosa json document."""
+    """Return the list of RVK annotations from a qucosa json document."""
     classification: QucosaJsonClassifcationType = doc["metadata"]["classification"]
     rvk_dict = list(filter(lambda d: d["type"] == "rvk", classification))[0]
     keys = rvk_dict["keys"]
@@ -222,6 +225,27 @@ def _get_rvk_notations_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str
     if isinstance(keys, list):
         return keys
     return []
+
+
+def _get_rvk_subjects_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
+    """Return the list of RVK annotations from a qucosa json document."""
+    return [rvk_notation_to_uri(n) for n in _get_rvk_notations_from_qucosa_metadata(doc)]
+
+
+def _get_ddc_keys_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
+    """Return the list of DDC annotations from a qucosa json document."""
+    classification: QucosaJsonClassifcationType = doc["metadata"]["classification"]
+    ddc_dict = list(filter(lambda d: d["type"] == "ddc", classification))[0]
+    keys = ddc_dict["keys"]
+    if isinstance(keys, str):
+        return list(map(lambda s: ddc_correct_short_keys(s.strip()), keys.split(",")))
+    if isinstance(keys, list):
+        return list(map(ddc_correct_short_keys, keys))
+    return []
+
+
+def _get_ddc_subjects_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
+    return [ddc_key_to_uri(k) for k in _get_ddc_keys_from_qucosa_metadata(doc)]
 
 
 def _get_document_title_from_qucosa_metadata(
@@ -420,19 +444,19 @@ def _get_document_id_from_qucosa_metadate(doc: QucosaJsonDocument) -> str:
 def _read_qucosa_generic_rvk_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument],
     create_document_from_qucosa: Callable[[QucosaJsonDocument, Optional[str]], Optional[Document]],
+    read_subjects_from_doc: Callable[[QucosaJsonDocument], List[str]],
     lang_code: Optional[str] = None,
+    subject_hierarchy_filter: SubjectHierarchyType[SubjectNodeType] = None,
 ) -> Iterator[Sample]:
     """Read qucosa data and extract documents and RVK subjects."""
-    logger.debug("load rvk classes and index them by notation")
-    rvk_subject_store = get_rvk_subject_store()
-
     logger.debug("read qucosa meta data json")
     for doc in qucosa_iterator:
-        notations = _get_rvk_notations_from_qucosa_metadata(doc)
-        notations_filtered = list(filter(lambda n: rvk_notation_to_uri(n) in rvk_subject_store, notations))
-        subject_uris_filtered = list(map(rvk_notation_to_uri, notations_filtered))
+        subjects = read_subjects_from_doc(doc)
 
-        if len(subject_uris_filtered) < 1:
+        if subject_hierarchy_filter is not None:
+            subjects = list(filter(lambda s_uri: s_uri in subject_hierarchy_filter, subjects))
+
+        if len(subjects) < 1:
             logger.debug("qucosa document with no known rvk subjects: %s", _get_document_id_from_qucosa_metadate(doc))
             continue
 
@@ -440,7 +464,7 @@ def _read_qucosa_generic_rvk_samples(
         if document is None:
             continue
 
-        yield Sample(document, subject_uris_filtered)
+        yield Sample(document, subjects)
 
 
 def _make_title_only_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
@@ -464,8 +488,48 @@ def _make_title_only_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> O
     return Document(uri=doc_uri, title=full_title)
 
 
-def read_qucosa_titles_rvk_samples(
+def _make_title_and_abstract_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
+    """Only uses title with at least 10 characters as document text."""
+    doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
+    doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
+    doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, lang_code)
+
+    if doc_title is None or len(doc_title) < 1:
+        logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
+        return None
+
+    if doc_abstract is None:
+        logger.debug("qucosa document with no abstract: %s", doc_uri)
+        return None
+
+    if len(doc_abstract) < 20:
+        logger.debug("qucosa document with too short abstract '%s': %s", doc_abstract, doc_uri)
+        return None
+
+    return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
+
+
+def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
+    """Only uses title with at least 10 characters as document text."""
+    doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
+    doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
+    doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, lang_code)
+
+    if doc_title is None or len(doc_title) < 1:
+        logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
+        return None
+
+    if doc_fulltext is None:
+        logger.debug("qucosa document with no fulltext: %s", doc_uri)
+        return None
+
+    return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
+
+
+def read_qucosa_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument] = None,
+    metadata_variant: Union[Literal["titles"], Literal["abstracts"], Literal["fulltexts"]] = "titles",
+    subject_schema: Union[Literal["rvk"], Literal["ddc"]] = "rvk",
     lang_code: Optional[str] = "de",
 ) -> Iterator[Sample]:
     """Read qucosa documents and use only document titles as training data.
@@ -489,99 +553,29 @@ def read_qucosa_titles_rvk_samples(
     if qucosa_iterator is None:
         qucosa_iterator = read_qucosa_documents_from_directory()
 
-    return _read_qucosa_generic_rvk_samples(qucosa_iterator, _make_title_only_doc, lang_code)
+    _make_doc_func_map = {
+        "titles": _make_title_only_doc,
+        "abstracts": _make_title_and_abstract_doc,
+        "fulltexts": _make_title_and_fulltext_doc,
+    }
 
+    _subject_getter_map = {
+        "rvk": _get_rvk_subjects_from_qucosa_metadata,
+        "ddc": _get_ddc_subjects_from_qucosa_metadata,
+    }
 
-def _make_title_and_abstract_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
-    """Only uses title with at least 10 characters as document text."""
-    doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
-    doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
-    doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, lang_code)
+    _subject_store_func_map = {
+        "rvk": lambda: get_rvk_subject_store(),
+        "ddc": lambda: None,
+    }
 
-    if doc_title is None or len(doc_title) < 1:
-        logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
-        return None
-
-    if doc_abstract is None:
-        logger.debug("qucosa document with no abstract: %s", doc_uri)
-        return None
-
-    if len(doc_abstract) < 20:
-        logger.debug("qucosa document with too short abstract '%s': %s", doc_abstract, doc_uri)
-        return None
-
-    return Document(uri=doc_uri, title=doc_title, abstract=doc_abstract)
-
-
-def read_qucosa_abstracts_rvk_samples(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    lang_code: Optional[str] = "de",
-) -> Iterator[Sample]:
-    """Read qucosa documents and use only document titles and abstracts as training data.
-
-    The fulltext is not loaded.
-
-    Parameters
-    ----------
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None
-        An iterator over qucosa json documents. If None, tries to load them from default directory
-        (and SLUB elasticsearch if not available).
-    lang_code: Optional[str] = "de"
-        The language code which decides which text is extracted. If None, all documents are returned independent of
-        language. Otherwise, documents that do not contain text of the requested language are skipped.
-
-    Returns
-    -------
-    Iterator[Sample]
-        An iterator over pairs of documents and their respective RVK subject annotations.
-    """
-    if qucosa_iterator is None:
-        qucosa_iterator = read_qucosa_documents_from_directory()
-
-    return _read_qucosa_generic_rvk_samples(qucosa_iterator, _make_title_and_abstract_doc, lang_code)
-
-
-def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
-    """Only uses title with at least 10 characters as document text."""
-    doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
-    doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code)
-    doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, lang_code)
-
-    if doc_title is None or len(doc_title) < 1:
-        logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
-        return None
-
-    if doc_fulltext is None:
-        logger.debug("qucosa document with no fulltext: %s", doc_uri)
-        return None
-
-    return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
-
-
-def read_qucosa_fulltext_rvk_samples(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    lang_code: Optional[str] = "de",
-) -> Iterator[Sample]:
-    """Read qucosa documents and use document titles and fulltext as training data.
-
-    Parameters
-    ----------
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None
-        An iterator over qucosa json documents. If None, tries to load them from default directory
-        (and SLUB elasticsearch if not available).
-    lang_code: Optional[str] = "de"
-        The language code which decides which text is extracted. If None, all documents are returned independent of
-        language. Otherwise, documents that do not contain text of the requested language are skipped.
-
-    Returns
-    -------
-    Iterator[Sample]
-        An iterator over pairs of documents and their respective RVK subject annotations.
-    """
-    if qucosa_iterator is None:
-        qucosa_iterator = read_qucosa_documents_from_directory()
-
-    return _read_qucosa_generic_rvk_samples(qucosa_iterator, _make_title_and_fulltext_doc, lang_code)
+    return _read_qucosa_generic_rvk_samples(
+        qucosa_iterator,
+        _make_doc_func_map[metadata_variant],
+        _subject_getter_map[subject_schema],
+        lang_code,
+        _subject_store_func_map[subject_schema](),
+    )
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(
@@ -610,7 +604,7 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv(
 
     if not os.path.exists(filepath):
         with open(filepath, "w", encoding="utf8") as f_tsv:
-            for doc, subjects in read_qucosa_titles_rvk_samples(qucosa_iterator):
+            for doc, subjects in read_qucosa_samples(qucosa_iterator):
                 text = doc.title
                 labels_str = " ".join(map(lambda l: f"<{l}>", subjects))
                 f_tsv.write(f"{text}\t{labels_str}\n")
