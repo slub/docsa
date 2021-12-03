@@ -4,7 +4,7 @@
 
 import logging
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
 
 logger = logging.getLogger(__name__)
@@ -143,12 +143,40 @@ def ddc_parent_from_uri(uri: str):
     return ddc_key_to_uri(key[:2] + "0")
 
 
+def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
+    """Return an extended list of ddc subjects that also contains all ancestor subjects."""
+    extended_set = set(subjects)
+    to_be_checked = set(subjects)
+
+    while len(to_be_checked) > 0:
+        subject = to_be_checked.pop()
+        parent = ddc_parent_from_uri(subject)
+        if parent is not None and parent not in extended_set:
+            extended_set.add(parent)
+            to_be_checked.add(parent)
+
+    return list(extended_set)
+
+
 class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
     """A simple subject hierarchy implementation without any ddc labels."""
 
+    def __init__(self, subject_uris: Sequence[str] = None):
+        """Initialize unlabled ddc hierarchy.
+
+        Parameters
+        ----------
+        subject_uris: Sequence[str] = None
+            if set, this list is used for iterating all available ddc keys instead of assuming that only 1000 major
+            keys exist
+        """
+        self.subject_uris = subject_uris
+
     def __len__(self):
-        """Return a static length of 1000, which howerver only corresponds to the major level ddc subjects."""
-        return 1000
+        """Return the size of the provided available ddc subjects or a static length of 1000."""
+        if self.subject_uris is not None:
+            return len(self.subject_uris)
+        raise ValueError("length not available if list of ddc subjects was not provided")
 
     def __getitem__(self, uri: str) -> SubjectNode:
         """Return a subject hierarchy node for the given ddc uri.
@@ -169,11 +197,14 @@ class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
 
     def __iter__(self) -> Iterable[str]:
         """Return an iterator over the major level ddc subjects."""
-        for i in range(1000):
-            yield ddc_key_to_uri(ddc_correct_short_keys(str(i)))
+        if self.subject_uris is not None:
+            return iter(self.subject_uris)
+        raise ValueError("iteration not available if list of ddc subjects was not provided")
 
     def __contains__(self, k: str) -> bool:
-        """Check whether a ddc uri is a valid uri, and therefore, contained in this hierarchy."""
+        """Check whether a ddc uri is contained in the provided subject uris, or check if it is a valid ddc uri."""
+        if self.subject_uris is not None:
+            return k in self.subject_uris
         if is_valid_ddc_uri(k):
             return True
         return False
@@ -201,6 +232,6 @@ class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
         return self != other
 
 
-def get_ddc_subject_hierarchy():
+def get_generic_ddc_subject_hierarchy():
     """Return an instance of the UnlabledDdcHierarchy."""
     return UnlabeledDdcHierarchy()

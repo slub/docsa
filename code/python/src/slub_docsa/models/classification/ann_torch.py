@@ -185,13 +185,14 @@ class AbstractTorchModel(ClassificationModel):
         validation_targets: Optional[np.ndarray] = None,
     ):
         """Train the fully connected network for all training documents."""
+        logger.info("train torch network with %d training examples", len(train_documents))
         train_corpus = [document_as_concatenated_string(d) for d in train_documents]
 
-        # fit vectorizer based on training documents
-        logger.info("train fully connected network with %d examples", len(train_documents))
+        logger.debug("fit vectorizer based on training documents")
         self.vectorizer.fit(iter(train_corpus))
 
         # compile training data as data loader (and transform documents to features according to vectorizer)
+        logger.debug("transform training data into tensors")
         train_dataloader, train_features_shape = self._get_data_loader_from_documents(
             texts=train_corpus,
             targets=train_targets,
@@ -202,6 +203,7 @@ class AbstractTorchModel(ClassificationModel):
         # same for validation data in case it is available
         validation_dataloader = None
         if validation_documents is not None and validation_targets is not None:
+            logger.debug("transform validation data into tensors")
             validation_corpus = [document_as_concatenated_string(d) for d in validation_documents]
             validation_dataloader, _ = self._get_data_loader_from_documents(
                 texts=validation_corpus,

@@ -8,6 +8,7 @@ import gzip
 import json
 import logging
 import time
+import pickle  # nosec
 
 from typing import Callable, Iterable, Iterator, Mapping, List, Any, Optional, Tuple, Union
 from typing_extensions import Literal
@@ -17,8 +18,9 @@ from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
-from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri
+from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, SubjectNodeType
+from slub_docsa.data.load.ddc import UnlabeledDdcHierarchy, ddc_correct_short_keys, ddc_key_to_uri, is_valid_ddc_uri
+from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
 
@@ -48,6 +50,9 @@ SLUB_ELASTICSEARCH_SERVER_PASSWORD = os.environ.get("SLUB_ELASTICSEARCH_SERVER_P
 """Default password (`None`) for the SLUB elasticsearch server.
 Can be overwritten using the environment variable `SLUB_ELASTICSEARCH_SERVER_PASSWORD`.
 """
+
+QUCOSA_DDC_SUBJECT_LIST_PATH = os.path.join(CACHE_DIR, "qucosa/ddc_list.pickle.gz")
+"""Default filepath where all availble ddc subjects are stored as cache."""
 
 # helper types for processing qucosa json documents
 QucosaJsonClassificationElementType = Mapping[str, Any]
@@ -441,23 +446,21 @@ def _get_document_id_from_qucosa_metadate(doc: QucosaJsonDocument) -> str:
     return doc["id"]
 
 
-def _read_qucosa_generic_rvk_samples(
+def _read_qucosa_generic_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument],
     create_document_from_qucosa: Callable[[QucosaJsonDocument, Optional[str]], Optional[Document]],
     read_subjects_from_doc: Callable[[QucosaJsonDocument], List[str]],
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
     lang_code: Optional[str] = None,
-    subject_hierarchy_filter: SubjectHierarchyType[SubjectNodeType] = None,
 ) -> Iterator[Sample]:
-    """Read qucosa data and extract documents and RVK subjects."""
+    """Read qucosa data and extract documents and subjects."""
     logger.debug("read qucosa meta data json")
     for doc in qucosa_iterator:
         subjects = read_subjects_from_doc(doc)
-
-        if subject_hierarchy_filter is not None:
-            subjects = list(filter(lambda s_uri: s_uri in subject_hierarchy_filter, subjects))
+        subjects = list(filter(lambda s_uri: s_uri in subject_hierarchy, subjects))
 
         if len(subjects) < 1:
-            logger.debug("qucosa document with no known rvk subjects: %s", _get_document_id_from_qucosa_metadate(doc))
+            logger.debug("qucosa document with no known subjects: %s", _get_document_id_from_qucosa_metadate(doc))
             continue
 
         document = create_document_from_qucosa(doc, lang_code)
@@ -526,6 +529,38 @@ def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[st
     return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
 
 
+def get_qucosa_ddc_subject_store(
+    ddc_list_filepath: str = QUCOSA_DDC_SUBJECT_LIST_PATH,
+) -> SubjectHierarchyType[SubjectNode]:
+    """Return the ddc subject hierarchy which contains only subjects present in the qucosa dataset."""
+    if not os.path.exists(ddc_list_filepath):
+        logger.debug("create and fill ddc subject store (may take some time)")
+        qucosa_iterator = read_qucosa_documents_from_directory()
+        subjects = []
+
+        for doc in qucosa_iterator:
+            subjects += _get_ddc_subjects_from_qucosa_metadata(doc)
+
+        subjects = list(filter(is_valid_ddc_uri, subjects))
+        subjects = extend_ddc_subject_list_with_ancestors(subjects)
+        with gzip.open(ddc_list_filepath, "wb") as file:
+            pickle.dump(subjects, file)
+
+    with gzip.open(ddc_list_filepath, "rb") as file:
+        subjects = pickle.load(file)  # nosec
+        return UnlabeledDdcHierarchy(subjects)
+
+
+def qucosa_subject_hierarchy_by_subject_schema(
+    subject_schema: Union[Literal["rvk"], Literal["ddc"]],
+) -> SubjectHierarchyType[SubjectNodeType]:
+    """Return either rvk or ddc subject hierarchy depending on requested subject schema."""
+    return {
+        "rvk": lambda: get_rvk_subject_store(),
+        "ddc": lambda: get_qucosa_ddc_subject_store(),
+    }[subject_schema]()
+
+
 def read_qucosa_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument] = None,
     metadata_variant: Union[Literal["titles"], Literal["abstracts"], Literal["fulltexts"]] = "titles",
@@ -566,15 +601,15 @@ def read_qucosa_samples(
 
     _subject_store_func_map = {
         "rvk": lambda: get_rvk_subject_store(),
-        "ddc": lambda: None,
+        "ddc": lambda: get_qucosa_ddc_subject_store(),
     }
 
-    return _read_qucosa_generic_rvk_samples(
+    return _read_qucosa_generic_samples(
         qucosa_iterator,
         _make_doc_func_map[metadata_variant],
         _subject_getter_map[subject_schema],
-        lang_code,
         _subject_store_func_map[subject_schema](),
+        lang_code,
     )
 
 

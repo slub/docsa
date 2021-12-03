@@ -10,7 +10,7 @@ from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_fro
 from slub_docsa.common.paths import CACHE_DIR
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchyType
-from slub_docsa.data.load.qucosa import read_qucosa_samples
+from slub_docsa.data.load.qucosa import qucosa_subject_hierarchy_by_subject_schema, read_qucosa_samples
 from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import RvkSubjectNode, get_rvk_subject_store
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
@@ -57,18 +57,19 @@ def _default_pruning(samples_iterator, min_samples, subject_hierarchy):
 
 
 def _load_qucosa_samples(
-    subject_hierarchy,
+    subject_schema: Union[Literal["rvk"], Literal["ddc"]],
     text_source: Union[Literal["titles"], Literal["abstracts"], Literal["fulltexts"]] = "titles",
     lang_code: str = None,
     langid_check: bool = False,
     stemming: bool = False,
 ) -> Iterator[Sample]:
+    subject_hierarchy = qucosa_subject_hierarchy_by_subject_schema(subject_schema)
     qucosa_iterator = read_qucosa_documents_from_directory()
-    sample_iterator = read_qucosa_samples(qucosa_iterator, "titles", "rvk", lang_code)
+    sample_iterator = read_qucosa_samples(qucosa_iterator, "titles", subject_schema, lang_code)
     if text_source == "abstracts":
-        sample_iterator = read_qucosa_samples(qucosa_iterator, "abstracts", "rvk", lang_code)
+        sample_iterator = read_qucosa_samples(qucosa_iterator, "abstracts", subject_schema, lang_code)
     if text_source == "fulltexts":
-        sample_iterator = read_qucosa_samples(qucosa_iterator, "fulltexts", "rvk", lang_code)
+        sample_iterator = read_qucosa_samples(qucosa_iterator, "fulltexts", subject_schema, lang_code)
 
     if langid_check:
         if lang_code is None:
@@ -85,16 +86,21 @@ def _load_qucosa_samples(
 
 def qucosa_named_datasets_tuple_list():
     """Return list of qucosa datasets as tuples."""
-    rvk = get_rvk_subject_store()
-
     datasets: List[Tuple[str, Callable[[], Iterator[Sample]]]] = [
-        ("qucosa_all_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", None, False, False)),
-        ("qucosa_de_titles_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", False, False)),
-        ("qucosa_de_titles_langid_rvk", lambda: _load_qucosa_samples(rvk, "titles", "de", True, False)),
-        ("qucosa_de_abstracts_rvk", lambda: _load_qucosa_samples(rvk, "abstracts", "de", False, False)),
-        ("qucosa_de_abstracts_langid_rvk", lambda: _load_qucosa_samples(rvk, "abstracts", "de", True, False)),
-        ("qucosa_de_fulltexts_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", False, False)),
-        ("qucosa_de_fulltexts_langid_rvk", lambda: _load_qucosa_samples(rvk, "fulltexts", "de", True, False))
+        ("qucosa_all_titles_rvk", lambda: _load_qucosa_samples("rvk", "titles", None, False, False)),
+        ("qucosa_all_titles_ddc", lambda: _load_qucosa_samples("ddc", "titles", None, False, False)),
+        ("qucosa_de_titles_rvk", lambda: _load_qucosa_samples("rvk", "titles", "de", False, False)),
+        ("qucosa_de_titles_ddc", lambda: _load_qucosa_samples("ddc", "titles", "de", False, False)),
+        ("qucosa_de_titles_langid_rvk", lambda: _load_qucosa_samples("rvk", "titles", "de", True, False)),
+        ("qucosa_de_titles_langid_ddc", lambda: _load_qucosa_samples("ddc", "titles", "de", True, False)),
+        ("qucosa_de_abstracts_rvk", lambda: _load_qucosa_samples("rvk", "abstracts", "de", False, False)),
+        ("qucosa_de_abstracts_ddc", lambda: _load_qucosa_samples("ddc", "abstracts", "de", False, False)),
+        ("qucosa_de_abstracts_langid_rvk", lambda: _load_qucosa_samples("rvk", "abstracts", "de", True, False)),
+        ("qucosa_de_abstracts_langid_ddc", lambda: _load_qucosa_samples("ddc", "abstracts", "de", True, False)),
+        ("qucosa_de_fulltexts_rvk", lambda: _load_qucosa_samples("rvk", "fulltexts", "de", False, False)),
+        ("qucosa_de_fulltexts_ddc", lambda: _load_qucosa_samples("ddc", "fulltexts", "de", False, False)),
+        ("qucosa_de_fulltexts_langid_rvk", lambda: _load_qucosa_samples("rvk", "fulltexts", "de", True, False)),
+        ("qucosa_de_fulltexts_langid_ddc", lambda: _load_qucosa_samples("ddc", "fulltexts", "de", True, False))
     ]
 
     return datasets

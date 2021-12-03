@@ -22,7 +22,7 @@ if __name__ == "__main__":
     random_state = 123
     plot_training_history_filepath = os.path.join(FIGURES_DIR, "qucosa/classify_one_ann_history")
     stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
-    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
+    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_ddc"]))[0]
 
     subject_order = unique_subject_order(dataset.subjects)
 
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # vectorizer = get_qucosa_dbmdz_bert_vectorizer(subtext_samples=1, hidden_states=1)
     vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000)
 
-    # model = AnnifModel(model_type="omikuji", lang_code="de")
+    # model = AnnifModel(model_type="tfidf", lang_code="de")
     # model = TorchSingleLayerDenseTanhModel(
     # model = TorchBertSequenceClassificationHeadModel(
     model = TorchSingleLayerDenseReluModel(

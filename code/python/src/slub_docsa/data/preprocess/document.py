@@ -2,6 +2,7 @@
 
 import logging
 import os
+import functools
 
 from typing import Callable, Iterator, List
 
@@ -113,15 +114,19 @@ def nltk_snowball_text_stemming_function(
     nltk_language = NLTK_LANGUAGE_CODES_MAP[lang_code]
     stemmer = SnowballStemmer(nltk_language)
     tokenize = nltk_word_tokenize_text_function(lang_code)
-    stopword_list = stopwords.words(nltk_language)
+    stopword_set = set(stopwords.words(nltk_language))
+
+    @functools.lru_cache(maxsize=1000000)
+    def stem_func(word):
+        return stemmer.stem(word)
 
     def is_stopword(token: str) -> bool:
-        return token in stopword_list
+        return token in stopword_set
 
     def stem_text(text: str) -> str:
-        # logger.debug("stemming text of size %d", len(text))
+        logger.debug("stemming text of size %d", len(text))
         filtered_tokens = [token for token in tokenize(text) if not remove_stopwords or not is_stopword(token)]
-        return " ".join([stemmer.stem(token) for token in filtered_tokens])
+        return " ".join([stem_func(token) for token in filtered_tokens])
 
     return stem_text
 

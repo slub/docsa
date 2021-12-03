@@ -8,7 +8,7 @@ from typing import Callable, List, Mapping
 
 import plotly.express as px
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
-from slub_docsa.data.load.ddc import get_ddc_subject_hierarchy
+from slub_docsa.data.load.ddc import get_generic_ddc_subject_hierarchy
 from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
 
 from slub_docsa.data.load.qucosa import QucosaJsonDocument, read_qucosa_documents_from_directory
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     subject_store = {
         "rvk": get_rvk_subject_store(),
-        "ddc": get_ddc_subject_hierarchy(),
+        "ddc": get_generic_ddc_subject_hierarchy(),
     }[subject_schema]
 
     qucosa_subject_getter = {
