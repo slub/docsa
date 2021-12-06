@@ -1,17 +1,23 @@
 """Use scikit-learn methods and algorithms to provide model implementations."""
 
+import os
+import pickle  # nosec
+import logging
+
 from typing import Iterable, Optional, Sequence, Any
 
 import numpy as np
 
 from slub_docsa.common.document import Document
-from slub_docsa.common.model import ClassificationModel
+from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
+from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
+logger = logging.getLogger(__name__)
 
-class ScikitClassifier(ClassificationModel):
+
+class ScikitClassifier(PersistableClassificationModel):
     """Model that uses a Scikit-Learn Predictor that supports multiple labels.
 
     A list of supported multi-label models can be found [here](https://scikit-learn.org/stable/modules/multiclass.html).
@@ -32,6 +38,7 @@ class ScikitClassifier(ClassificationModel):
         self.predictor = predictor
         self.vectorizer = vectorizer
         self.subject_order = None
+        self.fitted_once = False
 
     def _vectorize(self, documents: Sequence[Document]) -> Any:
         if not self.vectorizer:
@@ -58,6 +65,7 @@ class ScikitClassifier(ClassificationModel):
         self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
         features = self._vectorize(train_documents)
         self.predictor.fit(features, train_targets)
+        self.fitted_once = True
 
     def _predict(self, test_documents: Sequence[Document]) -> Iterable[Iterable[str]]:
         """Predict subjects of test documents."""
@@ -79,6 +87,37 @@ class ScikitClassifier(ClassificationModel):
             probability_matrix = np.stack(probability_list, axis=1)
         probability_matrix = np.transpose(probability_matrix)
         return probability_matrix
+
+    def save(self, persist_dir):
+        """Save scikit predictor class to disc using pickle."""
+        if not self.fitted_once:
+            raise ValueError("can not persist model that was not fitted before")
+
+        logger.info("save scikit predictor to %s", persist_dir)
+        os.makedirs(persist_dir, exist_ok=True)
+        with open(os.path.join(persist_dir, "scikit_predictor.pickle"), "wb") as file:
+            pickle.dump(self.predictor, file)
+
+        logger.info("save vectorizer to %s", persist_dir)
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not save vectorizer that is not persistable")
+        self.vectorizer.save(persist_dir)
+
+    def load(self, persist_dir):
+        """Load scikit predictor class from disc using pickle."""
+        predictor_path = os.path.join(persist_dir, "scikit_predictor.pickle")
+
+        if not os.path.exists(predictor_path):
+            raise ValueError(f"can not load predictor state from file that does not exist at {predictor_path}")
+
+        logger.info("load scikit predictor from %s", predictor_path)
+        with open(predictor_path, "rb") as file:
+            self.predictor = pickle.load(file)  # nosec
+
+        logger.info("load vectorizer from %s", persist_dir)
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not load vectorizer that is not persistable")
+        self.vectorizer.load(persist_dir)
 
     def __str__(self):
         """Return string describing meta classifier."""

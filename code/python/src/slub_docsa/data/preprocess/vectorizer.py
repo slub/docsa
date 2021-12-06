@@ -4,6 +4,7 @@
 
 import logging
 import os
+import pickle  # nosec
 
 from typing import Iterator, Optional, cast
 from itertools import islice
@@ -61,8 +62,34 @@ class AbstractVectorizer:
         raise NotImplementedError()
 
 
-class TfidfVectorizer(AbstractVectorizer):
+class PersistableVectorizer(AbstractVectorizer):
+    """Extend a vectorizer to support save/load methods that can be used to persist it."""
+
+    def load(self, persist_dir: str):
+        """Load a persisted vectorizer state from disk.
+
+        Parameters
+        ----------
+        persist_dir: str
+            the path to the directory that the persisted vectorizer state is loaded from
+        """
+        raise NotImplementedError()
+
+    def save(self, persist_dir: str):
+        """Save the vectorizer state to disk.
+
+        Parameters
+        ----------
+        persist_dir: str
+            a path to a directory that is used to save the vectorizer state
+        """
+        raise NotImplementedError()
+
+
+class TfidfVectorizer(PersistableVectorizer):
     """Vectorizer using Scikit TfidfVectorizer."""
+
+    PERSIST_FILENAME = "tfidf_vectorizer.pickle"
 
     def __init__(self, max_features=10000, **kwargs):
         """Initialize vectorizer.
@@ -75,6 +102,7 @@ class TfidfVectorizer(AbstractVectorizer):
             additional arguments that are passed to the scikit tfidf vectorizer
         """
         self.max_features = max_features
+        self.fitted_once = False
         self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
 
     def fit(self, texts: Iterator[str]):
@@ -83,6 +111,7 @@ class TfidfVectorizer(AbstractVectorizer):
         logger.debug("do scikit tfidf vectorization of %d texts and %d features", len(corpus), self.max_features)
         self.vectorizer.fit(corpus)
         logger.debug("done with scikit tfidf vectorization")
+        self.fitted_once = True
         # logger.debug("fitted tfidf vectorizer with vocabulary of %s", str(self.vectorizer.get_feature_names()))
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
@@ -92,6 +121,27 @@ class TfidfVectorizer(AbstractVectorizer):
                 # add random value if row is all zero, so cosine distance is well defined
                 row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
             yield row
+
+    def save(self, persist_dir: str):
+        """Save tfidf vectorizer to disc using pickle."""
+        if not self.fitted_once:
+            raise ValueError("can not persist tfidf vectorizer that was not fitted before")
+
+        with open(os.path.join(persist_dir, self.PERSIST_FILENAME), "wb") as file:
+            pickle.dump(self.vectorizer, file)
+
+    def load(self, persist_dir: str):
+        """Load tfidf vectorizer from disc using pickle."""
+        if self.fitted_once:
+            raise ValueError("can not load tfidf vectorizer that was previously fitted")
+
+        vectorizer_path = os.path.join(persist_dir, self.PERSIST_FILENAME)
+
+        if not os.path.exists(vectorizer_path):
+            raise ValueError(f"vectorizer state does not exists at {vectorizer_path}")
+
+        with open(vectorizer_path, "rb") as file:
+            self.vectorizer = pickle.load(file)  # nosec
 
     def __str__(self):
         """Return representative string of vectorizer."""
@@ -180,7 +230,7 @@ class RandomVectorizer(AbstractVectorizer):
         return "<RandomVectorizer>"
 
 
-class CachedVectorizer(AbstractVectorizer):
+class CachedVectorizer(PersistableVectorizer):
     """Caches vectorizations for fast repeated transforms."""
 
     def __init__(self, vectorizer: AbstractVectorizer, batch_size: int = 1000, fit_only_once: bool = False):
@@ -232,6 +282,18 @@ class CachedVectorizer(AbstractVectorizer):
 
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+
+    def save(self, persist_dir):
+        """Relay save call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not persist vectorizer that is not persistable")
+        self.vectorizer.save(persist_dir)
+
+    def load(self, persist_dir):
+        """Relay load call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not load vectorizer that is not persistable")
+        self.vectorizer.load(persist_dir)
 
     def __str__(self):
         """Return representative string of vectorizer."""

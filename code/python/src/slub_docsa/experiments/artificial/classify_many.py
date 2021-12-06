@@ -64,6 +64,7 @@ if __name__ == "__main__":
         named_datasets=named_datasets,
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
         named_models_generator=_model_list_generator,
+        n_splits=n_splits,
         load_cached_predictions=load_cached_predictions,
     )
 

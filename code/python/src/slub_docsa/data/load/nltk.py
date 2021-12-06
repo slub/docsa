@@ -26,5 +26,5 @@ def download_nltk(name: str):
     if name not in NLTK_ALREADY_DOWNLOADED:
         logger.info("nltk download of %s", name)
         os.makedirs(NLTK_PATH, exist_ok=True)
-        nltk.download(name, download_dir=NLTK_PATH)
+        nltk.download(name, download_dir=NLTK_PATH, quiet=True)
         NLTK_ALREADY_DOWNLOADED[name] = True

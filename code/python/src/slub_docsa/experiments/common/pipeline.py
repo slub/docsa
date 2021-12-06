@@ -44,13 +44,13 @@ def do_default_score_matrix_classification_evaluation(
         [Iterable[str], Optional[SubjectHierarchyType[SubjectNodeType]]],
         NamedClassificationModels
     ],
+    n_splits: int = 10,
     overall_score_name_subset: Iterable[str] = None,
     per_class_score_name_subset: Iterable[str] = None,
     load_cached_predictions: bool = False,
     stop_after_evaluating_split: int = None,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
-    n_splits = 10
     results: DefaultScoreMatrixResult = []
 
     for dataset_name, dataset, subject_hierarchy in named_datasets:

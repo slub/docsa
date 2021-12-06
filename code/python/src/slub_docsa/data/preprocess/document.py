@@ -1,5 +1,7 @@
 """Methods that process documents."""
 
+# pylint: disable=too-many-arguments
+
 import logging
 import os
 import functools
@@ -28,6 +30,7 @@ NLTK_LANGUAGE_CODES_MAP = {
 
 def document_as_concatenated_string(
     doc: Document,
+    skip_title: bool = False,
     skip_authors: bool = False,
     skip_abstract: bool = False,
     skip_fulltext: bool = False,
@@ -53,7 +56,9 @@ def document_as_concatenated_string(
     str
         The concatenated text of a document as a simple string
     """
-    text = doc.title
+    text = ""
+    if not skip_title and doc.title is not None:
+        text += doc.title
     if not skip_authors and doc.authors is not None:
         text += "\n" + ", ".join(doc.authors)
     if not skip_abstract and doc.abstract is not None:

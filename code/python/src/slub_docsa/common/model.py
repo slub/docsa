@@ -60,6 +60,30 @@ class ClassificationModel:
         raise NotImplementedError()
 
 
+class PersistableClassificationModel(ClassificationModel):
+    """Extends a classification model for save/load methods such that model can be persisted."""
+
+    def save(self, persist_dir: str):
+        """Save the fitted model state to disk at some directory.
+
+        Parameters
+        ----------
+        persist_dir: str
+            the path to a directory that can be used to save the model state
+        """
+        raise NotImplementedError()
+
+    def load(self, persist_dir: str):
+        """Load a persisted model state from some directory.
+
+        Parameters
+        ----------
+        persist_dir: str
+            the path to the directory from which the persisted model is loaded
+        """
+        raise NotImplementedError()
+
+
 class ClusteringModel:
     """Represents a clustering model similar to the scikit-learn fit and predict clustering model.
 

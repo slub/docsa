@@ -1,4 +1,4 @@
-"""Runs a single model for a specfiic qucosa dataset variant."""
+"""Runs a single model for a specific qucosa dataset variant."""
 
 # pylint: disable=invalid-name
 

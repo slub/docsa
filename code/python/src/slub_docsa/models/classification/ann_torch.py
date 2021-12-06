@@ -1,8 +1,11 @@
 """Torch Models for Classification."""
 
 # pylint: disable=fixme, invalid-name, no-member, too-many-locals, too-many-statements, too-many-arguments
+# pylint: disable=too-many-instance-attributes
 
 import logging
+import os
+import pickle  # nosec
 
 from typing import Any, Optional, Sequence, cast
 
@@ -18,18 +21,21 @@ from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
 
-from slub_docsa.common.model import ClassificationModel
+from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
+from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
 from slub_docsa.evaluation.score import scikit_incidence_metric, scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.incidence import positive_top_k_incidence_decision
 from slub_docsa.evaluation.plotting import ann_training_history_plot, write_multiple_figure_formats
 
 logger = logging.getLogger(__name__)
 
+TORCH_MODEL_STATE_FILENAME = "torch_model_state.pickle"
+TORCH_MODEL_SHAPE_FILENAME = "torch_model_shape.pickle"
 
-class AbstractTorchModel(ClassificationModel):
+
+class AbstractTorchModel(PersistableClassificationModel):
     """A abstract torch model.
 
     Implement the `get_model` method to provide your custom network model.
@@ -59,6 +65,7 @@ class AbstractTorchModel(ClassificationModel):
         self.vectorizer = vectorizer
         self.epochs = epochs
         self.model = None
+        self.model_shape = None
         self.batch_size = batch_size
         self.lr = lr
         self.plot_training_history_filepath = plot_training_history_filepath
@@ -121,9 +128,9 @@ class AbstractTorchModel(ClassificationModel):
             raise RuntimeError("can't validate a model that is not yet initialized")
 
         # calculate test error on validation data
-        epoch_loss = None
-        epoch_best_threshold_f1_score = None
-        epoch_top3_f1_score = None
+        epoch_loss = np.nan
+        epoch_best_threshold_f1_score = np.nan
+        epoch_top3_f1_score = np.nan
         if validation_dataloader is not None:
             # set model to evalution mode (not doing dropouts, etc.)
             self.model.eval()
@@ -214,7 +221,8 @@ class AbstractTorchModel(ClassificationModel):
 
         # initialize the torch model
         logger.info("initialize torch model on device '%s'", self.device)
-        self.model = self.get_model(int(train_features_shape[1]), int(train_targets.shape[1]))
+        self.model_shape = (int(train_features_shape[1]), int(train_targets.shape[1]))
+        self.model = self.get_model(*self.model_shape)
         self.model.to(self.device)
         self.model.train()
 
@@ -308,6 +316,48 @@ class AbstractTorchModel(ClassificationModel):
         predictions = cast(np.ndarray, cast(Any, scipy).special.expit(np.vstack(arrays)))
         logger.debug("predictions shape is %s", predictions.shape)
         return predictions
+
+    def save(self, persist_dir):
+        """Save torch model state to disk."""
+        if self.model is None or self.model_shape is None:
+            raise ValueError("can not save model that was not previously fitted")
+
+        logger.info("save pytorch model state and shape to %s", persist_dir)
+        os.makedirs(persist_dir, exist_ok=True)
+        torch.save(self.model.state_dict(), os.path.join(persist_dir, TORCH_MODEL_STATE_FILENAME))
+        with open(os.path.join(persist_dir, TORCH_MODEL_SHAPE_FILENAME), "wb") as file:
+            pickle.dump(self.model_shape, file)
+
+        logger.info("save vectorizer to %s", persist_dir)
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not save vectorizer that is not persistable")
+        self.vectorizer.save(persist_dir)
+
+    def load(self, persist_dir):
+        """Load torch model state from disk."""
+        if self.model is not None or self.model_shape is not None:
+            raise ValueError("trying to load a persisted model after it was fitted already")
+
+        model_state_path = os.path.join(persist_dir, TORCH_MODEL_STATE_FILENAME)
+        model_shape_path = os.path.join(persist_dir, TORCH_MODEL_SHAPE_FILENAME)
+
+        if not os.path.exists(model_state_path):
+            raise ValueError(f"torch model state does not exist at {model_state_path}")
+
+        if not os.path.exists(model_shape_path):
+            raise ValueError(f"torch model shape does not exist at {model_shape_path}")
+
+        logger.info("load torch model shape and state from files")
+        with open(model_shape_path, "rb") as file:
+            self.model_shape = pickle.load(file)  # nosec
+        self.model = self.get_model(*self.model_shape)
+        self.model.load_state_dict(torch.load(model_state_path))
+        self.model.to(self.device)
+
+        logger.info("load vectorizer from %s", persist_dir)
+        if not isinstance(self.vectorizer, PersistableVectorizer):
+            raise ValueError("can not load vectorizer that is not persistable")
+        self.vectorizer.load(persist_dir)
 
     def __str__(self):
         """Return representative string for model."""
