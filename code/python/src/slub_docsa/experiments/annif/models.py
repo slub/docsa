@@ -14,24 +14,24 @@ def default_annif_named_model_list(
 ) -> NamedClassificationModelTupleList:
     """Return a list of common annif models."""
     models: NamedClassificationModelTupleList = [
-        ("annif tfidf", lambda: AnnifModel(model_type="tfidf", lang_code=lang_code)),
-        ("annif svc", lambda: AnnifModel(model_type="svc", lang_code=lang_code)),
-        ("annif fasttext", lambda: AnnifModel(model_type="fasttext", lang_code=lang_code)),
-        ("annif omikuji", lambda: AnnifModel(model_type="omikuji", lang_code=lang_code)),
-        ("annif vw_multi", lambda: AnnifModel(model_type="vw_multi", lang_code=lang_code)),
-        ("annif mllm", lambda: AnnifModel(
+        ("annif_tfidf", lambda: AnnifModel(model_type="tfidf", lang_code=lang_code)),
+        ("annif_svc", lambda: AnnifModel(model_type="svc", lang_code=lang_code)),
+        ("annif_fasttext", lambda: AnnifModel(model_type="fasttext", lang_code=lang_code)),
+        ("annif_omikuji", lambda: AnnifModel(model_type="omikuji", lang_code=lang_code)),
+        ("annif_vw_multi", lambda: AnnifModel(model_type="vw_multi", lang_code=lang_code)),
+        ("annif_mllm", lambda: AnnifModel(
             model_type="mllm",
             lang_code=lang_code,
             subject_order=subject_order,
             subject_hierarchy=subject_hierarchy
         )),
-        ("annif yake", lambda: AnnifModel(
+        ("annif_yake", lambda: AnnifModel(
             model_type="yake",
             lang_code=lang_code,
             subject_order=subject_order,
             subject_hierarchy=subject_hierarchy
         )),
-        ("annif stwfsa", lambda: AnnifModel(
+        ("annif_stwfsa", lambda: AnnifModel(
             model_type="stwfsa",
             lang_code=lang_code,
             subject_order=subject_order,

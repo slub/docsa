@@ -250,13 +250,13 @@ def score_clustering_models_for_documents(
                 sampled_subject_targets = [subject_targets[i] for i in sampled_idx]
 
         for j, model in enumerate(models):
-            logger.info("fit clustering model %s for repetition %d", str(model), i+1)
+            logger.info("fit clustering model %s for repetition %d", str(model), i + 1)
             model.fit(sampled_documents)
 
-            logger.info("predict clustering model %s for repetition %d", str(model), i+1)
+            logger.info("predict clustering model %s for repetition %d", str(model), i + 1)
             membership = model.predict(sampled_documents)
 
-            logger.info("score clustering result from model %s for repetition %d", str(model), i+1)
+            logger.info("score clustering result from model %s for repetition %d", str(model), i + 1)
             for k, score_function in enumerate(scores):
                 score = score_function(sampled_documents, membership, sampled_subject_targets)
                 score_matrix[j, k, i] = score

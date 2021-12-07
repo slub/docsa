@@ -6,7 +6,7 @@ import os
 from typing import Callable, Iterator, List, Optional, Tuple
 
 from slub_docsa.common.dataset import Dataset, samples_from_dataset
-from slub_docsa.common.paths import CACHE_DIR
+from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.subject import SubjectHierarchyType
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia, generate_random_dataset
@@ -16,8 +16,6 @@ from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sampl
 from slub_docsa.data.store.subject import load_persisted_subject_hierarchy_from_lazy_subject_generator
 
 logger = logging.getLogger(__name__)
-
-ARTIFICIAL_DATASETS_CACHE_DIR = os.path.join(CACHE_DIR, "artificial")
 
 
 def generate_pruned_random_no_correlations_dataset(n_token, n_docs, n_subjects, min_samples):
@@ -35,7 +33,7 @@ def generate_pruned_easy_random_dataset_from_dbpedia(n_docs, n_subjects, min_sam
 def generate_pruned_hierarchical_random_dataset(n_token, n_docs, n_subjects, min_samples):
     """Generate hierarchical random that that is hierarchical pruned to have minimum samples per subject."""
     dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_dbpedia(
-            "en", n_token, n_docs, n_subjects
+        "en", n_token, n_docs, n_subjects
     )
     dataset.subjects = prune_subject_targets_to_minimum_samples(min_samples, dataset.subjects, subject_hierarchy)
     dataset = filter_subjects_with_insufficient_samples(dataset, min_samples)
@@ -66,9 +64,10 @@ def default_named_artificial_datasets(
     for dataset_name, lazy_dataset_generator in lazy_named_datasets:
         # load and persist each dataset
         logger.info("load and save persisted random dataset %s", dataset_name)
-        os.makedirs(ARTIFICIAL_DATASETS_CACHE_DIR, exist_ok=True)
-        dataset_fp = os.path.join(ARTIFICIAL_DATASETS_CACHE_DIR, f"{dataset_name}_dataset.sqlite")
-        subject_hierarchy_fp = os.path.join(ARTIFICIAL_DATASETS_CACHE_DIR, f"{dataset_name}_subject_hierarchy.dbm")
+        artificial_cache_dir = os.path.join(get_cache_dir(), "artificial")
+        os.makedirs(artificial_cache_dir, exist_ok=True)
+        dataset_fp = os.path.join(artificial_cache_dir, f"{dataset_name}_dataset.sqlite")
+        subject_hierarchy_fp = os.path.join(artificial_cache_dir, f"{dataset_name}_subject_hierarchy.dbm")
 
         # if dataset and subject hierarchy are stored, use stub definitions and load from files instead
         dataset = Dataset()

@@ -118,7 +118,7 @@ def generate_qucosa_subject_sunburst(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    from slub_docsa.common.paths import FIGURES_DIR
+    from slub_docsa.common.paths import get_figures_dir
 
     # subject_schema = "rvk"
     subject_schema = "ddc"
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     }[subject_schema]
 
     generate_qucosa_subject_sunburst(subject_store, qucosa_subject_getter).write_html(
-        os.path.join(FIGURES_DIR, f"qucosa/{subject_schema}_distribution.html"),
+        os.path.join(get_figures_dir(), f"qucosa/{subject_schema}_distribution.html"),
         include_plotlyjs="cdn",
     )
 

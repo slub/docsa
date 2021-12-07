@@ -6,7 +6,7 @@ import logging
 import os
 
 from sklearn.metrics import f1_score
-from slub_docsa.common.paths import CACHE_DIR, FIGURES_DIR
+from slub_docsa.common.paths import get_cache_dir, get_figures_dir
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     random_state = 123
-    plot_training_history_filepath = os.path.join(FIGURES_DIR, "qucosa/classify_one_ann_history")
-    stemming_cache_filepath = os.path.join(CACHE_DIR, "stemming/global_cache.sqlite")
+    plot_training_history_filepath = os.path.join(get_figures_dir(), "qucosa/classify_one_ann_history")
+    stemming_cache_filepath = os.path.join(get_cache_dir(), "stemming/global_cache.sqlite")
     _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_ddc"]))[0]
 
     subject_order = unique_subject_order(dataset.subjects)

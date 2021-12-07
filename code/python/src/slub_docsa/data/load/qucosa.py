@@ -22,19 +22,9 @@ from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, Subject
 from slub_docsa.data.load.ddc import UnlabeledDdcHierarchy, ddc_correct_short_keys, ddc_key_to_uri, is_valid_ddc_uri
 from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
-from slub_docsa.common.paths import CACHE_DIR, RESOURCES_DIR
+from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 
 logger = logging.getLogger(__name__)
-
-QUCOSA_FULLTEXT_MAPPING_DIR = os.path.join(RESOURCES_DIR, "qucosa/fulltext_mapping/")
-"""Default directory storing qucosa documents as gzipped jsonl files.
-Can be overwritten by specifying a custom directory in the respective methods.
-"""
-
-QUCOSA_SIMPLE_TRAINING_DATA_TSV = os.path.join(CACHE_DIR, "qucosa/simple_training_data.tsv")
-"""Default filepath for simple TSV export of qucosa data.
-Can be overwritten by specifying a custom filepath in the respective methods.
-"""
 
 SLUB_ELASTICSEARCH_SERVER_URL = os.environ.get("SLUB_ELASTICSEARCH_SERVER_URL", "es.data.slub-dresden.de")
 """Default server URL (`es.data.slub-dresden.de`) for SLUB elasticsearch server.
@@ -50,9 +40,6 @@ SLUB_ELASTICSEARCH_SERVER_PASSWORD = os.environ.get("SLUB_ELASTICSEARCH_SERVER_P
 """Default password (`None`) for the SLUB elasticsearch server.
 Can be overwritten using the environment variable `SLUB_ELASTICSEARCH_SERVER_PASSWORD`.
 """
-
-QUCOSA_DDC_SUBJECT_LIST_PATH = os.path.join(CACHE_DIR, "qucosa/ddc_list.pickle.gz")
-"""Default filepath where all availble ddc subjects are stored as cache."""
 
 # helper types for processing qucosa json documents
 QucosaJsonClassificationElementType = Mapping[str, Any]
@@ -75,6 +62,7 @@ def read_qucosa_metadata_from_elasticsearch(
     time_between_requests: float = 10.0,
     page_size: int = 100,
     scroll_timeout: str = "1m",
+    query: Any = None,
 ) -> Iterable[QucosaJsonDocument]:
     """Read Qucosa documents and its meta data from the SLUB ElasticSearch server.
 
@@ -110,8 +98,11 @@ def read_qucosa_metadata_from_elasticsearch(
         {"host": host, "use_ssl": True, "port": 443}
     ], http_auth=http_auth)
 
+    if query is None:
+        query = {"match_all": {}}
+
     last_request = time.time()
-    results = es_server.search(index=index_name, scroll=scroll_timeout, size=page_size)
+    results = es_server.search(index=index_name, query=query, scroll=scroll_timeout, size=page_size)
 
     if "_scroll_id" not in results:
         raise RuntimeError("no scroll id returned by elasticsearch")
@@ -133,7 +124,7 @@ def read_qucosa_metadata_from_elasticsearch(
 
 def save_qucosa_documents_to_directory(
     qucosa_documents: Iterable[QucosaJsonDocument],
-    directory: str = QUCOSA_FULLTEXT_MAPPING_DIR,
+    directory: str = None,
     max_documents_per_file: int = 100
 ):
     """Save qucosa documents to a directory as gzip compressed jsonl files.
@@ -144,7 +135,7 @@ def save_qucosa_documents_to_directory(
     ----------
     qucosa_documents: Iterable[QucosaDocument]
         The qucosa documents that are supposed to be saved to the directory.
-    directory: str = QUCOSA_FULLTEXT_MAPPING_DIR
+    directory: str = "<resources_dir>/qucosa/fulltext_mapping/"
         The directory where qucosa documents are stored as jsonl files.
     max_documents_per_file: int = 100
         The maximum number of documents to store in one single gzip compressed jsonl file.
@@ -153,6 +144,8 @@ def save_qucosa_documents_to_directory(
     -------
     None
     """
+    if directory is None:
+        directory = os.path.join(get_resources_dir(), "qucosa/fulltext_mapping/")
     os.makedirs(directory, exist_ok=True)
 
     if len(os.listdir(directory)) > 0:
@@ -187,14 +180,14 @@ def save_qucosa_documents_to_directory(
 
 
 def read_qucosa_documents_from_directory(
-    directory: str = QUCOSA_FULLTEXT_MAPPING_DIR,
+    directory: str = None,
     fallback_retrieve_from_elasticsearch: bool = True,
 ) -> Iterable[QucosaJsonDocument]:
     """Read qucosa documents from a directory of gzip compressed jsonl files.
 
     Parameters
     ----------
-    directory: str
+    directory: str = "<resources_dir>/qucosa/fulltext_mapping/"
         The directory which is scanned for gzip compressed jsonl files that are read as Qucosa documents.
     fallback_retrieve_from_elasticsearch: bool = True
         If true will try to download and save qucosa documents from SLUB elasticsearch server unless directory
@@ -205,6 +198,8 @@ def read_qucosa_documents_from_directory(
     Iterable[QucosaJsonDocument]
         The Qucosa documents that were read from the provided directory.
     """
+    if directory is None:
+        directory = os.path.join(get_resources_dir(), "qucosa/fulltext_mapping/")
     if not os.path.exists(directory) and fallback_retrieve_from_elasticsearch:
         logger.info("qucosa directory does not exist, try to read and save documents from SLUB elasticsearch")
         qucosa_document_iterator = read_qucosa_metadata_from_elasticsearch()
@@ -530,9 +525,11 @@ def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[st
 
 
 def get_qucosa_ddc_subject_store(
-    ddc_list_filepath: str = QUCOSA_DDC_SUBJECT_LIST_PATH,
+    ddc_list_filepath: str = None,
 ) -> SubjectHierarchyType[SubjectNode]:
     """Return the ddc subject hierarchy which contains only subjects present in the qucosa dataset."""
+    if ddc_list_filepath is None:
+        ddc_list_filepath = os.path.join(get_cache_dir(), "qucosa/ddc_list.pickle.gz")
     if not os.path.exists(ddc_list_filepath):
         logger.debug("create and fill ddc subject store (may take some time)")
         qucosa_iterator = read_qucosa_documents_from_directory()
@@ -615,7 +612,7 @@ def read_qucosa_samples(
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(
     qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    filepath: str = QUCOSA_SIMPLE_TRAINING_DATA_TSV,
+    filepath: str = None,
 ):
     """Save all qucosa documents as annif tsv file using only the title as text and RVK as subject annotations.
 
@@ -624,13 +621,15 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv(
     qucosa_iterator: Iterable[QucosaJsonDocument] = None
         An iterator over qucosa json documents. If None, tries to load them from default directory
         (and SLUB elasticsearch if not available).
-    filepath: str = QUCOSA_SIMPLE_TRAINING_DATA_TSV
+    filepath: str = "<cache_dir>/qucosa/simple_training_data.tsv"
         The path to the TSV file that is being created
 
     Returns
     -------
     None
     """
+    if filepath is None:
+        filepath = os.path.join(get_cache_dir(), "qucosa/simple_training_data.tsv")
     if qucosa_iterator is None:
         qucosa_iterator = read_qucosa_documents_from_directory()
 

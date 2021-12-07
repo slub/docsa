@@ -5,7 +5,7 @@
 import logging
 import os
 
-from slub_docsa.common.paths import FIGURES_DIR
+from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
 from slub_docsa.experiments.artificial.datasets import default_named_artificial_datasets
 from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
@@ -68,4 +68,8 @@ if __name__ == "__main__":
         load_cached_predictions=load_cached_predictions,
     )
 
-    write_default_classification_plots(evaluation_result, os.path.join(FIGURES_DIR, "artificial"), filename_suffix)
+    write_default_classification_plots(
+        evaluation_result,
+        os.path.join(get_figures_dir(), "artificial"),
+        filename_suffix
+    )

@@ -18,15 +18,13 @@ from torch.nn.modules.module import Module
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
 
-from slub_docsa.common.paths import CACHE_DIR
+from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
 from slub_docsa.data.preprocess.document import persisted_nltk_snowball_text_stemming_function
 from slub_docsa.data.store.array import bytes_to_numpy_array, numpy_array_to_bytes
 from slub_docsa.data.store.document import sha1_hash_from_text
 
 logger = logging.getLogger(__name__)
-
-HUGGINGFACE_CACHE_DIR = os.path.join(CACHE_DIR, "huggingface")
 
 
 class AbstractVectorizer:
@@ -300,7 +298,7 @@ class CachedVectorizer(PersistableVectorizer):
         return f"<CachedVectorizer of={str(self.vectorizer)}>"
 
 
-class PersistedCachedVectorizer(AbstractVectorizer):
+class PersistedCachedVectorizer(PersistableVectorizer):
     """Stores vectorizations in persistent cache."""
 
     def __init__(self, filepath: str, vectorizer: AbstractVectorizer, batch_size: int = 100):
@@ -352,6 +350,20 @@ class PersistedCachedVectorizer(AbstractVectorizer):
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
+    def save(self, persist_dir: str):
+        """Relay save call to parent vectorizer."""
+        if isinstance(self.vectorizer, PersistableVectorizer):
+            self.vectorizer.save(persist_dir)
+        else:
+            raise ValueError("can not save vectorizer that is not persistable")
+
+    def load(self, persist_dir: str):
+        """Relay load class to parent vectorizer."""
+        if isinstance(self.vectorizer, PersistableVectorizer):
+            self.vectorizer.load(persist_dir)
+        else:
+            raise ValueError("can not load vectorizer that is not persistable")
+
     def __str__(self):
         """Return representative string of vectorizer."""
         return f"<PersistentCachedVectorizer of={str(self.vectorizer)} at={self.filepath}>"
@@ -377,7 +389,7 @@ def _extract_subtext_samples(text: str, samples: int) -> Iterator[str]:
         yield sub_text
 
 
-class HuggingfaceBertVectorizer(AbstractVectorizer):
+class HuggingfaceBertVectorizer(PersistableVectorizer):
     """Evaluates a pre-trained bert model for text vectorization.
 
     Embeddings are extracted as the last hidden states of the first "[CLS]" token, see:
@@ -387,7 +399,7 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
     multiple text strings are uniformly extracted from the entire text (at positions `i/samples`), and embeddings are
     concatenated.
 
-    If `samples? is larger than 1, the total batch size for each run of the Bert model will be `batch_size * samples`.
+    If `samples` is larger than 1, the total batch size for each run of the Bert model will be `batch_size * samples`.
     """
 
     def __init__(
@@ -396,7 +408,7 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
         batch_size: int = 4,
         subtext_samples: int = 1,
         hidden_states: int = 1,
-        cache_dir: str = HUGGINGFACE_CACHE_DIR,
+        cache_dir: str = None,
     ):
         """Initialize vectorizer.
 
@@ -422,6 +434,9 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer: Optional[Module] = None
         self.model: Optional[Module] = None
+
+        if self.cache_dir is None:
+            self.cache_dir = os.path.join(get_cache_dir(), "huggingface")
 
     def _load_model(self):
         if self.model is None:
@@ -499,6 +514,14 @@ class HuggingfaceBertVectorizer(AbstractVectorizer):
 
             total_so_far += len(texts_chunk)
             i += 1
+
+    def save(self, persist_dir: str):
+        """Bert vectorizer is not stateful and needs no saving."""
+        return
+
+    def load(self, persist_dir: str):
+        """Bert vectorizer is not stateful and needs no loading."""
+        return
 
     def __str__(self):
         """Return representative string of vectorizer."""

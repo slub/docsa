@@ -7,7 +7,7 @@
     "python.linting.pylintEnabled": true,
     "python.linting.pylintArgs": ["--max-line-length=120", "--min-similarity-lines=8", "--extension-pkg-whitelist=lxml"],
     "python.linting.flake8Enabled": true,
-    "python.linting.flake8Args": ["--max-line-length=120"],
+    "python.linting.flake8Args": ["--max-line-length=120", "--ignore=D301,W503"],
     "python.linting.banditEnabled": true,
     "python.linting.banditArgs": ["--configfile code/python/bandit.yml"],
     "python.linting.enabled": true,

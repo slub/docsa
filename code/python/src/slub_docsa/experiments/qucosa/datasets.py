@@ -7,7 +7,7 @@ from typing import Any, Callable, Iterator, List, Tuple, Union
 from typing_extensions import Literal
 
 from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_from_dataset
-from slub_docsa.common.paths import CACHE_DIR
+from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchyType
 from slub_docsa.data.load.qucosa import qucosa_subject_hierarchy_by_subject_schema, read_qucosa_samples
@@ -21,9 +21,6 @@ from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sampl
 from slub_docsa.evaluation.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
-
-QUCOSA_DATASET_CACHE_DIRECTORY = os.path.join(CACHE_DIR, "qucosa")
-VECTORIZATION_CACHE = os.path.join(CACHE_DIR, "vectorizer")
 
 
 def _prune_hierarchical_min_samples(samples_iterator, min_samples, subject_hierarchy):
@@ -129,6 +126,7 @@ def qucosa_named_datasets(
     name_subset: List[str] = None
 ) -> Iterator[Tuple[str, Dataset, SubjectHierarchyType[RvkSubjectNode]]]:
     """Return default qucosa dataset variants."""
+    quocsa_cache_dir = os.path.join(get_cache_dir(), "qucosa")
     dataset_list = qucosa_named_datasets_tuple_list()
 
     # filter data sets based on name subset parameter
@@ -138,7 +136,7 @@ def qucosa_named_datasets(
     for dataset_name, lazy_sample_iterator, lazy_subject_hierarchy in dataset_list:
         # load and persist each dataset
         logger.info("load and save persisted dataset %s", dataset_name)
-        filepath = os.path.join(QUCOSA_DATASET_CACHE_DIRECTORY, f"{dataset_name}.sqlite")
+        filepath = os.path.join(quocsa_cache_dir, f"{dataset_name}.sqlite")
         dataset = load_persisted_dataset_from_lazy_sample_iterator(lazy_sample_iterator, filepath)
         yield dataset_name, dataset, lazy_subject_hierarchy()
 

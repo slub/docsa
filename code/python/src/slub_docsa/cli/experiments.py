@@ -2,8 +2,10 @@
 
 import argparse
 from slub_docsa.cli.common import add_logging_arguments, setup_logging_from_args
-from slub_docsa.cli.qucosa import available_qucosa_dataset_names, available_qucosa_model_names
+from slub_docsa.cli.qucosa import available_qucosa_clustering_model_names, available_qucosa_dataset_names
+from slub_docsa.cli.qucosa import available_qucosa_classification_model_names
 from slub_docsa.experiments.qucosa.classify_many import qucosa_experiments_classify_many
+from slub_docsa.experiments.qucosa.cluster_many import qucosa_experiments_cluster_many
 
 
 def experiments_subparser(parser: argparse.ArgumentParser):
@@ -18,6 +20,18 @@ def _experiments_qucosa_subparser(parser: argparse.ArgumentParser):
     parser.set_defaults(func=lambda args: parser.print_help())
     subparser = parser.add_subparsers()
     _experiments_qucosa_classify_many_subparser(subparser.add_parser("classify_many"))
+    _experiments_qucosa_cluster_many_subparser(subparser.add_parser("cluster_many"))
+
+
+def _add_expimernts_qucosa_common_arguments(parser: argparse.ArgumentParser):
+    """Add common arguments for experiments qucosa commands."""
+    parser.add_argument(
+        "--datasets",
+        "-d",
+        nargs="+",
+        help="a list of dataset variants to evaluate: " + ", ".join(available_qucosa_dataset_names()),
+        default=["qucosa_de_titles_langid_rvk", "qucosa_de_abstracts_langid_rvk", "qucosa_de_fulltexts_langid_rvk"],
+    )
 
 
 def _experiments_qucosa_classify_many_action(args):
@@ -29,7 +43,7 @@ def _experiments_qucosa_classify_many_action(args):
     n_splits = int(args.cross_splits)
 
     avaiable_datasets = available_qucosa_dataset_names()
-    avaiable_models = available_qucosa_model_names()
+    avaiable_models = available_qucosa_classification_model_names()
 
     for dataset_name in dataset_subset:
         if dataset_name not in avaiable_datasets:
@@ -54,20 +68,14 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
     """Return sub-parser for `experiments qucosa classify_many` command."""
     parser.set_defaults(func=_experiments_qucosa_classify_many_action)
     add_logging_arguments(parser)
+    _add_expimernts_qucosa_common_arguments(parser)
 
-    parser.add_argument(
-        "--datasets",
-        "-d",
-        nargs="+",
-        help="a list of dataset variants to evaluate: " + ", ".join(available_qucosa_dataset_names()),
-        default=["qucosa_de_titles_langid_rvk", "qucosa_de_abstracts_langid_rvk", "qucosa_de_fulltexts_langid_rvk"],
-    )
-
+    model_names = available_qucosa_classification_model_names(False)
     parser.add_argument(
         "--models",
         "-m",
         nargs="+",
-        help="a list of models to evaluate: " + ", ".join(available_qucosa_model_names(False)),
+        help="a list of classification models to evaluate: " + ", ".join(model_names),
         default=["nihilistic", "oracle", "tfidf_10k_knn_k=1"],
     )
 
@@ -76,4 +84,60 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
         "-c",
         help="the number of cross-validation splits, default 10",
         default=10,
+    )
+
+
+def _experiments_qucosa_cluster_many_action(args):
+    """Perform `experiments qucosa cluster_many` action."""
+    setup_logging_from_args(args)
+
+    dataset_subset = args.datasets
+    model_subset = args.models
+    repeats = int(args.repeats)
+    max_documents = None if args.limit is None else int(args.limit)
+
+    avaiable_datasets = available_qucosa_dataset_names()
+    avaiable_models = available_qucosa_clustering_model_names()
+
+    for dataset_name in dataset_subset:
+        if dataset_name not in avaiable_datasets:
+            raise ValueError(f"dataset with name '{dataset_name}' is not available")
+
+    for model_name in model_subset:
+        if model_name not in avaiable_models:
+            raise ValueError(f"model with name '{model_name}' is not available")
+
+    qucosa_experiments_cluster_many(
+        dataset_subset=dataset_subset,
+        model_subset=model_subset,
+        repeats=repeats,
+        max_documents=max_documents
+    )
+
+
+def _experiments_qucosa_cluster_many_subparser(parser: argparse.ArgumentParser):
+    parser.set_defaults(func=_experiments_qucosa_cluster_many_action)
+    add_logging_arguments(parser)
+    _add_expimernts_qucosa_common_arguments(parser)
+
+    model_names = available_qucosa_clustering_model_names()
+    parser.add_argument(
+        "--models",
+        "-m",
+        nargs="+",
+        help="a list of clustering models to evaluate: " + ", ".join(model_names),
+        default=["random_c=20", "random_c=subjects", "tfidf_10k_kMeans_c=20", "tfidf_10k_kMeans_c=subjects"],
+    )
+
+    parser.add_argument(
+        "--repeats",
+        "-r",
+        help="the number of clustering repetitons, default 10",
+        default=10,
+    )
+
+    parser.add_argument(
+        "--limit",
+        "-l",
+        help="the maximum number documents to consider for clustering, default all",
     )

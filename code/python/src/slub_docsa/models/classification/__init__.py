@@ -1,9 +1,7 @@
-"""Classification models and similarity metrics.
+"""Classification models.
 
-# Classification
-
-Classification models implement the `slub_docsa.common.model.Model` interface and provide various algorithms for
-multi-class multi-label classification.
+Classification models implement the `slub_docsa.common.model.ClassificationModel` interface and provide various
+algorithms for multi-class multi-label classification.
 
 ## Dummy Models
 
@@ -12,24 +10,27 @@ purposes.
 
 ### Oracle
 
-The `slub_docsa.models.dummy.OracleModel` is a model implementation that cheats by getting access to the target
-subjects of the test dataset. Instead of learning a model it simply returns the true subject annotations.
+The `slub_docsa.models.classification.dummy.OracleModel` is a model implementation that cheats by getting access to the
+target subjects of the test dataset. Instead of learning a model it simply returns the true subject annotations.
 
 As a result, this model should always outperform any other classification model. This can be useful to determine
 the maximal achievable score in some scenarios where the best score is not known in advance.
 
 For example, when chosing subjects based on the `slub_docsa.evaluation.incidence.positive_top_k_incidence_decision`
-and there are documents that are annotated with more then `k` subjects, even the `slub_docsa.models.dummy.OracleModel`
-will not be able to achieve the maximum `sklearn.metrics.f1_score` of `1.0`, since some subjects are not predicted even
-if their test subject probabilities are correctly predicted as `1.0`.
+and there are documents that are annotated with more then `k` subjects, even the
+`slub_docsa.models.classification.dummy.OracleModel` will not be able to achieve the maximum `sklearn.metrics.f1_score`
+of `1.0`, since some subjects are not predicted even if their test subject probabilities are correctly predicted as
+`1.0`.
 
 ### Nihilistic
 
-The `slub_docsa.models.dummy.NihilisticModel` simply returns a subject probability of `0.0` for all predictions.
+The `slub_docsa.models.classification.dummy.NihilisticModel` simply returns a subject probability of `0.0` for all
+predictions.
 
 ### Random
 
-The `slub_docsa.models.dummy.RandomModel` returns uniform random subject probabilities between `0.0` and `1.0`.
+The `slub_docsa.models.classification.dummy.RandomModel` returns uniform random subject probabilities between `0.0` and
+`1.0`.
 
 This means, for example, using the `slub_docsa.evaluation.incidence.threshold_incidence_decision` with `threshold=0.5`,
 it will predict on average half of all available subjects.
@@ -40,8 +41,8 @@ should outperform the random model.
 ## Scikit Models
 
 Many classic classification algorithms have already been implemented as part of the [scikit-learn](
-https://scikit-learn.org/) library. The `slub_docsa.models.scikit.ScikitClassifier` model provides an interface to
-these classic algorithms.
+https://scikit-learn.org/) library. The `slub_docsa.models.classification.scikit.ScikitClassifier` model provides an
+interface to these classic algorithms.
 
 Unfortunately, not all classifier can be used since not all of them support multi-class multi-label classifications.
 For example, the [`LogisticRegression`](

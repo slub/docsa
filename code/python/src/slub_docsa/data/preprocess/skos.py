@@ -110,11 +110,11 @@ def subject_hierarchy_to_skos_graph(
 if __name__ == "__main__":
     import os
     from slub_docsa.data.load.rvk import get_rvk_subject_store
-    from slub_docsa.common.paths import CACHE_DIR
+    from slub_docsa.common.paths import get_cache_dir
 
     logging.basicConfig(level=logging.DEBUG)
 
     rvk_subject_hierarchy = get_rvk_subject_store()
     rvk_skos_graph = subject_hierarchy_to_skos_graph(rvk_subject_hierarchy, "de", generate_rvk_custom_skos_triples)
 
-    rvk_skos_graph.serialize(destination=os.path.join(CACHE_DIR, "rvk/rvk_skos.ttl"), format="turtle")
+    rvk_skos_graph.serialize(destination=os.path.join(get_cache_dir(), "rvk/rvk_skos.ttl"), format="turtle")

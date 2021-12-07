@@ -7,7 +7,7 @@ import logging
 
 from typing import Callable, Iterable, Iterator, Optional, Tuple
 
-from slub_docsa.common.paths import ANNIF_DIR, CACHE_DIR
+from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
 from slub_docsa.data.store.predictions import persisted_fit_classification_model_and_predict
@@ -22,9 +22,6 @@ from slub_docsa.experiments.common.scores import NamedScoreLists, default_named_
 from slub_docsa.experiments.common.scores import default_named_multiclass_score_list, initialize_named_score_tuple_list
 
 logger = logging.getLogger(__name__)
-
-ANNIF_PROJECT_DATA_DIR = os.path.join(ANNIF_DIR, "testproject")
-PREDICTIONS_CACHE = os.path.join(CACHE_DIR, "predictions")
 
 
 def get_split_function_by_name(name: str, n_splits: int, random_state: float = None) -> DatasetSplitFunction:
@@ -52,12 +49,13 @@ def do_default_score_matrix_classification_evaluation(
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     results: DefaultScoreMatrixResult = []
+    predictions_cache_dir = os.path.join(get_cache_dir(), "predictions")
 
     for dataset_name, dataset, subject_hierarchy in named_datasets:
         # load predictions cache
-        os.makedirs(PREDICTIONS_CACHE, exist_ok=True)
+        os.makedirs(predictions_cache_dir, exist_ok=True)
         fit_and_predict = persisted_fit_classification_model_and_predict(
-            os.path.join(PREDICTIONS_CACHE, dataset_name + ".dbm"),
+            os.path.join(predictions_cache_dir, dataset_name + ".dbm"),
             load_cached_predictions,
         )
 

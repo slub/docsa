@@ -15,7 +15,7 @@ from typing import Iterable, Any, List, Optional, Tuple
 import rdflib
 from lxml import etree  # nosec
 from rdflib.namespace import SKOS
-from slub_docsa.common.paths import RESOURCES_DIR, CACHE_DIR
+from slub_docsa.common.paths import get_resources_dir, get_cache_dir
 from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
 from slub_docsa.data.store.subject import SubjectHierarchyDbmStore
 from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
@@ -25,14 +25,20 @@ logger = logging.getLogger(__name__)
 RVK_XML_URL = "https://rvk.uni-regensburg.de/downloads/rvko_xml.zip"
 """URL used to download the RVK xml file"""
 
-RVK_XML_FILE_PATH = os.path.join(RESOURCES_DIR, "rvk/rvko_xml.zip")
-"""Default filepath where downloaded xml file is stored."""
 
-RVK_SUBJECT_STORE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_store.dbm")
-"""Default filepath where processed RVK hierarchy is stored as cache."""
+def _get_rvk_xml_filepath():
+    """Return filepath where downloaded xml file is stored."""
+    return os.path.join(get_resources_dir(), "rvk/rvko_xml.zip")
 
-RVK_ANNIF_TSV_FILE_PATH = os.path.join(CACHE_DIR, "rvk/rvk_annif.tsv")
-"""Default filepath where RVK subjects are exported to as TSV file."""
+
+def _get_rvk_subject_store_path():
+    """Return filepath where processed RVK hierarchy is stored as cache."""
+    return os.path.join(get_cache_dir(), "rvk/rvk_store.dbm")
+
+
+def _get_annif_tsv_filepath():
+    """Return filepath where RVK subjects are exported to as TSV file."""
+    return os.path.join(get_cache_dir(), "rvk/rvk_annif.tsv")
 
 
 class RvkSubjectNode(SubjectNode):
@@ -50,9 +56,11 @@ class RvkSubjectNode(SubjectNode):
 
 def _download_rvk_xml(
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = RVK_XML_FILE_PATH,
+    xml_filepath: str = None,
 ) -> None:
     """Download the RVK xml file from rvk.uni-regensburg.de."""
+    if xml_filepath is None:
+        xml_filepath = _get_rvk_xml_filepath()
     os.makedirs(os.path.dirname(xml_filepath), exist_ok=True)
     if not os.path.exists(xml_filepath):
         logger.debug("download RVK classes to %s", xml_filepath)
@@ -132,7 +140,7 @@ def read_rvk_subjects_from_file(
 def read_rvk_subjects(
     depth: int = None,
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = RVK_XML_FILE_PATH,
+    xml_filepath: str = None,
 ) -> Iterable[RvkSubjectNode]:
     """Download and read RVK subjects and their labels.
 
@@ -153,16 +161,18 @@ def read_rvk_subjects(
     Iterable[RvkSubjectNode]
         A generator of RvkSubjectNodes as parsed from the xml file downloaded via `_download_rvk_xml()`.
     """
+    if xml_filepath is None:
+        xml_filepath = _get_rvk_xml_filepath()
     # make sure file is available and download if necessary
     _download_rvk_xml(download_url, xml_filepath)
     return read_rvk_subjects_from_file(xml_filepath, depth)
 
 
 def get_rvk_subject_store(
-    store_filepath: str = RVK_SUBJECT_STORE_PATH,
+    store_filepath: str = None,
     depth: int = None,
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = RVK_XML_FILE_PATH,
+    xml_filepath: str = None,
 ) -> SubjectHierarchyType[RvkSubjectNode]:
     """Store all RVK classes in a dictionary indexed by notation.
 
@@ -182,8 +192,13 @@ def get_rvk_subject_store(
     SubjectHierarchyType[RvkSubjectNode]
         The RVK subject hierarchy loaded from the filepath
     """
+    if store_filepath is None:
+        store_filepath = _get_rvk_subject_store_path()
+    if xml_filepath is None:
+        xml_filepath = _get_rvk_xml_filepath()
     if not os.path.exists(store_filepath):
         logger.debug("create and fill RVK subject store (may take some time)")
+        os.makedirs(os.path.dirname(store_filepath), exist_ok=True)
         store = SubjectHierarchyDbmStore[RvkSubjectNode](store_filepath, read_only=False)
 
         for i, rvk_subject in enumerate(read_rvk_subjects(depth, download_url, xml_filepath)):
@@ -198,7 +213,7 @@ def get_rvk_subject_store(
 
 def convert_rvk_classes_to_annif_tsv(
     rvk_subject_hierarchy: SubjectHierarchyType[RvkSubjectNode],
-    tsv_filepath: str = RVK_ANNIF_TSV_FILE_PATH,
+    tsv_filepath: str = None,
 ):
     """Convert RVK classes to tab-separated values file required by Annif.
 
@@ -213,6 +228,8 @@ def convert_rvk_classes_to_annif_tsv(
     -------
     None
     """
+    if tsv_filepath is None:
+        tsv_filepath = _get_annif_tsv_filepath()
     if not os.path.exists(tsv_filepath):
         os.makedirs(os.path.dirname(tsv_filepath), exist_ok=True)
 

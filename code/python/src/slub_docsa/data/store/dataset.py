@@ -150,6 +150,7 @@ def load_persisted_dataset_from_lazy_sample_iterator(
     filepath
     """
     if not os.path.exists(filepath):
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         store = DatasetSqliteStore(filepath, populate_mode=True)
         store.populate(lazy_sample_iterator())
         store.close()

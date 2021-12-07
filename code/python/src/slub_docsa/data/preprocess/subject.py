@@ -122,7 +122,7 @@ def prune_subject_uri_to_level(
         return subject_uri
 
     # subject must be above (closer to leaf) than level
-    return ancestors[level-1].uri
+    return ancestors[level - 1].uri
 
 
 def prune_subject_uris_to_level(
@@ -230,7 +230,7 @@ def children_map_from_subject_hierarchy(
 def prune_subject_uris_to_parent(
     subject_uris: SubjectUriList,
     to_be_pruned_subjects: Set[str],
-    subject_hierarchy:  SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
 ) -> SubjectUriList:
     """Replace subject uris with uri of parent subject for those that are supposed to be pruned.
 
@@ -267,7 +267,7 @@ def prune_subject_uris_to_parent(
 def prune_subject_targets_to_parent(
     subject_targets: SubjectTargets,
     to_be_pruned_subjects: Set[str],
-    subject_hierarchy:  SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
 ) -> SubjectTargets:
     """Replace subject uris in target list with uri of parent subject for those that are supposed to be pruned.
 

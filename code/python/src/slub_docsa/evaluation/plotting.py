@@ -52,7 +52,7 @@ def score_matrix_box_plot(
     _, n_scores, _ = score_matrix.shape
 
     fig = cast(Any, make_subplots(
-        rows=math.ceil(n_scores/columns),
+        rows=math.ceil(n_scores / columns),
         cols=columns,
         subplot_titles=score_names,
     ))
@@ -65,11 +65,11 @@ def score_matrix_box_plot(
                 legendgroup=j,
                 marker_color=_get_marker_color(j)
             )
-            fig.add_trace(box, row=math.floor(i/columns)+1, col=(i % columns)+1)
+            fig.add_trace(box, row=math.floor(i / columns) + 1, col=(i % columns) + 1)
 
     for i in range(n_scores):
         fig.update_layout(
-            {"yaxis" + str(i+1): {"range": score_ranges[i]}}
+            {"yaxis" + str(i + 1): {"range": score_ranges[i]}}
         )
 
     return fig
@@ -111,11 +111,11 @@ def score_matrices_box_plot(
     n_models, n_scores, n_splits = score_matrices[0].shape
 
     fig = cast(Any, make_subplots(
-        rows=math.ceil(n_scores/columns),
+        rows=math.ceil(n_scores / columns),
         cols=columns,
         subplot_titles=score_names,
-        horizontal_spacing=0.1/columns,
-        vertical_spacing=0.1/columns
+        horizontal_spacing=0.1 / columns,
+        vertical_spacing=0.1 / columns
     ))
 
     for i in range(n_scores):
@@ -132,7 +132,7 @@ def score_matrices_box_plot(
                 marker_color=_get_marker_color(k),
                 line={"width": 3},
             )
-            fig.add_trace(box, row=math.floor(i/columns)+1, col=(i % columns)+1)
+            fig.add_trace(box, row=math.floor(i / columns) + 1, col=(i % columns) + 1)
 
     fig.update_layout(
         boxmode='group'
@@ -141,19 +141,18 @@ def score_matrices_box_plot(
     for i in range(n_scores):
         # set y axis range for every plot
         fig.update_layout({
-                "yaxis" + str(i+1): {
-                    "range": score_ranges[i],
-                    # "title": score_names[i],
-                    # "title_font": {
-                    #     "size": 12,
-                    # }
-                },
-            }
-        )
+            "yaxis" + str(i + 1): {
+                "range": score_ranges[i],
+                # "title": score_names[i],
+                # "title_font": {
+                #     "size": 12,
+                # }
+            },
+        })
         # hide x axis tick labels for all plots but the last row
         if i < n_scores - columns:
             fig.update_layout({
-                "xaxis" + str(i+1): {
+                "xaxis" + str(i + 1): {
                     "showticklabels": False,
                 }
             })
@@ -238,14 +237,14 @@ def per_subject_precision_recall_vs_samples_plot(
             fig.add_trace(
                 cast(Any, go.Scatter)(
                     x=score_matrix[i, 0, :, :].flatten(),
-                    y=score_matrix[i, j+1, :, :].flatten(),
+                    y=score_matrix[i, j + 1, :, :].flatten(),
                     name=model_names[i],
                     showlegend=j <= 0,
                     legendgroup=i,
                     marker_color=_get_marker_color(i),
                     mode="markers"
                 ),
-                row=1, col=j+1,
+                row=1, col=j + 1,
             )
 
     fig.update_layout(
@@ -269,7 +268,7 @@ def _calculate_score_histogram_bin(values, score_range):
 
     return dict(
         start=bin_min,
-        end=bin_max+bin_size,
+        end=bin_max + bin_size,
         size=bin_size,
     )
 
@@ -330,8 +329,8 @@ def per_subject_score_histograms_plot(
                     marker_color=_get_marker_color(j),
                     name=f"{model_name} - {score_name}",
                 ),
-                row=i+1,
-                col=j+1
+                row=i + 1,
+                col=j + 1
             )
 
     for i in range(n_scores):
@@ -400,7 +399,7 @@ def ann_training_history_plot(
             mode="lines",
             name="test loss",
             line=dict(color=_get_marker_color(1), width=3),
-         ), row=1, col=1,
+        ), row=1, col=1,
     )
 
     fig.add_trace(
@@ -440,15 +439,15 @@ def ann_training_history_plot(
             mode="lines",
             name="test top3 f1_score",
             line=dict(color=_get_marker_color(1), width=3, dash='dot'),
-         ), row=1, col=2,
+        ), row=1, col=2,
     )
 
     max_loss = np.max([np.max(training_loss), np.max(test_loss)])
 
     fig.update_layout({"yaxis1": {"range": [0.0, max_loss], "title": "loss"}})
-    fig.update_layout({"xaxis1": {"range": [0.0, len(training_loss)-1], "title": "epoch"}})
+    fig.update_layout({"xaxis1": {"range": [0.0, len(training_loss) - 1], "title": "epoch"}})
     fig.update_layout({"yaxis2": {"range": [0.0, 1.0], "title": "f1 score (micro)"}})
-    fig.update_layout({"xaxis2": {"range": [0.0, len(training_loss)-1], "title": "epoch"}})
+    fig.update_layout({"xaxis2": {"range": [0.0, len(training_loss) - 1], "title": "epoch"}})
 
     return fig
 

@@ -25,7 +25,7 @@ from slub_docsa.models.clustering.scikit import ScikitClusteringModel
 from slub_docsa.models.clustering.dummy import RandomClusteringModel
 
 
-def default_qucosa_named_model_list() -> NamedClassificationModelTupleList:
+def default_qucosa_named_classification_model_list() -> NamedClassificationModelTupleList:
     """Return a list of default qucosa models to use for evaluating model performance."""
     models = [
         ("tfidf_2k_knn_k=1", lambda: ScikitClassifier(

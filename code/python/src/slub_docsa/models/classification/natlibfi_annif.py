@@ -205,8 +205,8 @@ class AnnifModel(ClassificationModel):
         """
         if len(train_documents) != train_targets.shape[0]:
             raise ValueError(
-                f"train documents size {len(train_documents)} does not match " +
-                f"incidence matrix shape {str(train_targets.shape)}"
+                f"train documents size {len(train_documents)} does not match "
+                + f"incidence matrix shape {str(train_targets.shape)}"
             )
 
         if self.subject_order is None:
@@ -228,7 +228,7 @@ class AnnifModel(ClassificationModel):
             if self.subject_hierarchy is None:
                 # create Annif subjects from subject order only (label info via subject hierarchy not available)
                 annif_subject_list = [
-                   AnnifSubject(uri=uri, label=uri, notation=None, text=None) for uri in self.subject_order
+                    AnnifSubject(uri=uri, label=uri, notation=None, text=None) for uri in self.subject_order
                 ]
             else:
                 # create Annif subjects with label info from subject hierarchy
@@ -335,7 +335,7 @@ class AnnifModel(ClassificationModel):
 
             if time.time() - last_info_time > 5:
                 last_info_time = time.time()
-                logger.info("predicted %d out of %d samples", i+1, len(test_documents))
+                logger.info("predicted %d out of %d samples", i + 1, len(test_documents))
 
         if np.min(probabilities) < 0.0:
             raise RuntimeError("some probabilities below 0.0")

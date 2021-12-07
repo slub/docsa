@@ -1,6 +1,6 @@
 """Common Tests."""
 
-from slub_docsa.common.paths import DATA_DIR
+from slub_docsa.common.paths import get_data_dir
 
 
 def test_trivial():
@@ -11,4 +11,4 @@ def test_trivial():
 
 def test_data_dir_not_empty():
     """Test that data dir is not empty."""
-    assert DATA_DIR
+    assert get_data_dir()

@@ -1,16 +1,12 @@
 """Methods that process documents."""
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, import-outside-toplevel
 
 import logging
 import os
 import functools
 
 from typing import Callable, Iterator, List
-
-from nltk.stem import SnowballStemmer
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 
 from sqlitedict import SqliteDict
 
@@ -83,6 +79,7 @@ def nltk_word_tokenize_text_function(lang_code: str) -> Callable[[str], List[str
     Callable[[str], List[str]]
         a function that tokenizes a text into a sequence of tokens using the nltk word tokenizer
     """
+    from nltk.tokenize import word_tokenize
     download_nltk("punkt")
     nltk_language = NLTK_LANGUAGE_CODES_MAP[lang_code]
 
@@ -110,6 +107,9 @@ def nltk_snowball_text_stemming_function(
     Callable[[str], str]
         a function that applies the nltk snowball stemmer to a text
     """
+    from nltk.stem import SnowballStemmer
+    from nltk.corpus import stopwords
+
     if lang_code not in NLTK_LANGUAGE_CODES_MAP:
         raise ValueError(f"language code '{lang_code}' not supported for stemming")
 

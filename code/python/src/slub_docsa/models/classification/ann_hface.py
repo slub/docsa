@@ -17,15 +17,13 @@ from transformers.models.auto.modeling_auto import AutoModelForSequenceClassific
 from transformers.training_args import TrainingArguments
 from transformers.trainer import Trainer
 
-from slub_docsa.common.paths import CACHE_DIR
+from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 logger = logging.getLogger(__name__)
-
-HUGGINGFACE_CACHE_DIR = os.path.join(CACHE_DIR, "huggingface")
 
 
 class _CustomTorchDataset(TorchDataset):
@@ -56,7 +54,7 @@ class HuggingfaceSequenceClassificationModel(ClassificationModel):
         model_identifier: str,
         epochs: int = 5,
         batch_size: int = 8,
-        cache_dir: str = HUGGINGFACE_CACHE_DIR,
+        cache_dir: str = None,
     ):
         """Initialize model.
 
@@ -79,6 +77,9 @@ class HuggingfaceSequenceClassificationModel(ClassificationModel):
         self.max_train_samples = 1000
         self.model: Optional[Module] = None
         self.trainer: Optional[Trainer] = None
+
+        if self.cache_dir is None:
+            self.cache_dir = os.path.join(get_cache_dir(), "huggingface")
 
         os.makedirs(self.cache_dir, exist_ok=True)
 

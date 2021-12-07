@@ -3,19 +3,23 @@
 Allows to train a classification model, persist it, and later classify new documents based on that model.
 """
 
-# pylint: disable=no-member, too-many-locals
+# pylint: disable=no-member, too-many-locals, too-many-branches, too-many-statements
 
 import argparse
 import logging
 import os
 import pickle  # nosec
 
-from slub_docsa.cli.common import add_logging_arguments, read_uft8_from_stdin, setup_logging_from_args
-from slub_docsa.cli.qucosa import available_qucosa_dataset_names, available_qucosa_model_names
-from slub_docsa.cli.qucosa import load_qucosa_dataset_by_name, load_qucosa_model_by_name
+from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments, read_uft8_from_stdin
+from slub_docsa.cli.common import setup_logging_from_args, setup_storage_directories
+from slub_docsa.cli.qucosa import available_qucosa_dataset_names, available_qucosa_classification_model_names
+from slub_docsa.cli.qucosa import load_qucosa_dataset_by_name, load_qucosa_classification_model_by_name
 from slub_docsa.common.dataset import SimpleDataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
+from slub_docsa.common.paths import get_cache_dir
+from slub_docsa.data.load.qucosa import read_qucosa_metadata_from_elasticsearch, _make_title_and_abstract_doc
+from slub_docsa.data.load.qucosa import _make_title_only_doc, _make_title_and_fulltext_doc
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
 logger = logging.getLogger(__name__)
@@ -39,26 +43,32 @@ def _classify_qucosa_subparser(parser: argparse.ArgumentParser):
 def _classify_qucosa_train_action(args):
     """Perform training for single model and single qucosa dataset variant."""
     setup_logging_from_args(args)
+    setup_storage_directories(args)
 
     dataset_name = args.dataset
     model_name = args.model
-    persist_path = args.persist
+    persist_dir = args.persist_dir
+    max_documents = args.limit
+
+    if persist_dir is None:
+        persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
 
     # load dataset and model
     logger.info("load dataset '%s'", dataset_name)
     dataset, _ = load_qucosa_dataset_by_name(dataset_name)
 
-    documents = [dataset.documents[i] for i in range(1000)]
-    subjects = [dataset.subjects[i] for i in range(1000)]
-
-    dataset = SimpleDataset(documents, subjects)
+    if max_documents is not None:
+        logger.info("use only the first %d examples for training", int(max_documents))
+        documents = [dataset.documents[i] for i in range(int(max_documents))]
+        subjects = [dataset.subjects[i] for i in range(int(max_documents))]
+        dataset = SimpleDataset(documents, subjects)
 
     subject_order = unique_subject_order(dataset.subjects)
     subject_incidence = subject_incidence_matrix_from_targets(dataset.subjects, subject_order)
     logger.info("dataset '%s' has %d unique subjects", dataset_name, len(subject_order))
 
     logger.info("load model '%s'", model_name)
-    model = load_qucosa_model_by_name(model_name)
+    model = load_qucosa_classification_model_by_name(model_name)
 
     if not isinstance(model, PersistableClassificationModel):
         logger.error("model '%s' is not persistable, abort", model_name)
@@ -67,43 +77,74 @@ def _classify_qucosa_train_action(args):
     logger.info("fit model '%s'", model_name)
     model.fit(dataset.documents, subject_incidence)
 
-    logger.info("persist model '%s' to disk at '%s'", model_name, persist_path)
-    model.save(persist_path)
+    logger.info("persist model '%s' to disk at '%s'", model_name, persist_dir)
+    model.save(persist_dir)
 
-    logger.info("persist subject order to disk at '%s'", persist_path)
-    with open(os.path.join(persist_path, "subject_order.pickle"), "wb") as file:
+    logger.info("persist subject order to disk at '%s'", persist_dir)
+    with open(os.path.join(persist_dir, "subject_order.pickle"), "wb") as file:
         pickle.dump(subject_order, file)
 
 
 def _classify_qucosa_predict_action(args):
     """Perform prediction for single qucosa dataset variant and model."""
     setup_logging_from_args(args)
+    setup_storage_directories(args)
 
     dataset_name = args.dataset
     model_name = args.model
-    persist_path = args.persist
+    persist_dir = args.persist_dir
     max_results = int(args.results)
-    text = read_uft8_from_stdin()
+    qucosa_id = args.id
 
-    document = Document(uri="stdin", title=None, fulltext=text)
+    if persist_dir is None:
+        persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
+
+    document = None
+    if qucosa_id is not None:
+        qucosa_metadata = next(iter(read_qucosa_metadata_from_elasticsearch(
+            query={"terms": {"_id": [qucosa_id]}}
+        )), None)
+        if qucosa_metadata is None:
+            raise ValueError(f"could not download/find qucosa document '{qucosa_id}'' on SLUB elastic search server")
+        if "titles" in dataset_name:
+            document = _make_title_only_doc(qucosa_metadata, "de")
+            if document is None:
+                raise ValueError("qucosa document does not provide german title, or title is too short")
+        if "abstracts" in dataset_name:
+            document = _make_title_and_abstract_doc(qucosa_metadata, "de")
+            if document is None:
+                raise ValueError("qucosa document does not provide german title and abstract")
+        if "fulltexts" in dataset_name:
+            document = _make_title_and_fulltext_doc(qucosa_metadata, "de")
+            if document is None:
+                raise ValueError("qucosa document does not provide german title and fulltext")
+        logger.info("predict subjects for document: %s", str(document))
+    else:
+        text = read_uft8_from_stdin()
+        if text is None:
+            raise ValueError("you need to provide some text as input via stdin")
+        document = Document(uri="stdin", title=None, fulltext=text)
+
+    if document is None:
+        raise ValueError("qucosa document not created succesfully, can't predict it")
 
     # load dataset and model
     logger.info("load dataset '%s'", dataset_name)
     _, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name)
 
-    logger.info("load subject order from disk at '%s'", persist_path)
-    with open(os.path.join(persist_path, "subject_order.pickle"), "rb") as file:
+    logger.info("load subject order from disk at '%s'", persist_dir)
+    with open(os.path.join(persist_dir, "subject_order.pickle"), "rb") as file:
         subject_order = pickle.load(file)  # nosec
 
     logger.info("load model '%s'", model_name)
-    model = load_qucosa_model_by_name(model_name)
+    model = load_qucosa_classification_model_by_name(model_name)
 
     if not isinstance(model, PersistableClassificationModel):
         logger.error("model '%s' is not persistable, abort", model_name)
         raise ValueError(f"model '{model_name}' is not persistable")
 
     # load persisted model and predict single document
-    model.load(persist_path)
+    model.load(persist_dir)
     probabilities = model.predict_proba([document])[0]
 
     # prepare predictions for output
@@ -122,6 +163,7 @@ def _classify_qucosa_predict_action(args):
 
 def _add_classify_qucosa_common_arguments(parser: argparse.ArgumentParser):
     """Add common arguments for classify qucosa train/predict commands."""
+    add_storage_directory_arguments(parser)
     parser.add_argument(
         "--dataset",
         "-d",
@@ -132,15 +174,13 @@ def _add_classify_qucosa_common_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--model",
         "-m",
-        help="which model variant to use for training: " + ", ".join(available_qucosa_model_names(True)),
+        help="which model variant to use for training: " + ", ".join(available_qucosa_classification_model_names(True)),
         default="tfidf 10k torch ann",
     )
 
     parser.add_argument(
-        "--persist",
-        "-p",
+        "--persist_dir",
         help="path to directory where model is saved",
-        required=True
     )
 
 
@@ -150,12 +190,24 @@ def _classify_qucosa_train_subparser(parser: argparse.ArgumentParser):
     add_logging_arguments(parser)
     _add_classify_qucosa_common_arguments(parser)
 
+    parser.add_argument(
+        "--limit",
+        "-l",
+        help="limit the number of training examples to this many examples",
+    )
+
 
 def _classify_qucosa_predict_subparser(parser: argparse.ArgumentParser):
     """Return sub-parser for classify qucosa predict command."""
     parser.set_defaults(func=_classify_qucosa_predict_action)
     add_logging_arguments(parser)
     _add_classify_qucosa_common_arguments(parser)
+
+    parser.add_argument(
+        "--id",
+        "-i",
+        help="predict subjects for qucosa document with id instead of text from stdin",
+    )
 
     parser.add_argument(
         "--results",

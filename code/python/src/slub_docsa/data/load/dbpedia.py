@@ -9,11 +9,9 @@ import urllib.request
 import urllib.parse
 import shutil
 
-from slub_docsa.common.paths import RESOURCES_DIR
+from slub_docsa.common.paths import get_resources_dir
 
 logger = logging.getLogger(__name__)
-
-RESOURCE_DIR = os.path.join(RESOURCES_DIR, "dbpedia")
 
 
 def _get_dbpedia_download_url(lang_code):
@@ -21,16 +19,20 @@ def _get_dbpedia_download_url(lang_code):
     return f"https://databus.dbpedia.org/dbpedia/text/short-abstracts/2020.07.01/{filename}"
 
 
-def _get_dbpedia_abstracts_filepath(lang_code):
-    return os.path.join(RESOURCE_DIR, f"short-abstracts_lang={lang_code}.ttl.bz2")
+def _get_dbpedia_abstracts_filepath(lang_code, dbpedia_resources_dir: str = None):
+    if dbpedia_resources_dir is None:
+        dbpedia_resources_dir = os.path.join(get_resources_dir(), "dbpedia")
+    return os.path.join(dbpedia_resources_dir, f"short-abstracts_lang={lang_code}.ttl.bz2")
 
 
-def _download_dbpedia_abstracts(lang_code: str, filepath: str = None):
+def _download_dbpedia_abstracts(lang_code: str, filepath: str = None, dbpedia_resources_dir: str = None):
     # create resources dir if not exists
-    os.makedirs(RESOURCE_DIR, exist_ok=True)
+    if dbpedia_resources_dir is None:
+        dbpedia_resources_dir = os.path.join(get_resources_dir(), "dbpedia")
+    os.makedirs(dbpedia_resources_dir, exist_ok=True)
 
     if filepath is None:
-        filepath = _get_dbpedia_abstracts_filepath(lang_code)
+        filepath = _get_dbpedia_abstracts_filepath(lang_code, dbpedia_resources_dir)
 
     if not os.path.exists(filepath):
         logging.info("downloading dbpedia abstracts, this may take a while ... ")
@@ -49,8 +51,8 @@ def read_dbpedia_abstracts(lang_code: str, limit=None, filepath: str = None) -> 
     limit: int | None
         The maximum number of abstracts to return. Returns all abstracts if None.
     filepath: str | None
-        The path to the dbpedia abstracts resource file. Is set to a default path relative to the
-        `slub_docsa.common.paths.RESOURCES_DIR` if set to None.
+        The path to the dbpedia abstracts resource file. Is set automatically relative to the
+        `<resources_dir>/dbpedia/` directory if set to None.
         File will be downloaded unless it already exists.
 
     Returns

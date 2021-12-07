@@ -112,7 +112,7 @@ def scikit_metric_for_best_threshold_based_on_f1score(
         best_score = -1
         best_threshold = None
         best_incidence = np.zeros((2, 2))
-        for threshold in [i/10.0 + 0.1 for i in range(9)]:
+        for threshold in [i / 10.0 + 0.1 for i in range(9)]:
             score = scikit_incidence_metric(
                 threshold_incidence_decision(threshold),
                 f1_score,
@@ -224,6 +224,8 @@ def cesa_bianchi_h_loss(
             subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
             incidence_list: Sequence[int],
     ) -> str:
+        if subject_order is None:
+            raise ValueError("can't find ancestor without subject order")
         subject_node = subject_hierarchy[subject_uri]
         ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
         previous_ancestor = ancestors[-1]

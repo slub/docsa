@@ -9,7 +9,7 @@ import numpy as np
 
 from scipy.spatial.distance import cosine
 from sklearn.cluster import KMeans
-from slub_docsa.common.paths import FIGURES_DIR
+from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, subject_label_breadcrumb
 from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments, unique_subject_order
 from slub_docsa.evaluation.plotting import cluster_distribution_by_subject_plot, subject_distribution_by_cluster_plot
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     max_documents = 5000
     n_clusters = 50
 
-    _, dataset, subject_hierarchy = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_rvk"]))[0]
+    _, dataset, subject_hierarchy = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_ddc"]))[0]
     vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
 
     sampled_idx = np.random.choice(range(len(dataset.documents)), size=max_documents, replace=False)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         subject_labels,
     )
 
-    write_multiple_figure_formats(fig, os.path.join(FIGURES_DIR, "qucosa/subject_distribution_by_cluster"))
+    write_multiple_figure_formats(fig, os.path.join(get_figures_dir(), "qucosa/subject_distribution_by_cluster"))
 
     fig = cluster_distribution_by_subject_plot(
         cluster_assignments,
@@ -74,4 +74,4 @@ if __name__ == "__main__":
         subject_labels,
     )
 
-    write_multiple_figure_formats(fig, os.path.join(FIGURES_DIR, "qucosa/cluster_distribution_by_subject"))
+    write_multiple_figure_formats(fig, os.path.join(get_figures_dir(), "qucosa/cluster_distribution_by_subject"))

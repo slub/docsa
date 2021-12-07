@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 from slub_docsa.common.dataset import dataset_from_samples
 
-from slub_docsa.common.paths import ANNIF_DIR
+from slub_docsa.common.paths import get_annif_dir
 from slub_docsa.data.load.qucosa import read_qucosa_samples, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
@@ -46,17 +46,17 @@ if __name__ == "__main__":
     rvk_labels = {uri: rvk_hierarchy[uri].label for uri in subject_order}
 
     # create experiment directory
-    os.makedirs(os.path.join(ANNIF_DIR, "comparison_experiment"), exist_ok=True)
+    os.makedirs(os.path.join(get_annif_dir(), "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")
     save_subject_labels_as_annif_tsv(
         rvk_labels,
-        os.path.join(ANNIF_DIR, "comparison_experiment/subjects.tsv"),
+        os.path.join(get_annif_dir(), "comparison_experiment/subjects.tsv"),
     )
 
     logger.info("save flat subject labels as skos turtle file")
     rvk_flat_graph = subject_labels_to_skos_graph(rvk_labels, LANG_CODE)
-    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.flat.ttl"), "wb") as f:
+    with open(os.path.join(get_annif_dir(), "comparison_experiment/subjects.flat.ttl"), "wb") as f:
         f.write(cast(bytes, rvk_flat_graph.serialize(format="turtle")))
 
     logger.info("save subject hierarchy as skos turtle file")
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         lang_code=LANG_CODE,
         mandatory_subject_list=subject_order
     )
-    with open(os.path.join(ANNIF_DIR, "comparison_experiment/subjects.hierarchical.ttl"), "wb") as f:
+    with open(os.path.join(get_annif_dir(), "comparison_experiment/subjects.hierarchical.ttl"), "wb") as f:
         f.write(cast(bytes, rvk_skos_graph.serialize(format="turtle")))
 
     # split data to fixed train and test set
@@ -81,12 +81,12 @@ if __name__ == "__main__":
     logger.info("save training data as Annif TSV file")
     save_dataset_as_annif_tsv(
         training_dataset,
-        os.path.join(ANNIF_DIR, "comparison_experiment/training_data.tsv"),
+        os.path.join(get_annif_dir(), "comparison_experiment/training_data.tsv"),
     )
     logger.info("save test data as Annif TSV file")
     save_dataset_as_annif_tsv(
         test_dataset,
-        os.path.join(ANNIF_DIR, "comparison_experiment/test_data.tsv"),
+        os.path.join(get_annif_dir(), "comparison_experiment/test_data.tsv"),
     )
 
     logger.info("fit Annif model with training data")
