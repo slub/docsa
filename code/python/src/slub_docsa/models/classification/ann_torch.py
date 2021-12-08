@@ -351,7 +351,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         with open(model_shape_path, "rb") as file:
             self.model_shape = pickle.load(file)  # nosec
         self.model = self.get_model(*self.model_shape)
-        self.model.load_state_dict(torch.load(model_state_path))
+        self.model.load_state_dict(torch.load(model_state_path, map_location=torch.device(self.device)))
         self.model.to(self.device)
 
         logger.info("load vectorizer from %s", persist_dir)
