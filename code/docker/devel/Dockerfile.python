@@ -20,6 +20,7 @@ ENV PATH="/home/slub/.venv/bin:$PATH"
 COPY Makefile /home/slub/workspace/Makefile
 COPY README.md /home/slub/workspace/README.md
 COPY code/python/setup.py /home/slub/workspace/code/python/setup.py
+RUN mkdir /home/slub/workspace/code/python/src
 RUN cd /home/slub/workspace && make install-dev
 
 # copy custom screenrc for convenience
