@@ -127,7 +127,8 @@ class AnnifModel(ClassificationModel):
         lang_code: str,
         subject_order: Sequence[str] = None,
         subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
-        data_dir: str = None
+        data_dir: str = None,
+        max_document_length: int = 10000
     ):
         """Initialize model with a Annif model type identifier and data directory.
 
@@ -138,6 +139,8 @@ class AnnifModel(ClassificationModel):
         data_dir: str | None
             The directory Annif will store temporary files, e.g., trained models.
             If it is None, a temporary directory is created and deleted as soon as the model instance is deleted.
+        max_document_length: int | None
+            Reduces the document to a maximum length of this many characters if set
         """
         self.model_type = model_type
         self.lang_code = lang_code
@@ -145,6 +148,7 @@ class AnnifModel(ClassificationModel):
         self.subject_order = subject_order
         self.subject_skos_graph = None
         self.data_dir = data_dir
+        self.max_document_length = max_document_length
         self.temporary_directory = None
         self.analyzer = None
         self.n_unique_subject = None
@@ -157,7 +161,8 @@ class AnnifModel(ClassificationModel):
 
     def __str__(self):
         """Return string describing the Annif model and its parameters used for predictions."""
-        return f"<AnnifModel type='{self.model_type}' lang_code='{self.lang_code}'>"
+        return f"<AnnifModel type='{self.model_type}' lang_code='{self.lang_code}' " \
+            + f"max_document_length={self.max_document_length}>"
 
     def _init_analyzer(self):
         download_nltk("punkt")
@@ -247,7 +252,7 @@ class AnnifModel(ClassificationModel):
         # define corpus
         annif_document_list = [
             AnnifDocument(
-                text=document_as_concatenated_string(d),
+                text=document_as_concatenated_string(d, max_length=self.max_document_length),
                 uris=train_subject_targets[i],
                 labels=None
             )
@@ -323,7 +328,7 @@ class AnnifModel(ClassificationModel):
 
         for i, doc in enumerate(test_documents):
 
-            results = self.model.suggest(document_as_concatenated_string(doc))
+            results = self.model.suggest(document_as_concatenated_string(doc, max_length=self.max_document_length))
             annif_score_vector = results.as_vector(self.project.subjects)
 
             for j in range(self.n_unique_subject):
