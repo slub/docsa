@@ -111,13 +111,13 @@ Model variants are distinguished by:
 
 ### Train a Model
 
-Let's train a model using a the Qucosa data variant `qucosa_de_fulltexts_langid_rvk` and the classification model
-`dbmdz_bert_sts1_torch_ann`.
+Let's train a model using a the Qucosa data variant `qucosa_de_titles_langid_rvk` and the classification model
+`tfidf_10k_torch_ann`.
 
 ```
 slub_docsa classify qucosa train \\
-    -d qucosa_de_fulltexts_langid_rvk \\
-    -m dbmdz_bert_sts1_torch_ann
+    -d qucosa_de_titles_langid_rvk \\
+    -m tfidf_10k_torch_ann
 ```
 
 A number of task are performed:
@@ -144,16 +144,26 @@ Note that:
 Arbitrary text can be classified by providing it as input to the command:
 
 ```
-echo "Some text that is being classified" | slub_docsa classify qucosa predict \\
-    -d qucosa_de_fulltexts_langid_rvk \\
-    -m dbmdz_bert_sts1_torch_ann
+echo "Verkehrsplanung" | slub_docsa classify qucosa predict \\
+    -d qucosa_de_titles_langid_rvk \\
+    -m tfidf_10k_torch_ann
 ```
 
 The output will be a lot of log messages reporting the progress (which can be silenced via `-s`) and the final
 prediction results consisting of the score, the subject URI and its label (if available):
 
 ```
-TODO TODO TODO
+0.9997003 https://rvk.uni-regensburg.de/api/xml/node/QR%20800 Allgemeines
+0.9934012 https://rvk.uni-regensburg.de/api/xml/node/ZO%203300 Verkehrsmittel;  Verkehrsmittelwahl
+0.02613362 https://rvk.uni-regensburg.de/api/xml/node/QR%20800%20-%20QR%20870 Verkehrswesen
+0.0009589965 https://rvk.uni-regensburg.de/api/xml/node/ZO%204620 Verkehrsleitsysteme, Telematik im Stra?enverkehr
+0.00043443392 https://rvk.uni-regensburg.de/api/xml/node/QR%20860 Stadtverkehrsprobleme
+0.00036961303 https://rvk.uni-regensburg.de/api/xml/node/MS Spezielle Soziologien
+0.00018879405 https://rvk.uni-regensburg.de/api/xml/node/AR%2022240 Wasserhygiene, Gew?sserschutz, Gew?ssersanierung
+0.00012006318 https://rvk.uni-regensburg.de/api/xml/node/NZ%2013380 Einzelne Pers?nlichkeiten (alph.)
+9.0069545e-05 https://rvk.uni-regensburg.de/api/xml/node/QR%20760 Neue Medien. Online-Dienste (Internet u. a.)
+8.523816e-05 https://rvk.uni-regensburg.de/api/xml/node/WQ%203600 Pterygota (Fluginsekten), Palaeoptera (Altfl?gler), \
+Neoptera (Neufl?gler), Polyneoptera
 ```
 
 ### Predict based on A New Qucosa Document
@@ -163,28 +173,25 @@ parameter:
 
 ```
 slub_docsa classify qucosa predict \\
-    -i "oai:qucosa:de:qucosa:21723" \\
-    -m dbmdz_bert_sts1_torch_ann \\
-    -d qucosa_de_fulltexts_langid_rvk
+    -i "oai:qucosa:de:qucosa:74587" \\
+    -d qucosa_de_titles_langid_rvk \\
+    -m tfidf_10k_torch_ann
 ```
 
 Similar to before, the output will consist of a sorted list of subject predictions:
 
 ```
-0.7393395 https://rvk.uni-regensburg.de/api/xml/node/UF Mechanik, Kontinuumsmechanik, Str?mungsmechanik, \
-Schwingungslehre
-0.09655364 https://rvk.uni-regensburg.de/api/xml/node/ZI%207100 Massivbau
-0.018514823 https://rvk.uni-regensburg.de/api/xml/node/ST%20320%20-%20ST%20690 Einzelne Anwendungen der \
-Datenverarbeitung
-0.0025747041 https://rvk.uni-regensburg.de/api/xml/node/ZM%203500%20-%20ZM%203900 Werkstoffpr?fung allgemein
-0.0015783093 https://rvk.uni-regensburg.de/api/xml/node/ZI%204000%20-%20ZI%204960 Bauphysik, Baustoffe, Bausch?den
-0.0013172389 https://rvk.uni-regensburg.de/api/xml/node/UP%207500 Allgemeines
-0.00043334285 https://rvk.uni-regensburg.de/api/xml/node/ZI%204500%20-%20ZI%204530 Beton
-0.00021226388 https://rvk.uni-regensburg.de/api/xml/node/ZL%204100%20-%20ZL%204180 Getriebetechnik, Getriebe
-0.0001846007 https://rvk.uni-regensburg.de/api/xml/node/ZS Handwerk, Feinwerktechnik, Holztechnik, Papiertechnik, \
-Textiltechnik und sonstige Technik
-0.00015280316 https://rvk.uni-regensburg.de/api/xml/node/ZM%207020%20-%20ZM%207029 Verbundwerkstoffe, Faserverst?rkte \
-Werkstoffe
+0.9923579 https://rvk.uni-regensburg.de/api/xml/node/ZO%204000%20-%20ZO%204999 Stra?enverkehr
+0.0031882976 https://rvk.uni-regensburg.de/api/xml/node/ZG%209148 Technische Formgebung (Industrial Design)
+2.399958e-05 https://rvk.uni-regensburg.de/api/xml/node/DO Spezialfragen des gesamten Schulsystems
+1.9707892e-05 https://rvk.uni-regensburg.de/api/xml/node/ZC%2055000%20-%20ZC%2056900 Obstarten
+6.9052834e-07 https://rvk.uni-regensburg.de/api/xml/node/DK%201061 Sachsen
+6.7059597e-07 https://rvk.uni-regensburg.de/api/xml/node/ZO%204875 Unfallforschung im Stra?enverkehr
+6.6172976e-07 https://rvk.uni-regensburg.de/api/xml/node/ZO%204340 Fahrr?der
+4.6475782e-07 https://rvk.uni-regensburg.de/api/xml/node/QP%20500%20-%20QP%20550 Produktion. Beschaffung und \
+Lagerhaltung
+3.3459614e-07 https://rvk.uni-regensburg.de/api/xml/node/AL%2047000%20-%20AL%2048450 Soziales und Freizeit
+1.4508818e-07 https://rvk.uni-regensburg.de/api/xml/node/QA%2010000 Zeitschriften
 ```
 
 ## Evaluate and Compare Multiple Models and Datasets
@@ -256,6 +263,60 @@ In addition, the following scores are calculated based on subject probabilties:
 
 ### Clustering Experiments
 
+Clustering models are either evaluated in comparison to each other, or one at a time.
 
+```
+slub_docsa experiments qucosa cluster_many -h
+```
+
+```
+usage: slub_docsa experiments qucosa cluster_many [-h] [-v] [-s]
+                                                  [--datasets DATASETS [DATASETS ...]]
+                                                  [--models MODELS [MODELS ...]]
+                                                  [--repeats REPEATS]
+                                                  [--limit LIMIT]
+...
+  --models MODELS [MODELS ...], -m MODELS [MODELS ...]
+                        a list of clustering models to evaluate: random_c=20,
+                        random_c=subjects, tfidf_10k_kMeans_c=20,
+                        tfidf_10k_kMeans_c=subjects,
+                        tfidf_10k_agg_sl_cosine_c=subjects,
+                        tfidf_10k_agg_sl_eucl_c=subjects,
+                        tfidf_10k_agg_ward_eucl_c=subjects, bert_kMeans_c=20,
+                        bert_kMeans_c=subjects,
+                        bert_kMeans_agg_sl_eucl_c=subjects,
+                        bert_kMeans_agg_ward_eucl_c=subjects
+```
+
+```
+slub_docsa experiments qucosa cluster_many \\
+    -d qucosa_de_titles_langid_rvk qucosa_de_abstracts_langid_rvk qucosa_de_fulltexts_langid_rvk \\
+    -m random_c=20 tfidf_10k_kMeans_c=20 -r 1
+```
+
+Resulting plots is `slub_docsa.evaluation.plotting.score_matrices_box_plot` with several scores, see
+[Clustering Evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation):
+
+- `mutual info` - comparing clusters to true labels by measuring the degree of agreement betwen the two assignments
+- `rand` - a measure calculated by counting how many cluster assignments match true labels
+- `homogeneity` and `completeness` - measuring whether a cluster only contains members of a single subject vs. whether
+  all documents of a subject are assigned to the same cluster
+- `intra cluster tfidf cosine` - measures the average distance between two documents of the same cluster
+
+
+In order to get a better understanding of how well clusters match true subjects, the following commands allows to
+generate interactive plots that allow to explore which documents are assigned to which clusters and are associated with
+certain subjects:
+
+```
+slub_docsa experiments qucosa cluster_one \\
+    -d qucosa_de_titles_langid_rvk \\
+    -m tfidf_10k_kMeans_c=20
+```
+
+The resulting plots are:
+
+- `slub_docsa.evaluation.plotting.subject_distribution_by_cluster_plot`
+- `slub_docsa.evaluation.plotting.cluster_distribution_by_subject_plot`
 
 """

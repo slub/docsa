@@ -142,7 +142,7 @@ def qucosa_named_datasets(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     # loads all data sets and generates persistent storage for them
     for dn, ds, _ in qucosa_named_datasets():
