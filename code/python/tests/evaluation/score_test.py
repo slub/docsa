@@ -26,7 +26,7 @@ def test_cesa_bianchi_h_loss():
         "uri://subject6",
     ]
 
-    subject_hierarchy: SubjectHierarchy[SubjectNode] = {
+    subject_hierarchy: SubjectHierarchy = {
         "uri://subject1": SubjectNode(uri="uri://subject1", label="subject 1", parent_uri=None),
         "uri://subject2": SubjectNode(uri="uri://subject2", label="subject 2", parent_uri=None),
         "uri://subject3": SubjectNode(uri="uri://subject3", label="subject 3", parent_uri="uri://subject2"),
