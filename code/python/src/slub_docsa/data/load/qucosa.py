@@ -55,6 +55,20 @@ QUCOSA_LANGUAGE_CODE_MAP = {
 """Mapping between two-letter language codes and 3-letter language abbrevations used in qucosa json documents."""
 
 
+def _initialize_elasticsearch_connection(
+    host: str = SLUB_ELASTICSEARCH_SERVER_URL,
+    http_auth: Optional[Tuple[str, str]] = None,
+):
+    if http_auth is None and \
+            SLUB_ELASTICSEARCH_SERVER_USER is not None and \
+            SLUB_ELASTICSEARCH_SERVER_PASSWORD is not None:
+        http_auth = (SLUB_ELASTICSEARCH_SERVER_USER, SLUB_ELASTICSEARCH_SERVER_PASSWORD)
+
+    return Elasticsearch([
+        {"host": host, "use_ssl": True, "port": 443}
+    ], http_auth=http_auth)
+
+
 def read_qucosa_metadata_from_elasticsearch(
     host: str = SLUB_ELASTICSEARCH_SERVER_URL,
     http_auth: Optional[Tuple[str, str]] = None,
@@ -89,14 +103,7 @@ def read_qucosa_metadata_from_elasticsearch(
     Iterable[QucosaJsonDocument]
         The documents retrieved from the ElasticSearch index.
     """
-    if http_auth is None and \
-            SLUB_ELASTICSEARCH_SERVER_USER is not None and \
-            SLUB_ELASTICSEARCH_SERVER_PASSWORD is not None:
-        http_auth = (SLUB_ELASTICSEARCH_SERVER_USER, SLUB_ELASTICSEARCH_SERVER_PASSWORD)
-
-    es_server = Elasticsearch([
-        {"host": host, "use_ssl": True, "port": 443}
-    ], http_auth=http_auth)
+    es_server = _initialize_elasticsearch_connection(host, http_auth)
 
     if query is None:
         query = {"match_all": {}}
@@ -120,6 +127,33 @@ def read_qucosa_metadata_from_elasticsearch(
         # do next request
         last_request = time.time()
         results = es_server.scroll(scroll_id=scroll_id, scroll=scroll_timeout)
+
+
+def number_of_qucosa_metadata_in_elasticsearch(
+    host: str = SLUB_ELASTICSEARCH_SERVER_URL,
+    http_auth: Optional[Tuple[str, str]] = None,
+    index_name: str = "fulltext_qucosa",
+) -> int:
+    """Return the number of qucosa documents currently available at the SLUB elastic search server.
+
+    Parameters
+    ----------
+    host: str = SLUB_ELASTICSEARCH_SERVER_URL
+        The hostname of the ElasticSearch server
+    http_auth: Optional[Tuple[str, str]]
+        Http basic auth parameters as tuple of username and password. If http_auth is None, but environment variables
+        `SLUB_ELASTICSEARCH_SERVER_USER` and `SLUB_ELASTICSEARCH_SERVER_PASSWORD` are set, then these are used as
+        username and password.
+    index_name: str = "fulltext_qucosa"
+        The name of the ElasticSearch index to be queried.
+
+    Returns
+    -------
+    int
+        the number of qucosa documents
+    """
+    es_server = _initialize_elasticsearch_connection(host, http_auth)
+    return es_server.count(index=index_name, body={"query": {"match_all": {}}})["count"]
 
 
 def save_qucosa_documents_to_directory(
@@ -182,6 +216,7 @@ def save_qucosa_documents_to_directory(
 def read_qucosa_documents_from_directory(
     directory: str = None,
     fallback_retrieve_from_elasticsearch: bool = True,
+    check_elasticsearch_document_count: bool = False,
 ) -> Iterable[QucosaJsonDocument]:
     """Read qucosa documents from a directory of gzip compressed jsonl files.
 
@@ -192,6 +227,9 @@ def read_qucosa_documents_from_directory(
     fallback_retrieve_from_elasticsearch: bool = True
         If true will try to download and save qucosa documents from SLUB elasticsearch server unless directory
         already exists.
+    check_elasticsearch_document_count: bool = False
+        If true, will query the SLUB elastic search server for the current amount of qucos documents and compare
+        that to the number of documents stored on disc; it they do not match, a warning message is printed
 
     Returns
     -------
@@ -204,6 +242,20 @@ def read_qucosa_documents_from_directory(
         logger.info("qucosa directory does not exist, try to read and save documents from SLUB elasticsearch")
         qucosa_document_iterator = read_qucosa_metadata_from_elasticsearch()
         save_qucosa_documents_to_directory(qucosa_document_iterator, directory)
+    if os.path.exists(directory) and check_elasticsearch_document_count:
+        es_count = number_of_qucosa_metadata_in_elasticsearch()
+        logger.debug("SLUB elastic search index contains %d qucosa documents", es_count)
+        dir_count = 0
+        for entry in os.scandir(directory):
+            if entry.is_file():
+                with gzip.open(entry.path, "r") as f_jsonl:
+                    dir_count += sum(1 for line in f_jsonl)
+        logger.debug("downloaded qucosa json files contain %d qucosa documents", dir_count)
+        if dir_count != es_count:
+            logger.warning(
+                "number of downloaded qucosa documents (%d) does not match SLUB elastic search server (%d)",
+                dir_count, es_count
+            )
 
     if not os.path.exists(directory):
         raise ValueError(f"directory '{directory}' does not exist" % directory)
