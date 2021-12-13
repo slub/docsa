@@ -16,8 +16,8 @@ import rdflib
 from lxml import etree  # nosec
 from rdflib.namespace import SKOS
 from slub_docsa.common.paths import get_resources_dir, get_cache_dir
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
-from slub_docsa.data.store.subject import SubjectHierarchyDbmStore
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
+from slub_docsa.data.store.subject import SubjectHierarchySqliteStore
 from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def _get_rvk_xml_filepath():
 
 def _get_rvk_subject_store_path():
     """Return filepath where processed RVK hierarchy is stored as cache."""
-    return os.path.join(get_cache_dir(), "rvk/rvk_store.dbm")
+    return os.path.join(get_cache_dir(), "rvk/rvk_store.sqlite")
 
 
 def _get_annif_tsv_filepath():
@@ -173,7 +173,7 @@ def get_rvk_subject_store(
     depth: int = None,
     download_url: str = RVK_XML_URL,
     xml_filepath: str = None,
-) -> SubjectHierarchyType[RvkSubjectNode]:
+) -> SubjectHierarchy:
     """Store all RVK classes in a dictionary indexed by notation.
 
     Parameters
@@ -189,7 +189,7 @@ def get_rvk_subject_store(
 
     Returns
     -------
-    SubjectHierarchyType[RvkSubjectNode]
+    SubjectHierarchy
         The RVK subject hierarchy loaded from the filepath
     """
     if store_filepath is None:
@@ -199,27 +199,29 @@ def get_rvk_subject_store(
     if not os.path.exists(store_filepath):
         logger.debug("create and fill RVK subject store (may take some time)")
         os.makedirs(os.path.dirname(store_filepath), exist_ok=True)
-        store = SubjectHierarchyDbmStore[RvkSubjectNode](store_filepath, read_only=False)
+        store = SubjectHierarchySqliteStore(store_filepath, read_only=False, autocommit=False)
 
         for i, rvk_subject in enumerate(read_rvk_subjects(depth, download_url, xml_filepath)):
             store[rvk_subject.uri] = rvk_subject
             if i % 10000 == 0:
+                store.commit()
                 logger.debug("Added %d RVK subjects to store so far", i)
 
+        store.commit()
         store.close()
 
-    return SubjectHierarchyDbmStore[RvkSubjectNode](store_filepath, read_only=True)
+    return SubjectHierarchySqliteStore(store_filepath)
 
 
 def convert_rvk_classes_to_annif_tsv(
-    rvk_subject_hierarchy: SubjectHierarchyType[RvkSubjectNode],
+    rvk_subject_hierarchy: SubjectHierarchy,
     tsv_filepath: str = None,
 ):
     """Convert RVK classes to tab-separated values file required by Annif.
 
     Parameters
     ----------
-    rvk_subject_hierarchy: SubjectHierarchyType[RvkSubjectNode]
+    rvk_subject_hierarchy: SubjectHierarchy
         The RVK subject hierarchy as loaded via e.g. `get_rvk_subject_store`
     tsv_filepath: str = RVK_ANNIF_TSV_FILE_PATH,
         The path to a file where RVK subjects are stored in tab-separated format

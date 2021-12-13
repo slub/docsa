@@ -6,7 +6,7 @@ from typing import List, Sequence, cast
 import numpy as np
 from slub_docsa.common.score import IncidenceDecisionFunctionType
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectTargets, SubjectUriList
+from slub_docsa.common.subject import SubjectHierarchy, SubjectTargets, SubjectUriList
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
 logger = logging.getLogger(__name__)
@@ -177,7 +177,7 @@ def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionTy
 
 
 def extend_incidence_list_to_ancestors(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
     subject_order: Sequence[str],
     incidence_list: Sequence[int],
 ) -> Sequence[int]:
@@ -187,7 +187,7 @@ def extend_incidence_list_to_ancestors(
 
     Parameters
     ----------
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         the subject hierarchy that is used to infer ancestor subjects
     subject_order: Sequence[str]
         the subject order that is used to infer which subject is references by which position in the incidence list

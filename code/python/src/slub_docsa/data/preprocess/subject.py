@@ -4,30 +4,30 @@ import logging
 
 from typing import List, Mapping, Set
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectTargets, SubjectUriList
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode, SubjectTargets, SubjectUriList
 
 logger = logging.getLogger(__name__)
 
 
 def subject_ancestors_list(
-    subject: SubjectNodeType,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
-) -> List[SubjectNodeType]:
+    subject: SubjectNode,
+    subject_hierarchy: SubjectHierarchy,
+) -> List[SubjectNode]:
     """Return the list of ancestors for a subject node in a subject hierarchy (including the subject itself).
 
     Parameters
     ----------
-    subject: SubjectNodeType
+    subject: SubjectNode
         the subjet whose ancestors are being returned
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         the subject hierarchy which is being searched for ancestors of the specified subject
 
     Returns
     -------
-    List[SubjectNodeType]
+    List[SubjectNode]
         the list of ancestors (starting with the root ancestors, ending with and including the subject itself)
     """
-    ancestors: List[SubjectNodeType] = []
+    ancestors: List[SubjectNode] = []
     next_subject = subject
 
     while next_subject is not None:
@@ -41,24 +41,24 @@ def subject_ancestors_list(
 
 
 def subject_siblings_list(
-    subject_node: SubjectNodeType,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
-) -> List[SubjectNodeType]:
+    subject_node: SubjectNode,
+    subject_hierarchy: SubjectHierarchy,
+) -> List[SubjectNode]:
     """Return the list of siblings for a subject node in a subject hierarchy.
 
     Parameters
     ----------
-    subject_node: SubjectNodeType
+    subject_node: SubjectNode
         the subject whose siblings are being returned
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         the subject hierarchy that is searched for siblings of the specified subject
 
     Returns
     -------
-    List[SubjectNodeType]
+    List[SubjectNode]
         the list of siblings in arbitrary order, including the subject itself
     """
-    siblings: List[SubjectNodeType] = []
+    siblings: List[SubjectNode] = []
 
     for siblings_node in subject_hierarchy.values():
         if siblings_node.parent_uri == subject_node.parent_uri:
@@ -68,16 +68,16 @@ def subject_siblings_list(
 
 
 def subject_label_breadcrumb(
-    subject: SubjectNodeType,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject: SubjectNode,
+    subject_hierarchy: SubjectHierarchy,
 ) -> str:
     """Return a label breadcrumb as a string describing the subject hierarchy path from root to this subject.
 
     Parameters
     ----------
-    subject: SubjectNodeType
+    subject: SubjectNode
         the subject whose ancestor path (breadcrumb) is supposed to be returned
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         the subject hierarchy that is searched for ancestors of the specified subject
 
     Returns
@@ -92,7 +92,7 @@ def subject_label_breadcrumb(
 def prune_subject_uri_to_level(
     level: int,
     subject_uri: str,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
 ) -> str:
     """Return the ancestor subject uri at a specific hierarchy level.
 
@@ -102,7 +102,7 @@ def prune_subject_uri_to_level(
         The level at which to return a ancestor subject uri. Level 1 is the root level.
     subject_uri: str
         The uri of the subject that is supposed to be pruned, i.e., replaced by a ancestor subject
-    subject_hierarchy: SubjectHierarchyType
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy used for pruning
 
     Returns
@@ -128,7 +128,7 @@ def prune_subject_uri_to_level(
 def prune_subject_uris_to_level(
     level: int,
     subjects: SubjectUriList,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy,
 ) -> SubjectUriList:
     """Prune a list of subjects to a specified hierarchy level.
 
@@ -140,7 +140,7 @@ def prune_subject_uris_to_level(
         The level at which to return a ancestor subject uri. Level 1 is the root level.
     subjects: SubjectUriList
         The list of subjects to be pruned to the specified hierarchy level
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy that contains the required subject relationships
 
     Returns
@@ -154,7 +154,7 @@ def prune_subject_uris_to_level(
 def prune_subject_targets_to_level(
     level: int,
     subject_target_list: SubjectTargets,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy,
 ) -> SubjectTargets:
     """Prune all subjects of a subject list to the specified hierarchy level.
 
@@ -167,7 +167,7 @@ def prune_subject_targets_to_level(
         The level at which to return a ancestor subject uri. Level 1 is the root level.
     subject_target_list: SubjectTargets
         The list of subject lists to be pruned to the specified hierarchy level
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy that contains the required subject relationships
 
     Returns
@@ -201,13 +201,13 @@ def count_number_of_samples_by_subjects(subject_targets: SubjectTargets) -> Mapp
 
 
 def children_map_from_subject_hierarchy(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
 ) -> Mapping[str, Set[str]]:
     """Return a set of children subjects for each parent subject in a subject hierarchy.
 
     Parameters
     ----------
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy to be scanned for parent-child relationships
 
     Returns
@@ -230,7 +230,7 @@ def children_map_from_subject_hierarchy(
 def prune_subject_uris_to_parent(
     subject_uris: SubjectUriList,
     to_be_pruned_subjects: Set[str],
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
 ) -> SubjectUriList:
     """Replace subject uris with uri of parent subject for those that are supposed to be pruned.
 
@@ -243,7 +243,7 @@ def prune_subject_uris_to_parent(
         the list of subjects that is scanned for subjects that are supposed to be pruned
     to_be_pruned_subjects: Set[str]
         the list of subjects that is supposed to be replaced with their parent subjects
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy that contains the required subject relationships
 
     Returns
@@ -267,7 +267,7 @@ def prune_subject_uris_to_parent(
 def prune_subject_targets_to_parent(
     subject_targets: SubjectTargets,
     to_be_pruned_subjects: Set[str],
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
 ) -> SubjectTargets:
     """Replace subject uris in target list with uri of parent subject for those that are supposed to be pruned.
 
@@ -280,7 +280,7 @@ def prune_subject_targets_to_parent(
         the list of subject lists that is scanned for subjects that are supposed to be pruned
     to_be_pruned_subjects: Set[str]
         the list of subjects that is supposed to be replaced with their parent subjects
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy that contains the required subject relationships
 
     Returns
@@ -296,7 +296,7 @@ def prune_subject_targets_to_parent(
 def prune_subject_targets_to_minimum_samples(
     minimum_samples: int,
     subject_targets: SubjectTargets,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
 ) -> SubjectTargets:
     """Prune subject targets such that subjects with insufficient samples are replaced with their parents.
 
@@ -309,7 +309,7 @@ def prune_subject_targets_to_minimum_samples(
         minimum number of required samples for subjects to be considered of acceptable size
     subject_targets: SubjectTargets
         subject targets that are checked for their number of samples, and modified if necessary (not in-place)
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         The subject hierarchy that contains the required subject relationships
 
     Returns

@@ -3,16 +3,15 @@
 import logging
 import os
 
-from typing import Any, Callable, Iterator, List, Tuple, Union
+from typing import Callable, Iterator, List, Tuple, Union
 from typing_extensions import Literal
 
 from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_from_dataset
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.sample import Sample
-from slub_docsa.common.subject import SubjectHierarchyType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.load.qucosa import qucosa_subject_hierarchy_by_subject_schema, read_qucosa_samples
 from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory
-from slub_docsa.data.load.rvk import RvkSubjectNode
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.document import apply_nltk_snowball_stemming_to_document_samples_iterator
 from slub_docsa.data.preprocess.language import filter_samples_by_detected_language_via_langid
@@ -89,7 +88,7 @@ def qucosa_named_datasets_tuple_list():
     def lazy_ddc():
         return qucosa_subject_hierarchy_by_subject_schema("ddc")
 
-    datasets: List[Tuple[str, Callable[[], Iterator[Sample]], Callable[[], SubjectHierarchyType[Any]]]] = [
+    datasets: List[Tuple[str, Callable[[], Iterator[Sample]], Callable[[], SubjectHierarchy]]] = [
         ("qucosa_all_titles_rvk",
             lambda: _load_qucosa_samples("rvk", "titles", None, False, False), lazy_rvk),
         ("qucosa_all_titles_ddc",
@@ -124,7 +123,7 @@ def qucosa_named_datasets_tuple_list():
 
 def qucosa_named_datasets(
     name_subset: List[str] = None
-) -> Iterator[Tuple[str, Dataset, SubjectHierarchyType[RvkSubjectNode]]]:
+) -> Iterator[Tuple[str, Dataset, SubjectHierarchy]]:
     """Return default qucosa dataset variants."""
     quocsa_cache_dir = os.path.join(get_cache_dir(), "qucosa")
     dataset_list = qucosa_named_datasets_tuple_list()

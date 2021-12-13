@@ -1,12 +1,12 @@
 """Base classes modeling a subject and subject hierarchy.
 
-Note: Type aliases `SubjectNodeType`, `SubjectHierarchyType`, `SubjectTargets` and `SubjectUriList`
+Note: Type aliases `SubjectHierarchy`, `SubjectTargets` and `SubjectUriList`
 are not correctly described in API documentation due to [issue in pdoc](https://github.com/pdoc3/pdoc/issues/229).
 """
 
 # pylint: disable=too-few-public-methods
 
-from typing import Iterable, List, Mapping, Sequence, Tuple, TypeVar, Optional
+from typing import Iterable, List, Mapping, Sequence, Tuple, Optional
 
 
 class Subject:
@@ -44,10 +44,7 @@ class SubjectNode(Subject):
         return f"<{self.__class__.__name__} uri=\"{self.uri}\" parent_uri=\"{self.parent_uri}\">"
 
 
-SubjectNodeType = TypeVar('SubjectNodeType', bound=SubjectNode)
-"""Generic Type for SubjectNode"""
-
-SubjectHierarchyType = Mapping[str, SubjectNodeType]
+SubjectHierarchy = Mapping[str, SubjectNode]
 """A dictionary mapping a subject uri to its subject node."""
 
 SubjectUriList = Iterable[str]
@@ -59,7 +56,7 @@ See `slub_docsa.common.dataset.Dataset`.
 """
 
 
-def print_subject_hierarchy(subject_hierarchy: SubjectHierarchyType):
+def print_subject_hierarchy(subject_hierarchy: SubjectHierarchy):
     """Print a subject hierarchy to `stdout` using simple indentation."""
     root_subjects_uri = [s.uri for s in subject_hierarchy.values() if s.parent_uri is None]
 

@@ -7,8 +7,8 @@ import logging
 from typing import Callable, List, Mapping
 
 import plotly.express as px
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
-from slub_docsa.data.load.ddc import get_generic_ddc_subject_hierarchy
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
+from slub_docsa.data.load.ddc import get_ddc_subject_store
 from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
 
 from slub_docsa.data.load.qucosa import QucosaJsonDocument, read_qucosa_documents_from_directory
@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def _get_parent_uri_from_subject(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
-    subject: SubjectNodeType
+    subject_hierarchy: SubjectHierarchy,
+    subject: SubjectNode,
 ):
     """Return parent notation of subject or empty string for sunburst chart."""
     if subject.parent_uri is not None and subject.parent_uri in subject_hierarchy:
@@ -29,7 +29,7 @@ def _get_parent_uri_from_subject(
 
 
 def qucosa_number_of_documents_by_subjects(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
     get_subject_from_qucosa_doc: Callable[[QucosaJsonDocument], List[str]],
 ) -> Mapping[str, float]:
     """Count the number of Qucosa documents for each RVK subject."""
@@ -52,7 +52,7 @@ def qucosa_number_of_documents_by_subjects(
 
 
 def generate_qucosa_subject_sunburst(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
     get_subject_from_qucosa_doc: Callable[[QucosaJsonDocument], List[str]],
 ):
     """Generate a sunburst chart for qucosa visualizing the RVK class distribution."""
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     subject_store = {
         "rvk": get_rvk_subject_store(),
-        "ddc": get_generic_ddc_subject_hierarchy(),
+        "ddc": get_ddc_subject_store(),
     }[subject_schema]
 
     qucosa_subject_getter = {
@@ -146,7 +146,14 @@ if __name__ == "__main__":
     count_no_value = subjects["uri://no_value"]
     count_not_found = subjects["uri://not_found"]
 
+    if subject_schema == "ddc":
+        n_known_subjects = "unknown"
+    elif subject_schema == "rvk":
+        n_known_subjects = len(subject_store)
+    else:
+        n_known_subjects = None
+
     print(f"qucosa has {qucosa_doc_count} documents")
-    print(f"qucosa uses only {len(subjects) - 2} of in total {len(subject_store)} unique {subject_schema} subjects")
+    print(f"qucosa uses only {len(subjects) - 2} of in total {n_known_subjects} unique {subject_schema} subjects")
     print(f"qucosa has {count_no_value} documents containing no subject annotation")
     print(f"qucosa has {count_not_found} documents with invalid annotations")

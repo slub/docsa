@@ -18,8 +18,8 @@ from lxml import etree  # nosec
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, SubjectNodeType
-from slub_docsa.data.load.ddc import UnlabeledDdcHierarchy, ddc_correct_short_keys, ddc_key_to_uri, is_valid_ddc_uri
+from slub_docsa.common.subject import SubjectHierarchy
+from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri, get_ddc_subject_store, is_valid_ddc_uri
 from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors
 from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
@@ -445,7 +445,7 @@ def _read_qucosa_generic_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument],
     create_document_from_qucosa: Callable[[QucosaJsonDocument, Optional[str]], Optional[Document]],
     read_subjects_from_doc: Callable[[QucosaJsonDocument], List[str]],
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
     lang_code: Optional[str] = None,
 ) -> Iterator[Sample]:
     """Read qucosa data and extract documents and subjects."""
@@ -526,7 +526,7 @@ def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[st
 
 def get_qucosa_ddc_subject_store(
     ddc_list_filepath: str = None,
-) -> SubjectHierarchyType[SubjectNode]:
+) -> SubjectHierarchy:
     """Return the ddc subject hierarchy which contains only subjects present in the qucosa dataset."""
     if ddc_list_filepath is None:
         ddc_list_filepath = os.path.join(get_cache_dir(), "qucosa/ddc_list.pickle.gz")
@@ -545,12 +545,12 @@ def get_qucosa_ddc_subject_store(
 
     with gzip.open(ddc_list_filepath, "rb") as file:
         subjects = pickle.load(file)  # nosec
-        return UnlabeledDdcHierarchy(subjects)
+        return get_ddc_subject_store(subject_uris=subjects)
 
 
 def qucosa_subject_hierarchy_by_subject_schema(
     subject_schema: Union[Literal["rvk"], Literal["ddc"]],
-) -> SubjectHierarchyType[SubjectNodeType]:
+) -> SubjectHierarchy:
     """Return either rvk or ddc subject hierarchy depending on requested subject schema."""
     return {
         "rvk": lambda: get_rvk_subject_store(),

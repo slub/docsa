@@ -23,7 +23,7 @@ import numpy as np
 
 from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.common.document import Document
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode, print_subject_hierarchy
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode, print_subject_hierarchy
 from slub_docsa.data.artificial.simple import generate_random_text
 from slub_docsa.data.artificial.tokens import TokenProbabilities, choose_tokens_by_probabilities
 from slub_docsa.data.artificial.tokens import generate_random_token_probabilties, combine_token_probabilities
@@ -39,7 +39,7 @@ def generate_hierarchical_subject_token_probabilities(
     label_from_tokens: bool = True,
     children_per_level_interval: Tuple[int, int] = (2, 5),
     child_token_factor_interval: Tuple[float, float] = (0.5, 0.9),
-) -> Tuple[Mapping[str, TokenProbabilities], SubjectHierarchyType]:
+) -> Tuple[Mapping[str, TokenProbabilities], SubjectHierarchy]:
     """Generate a number of hierarchical subjects each represented by random token probabilities.
 
     Subjects are generated incremetally, i.e., starting with the root subject a number of child subjects are generated.
@@ -66,7 +66,7 @@ def generate_hierarchical_subject_token_probabilities(
 
     Returns
     -------
-    Tuple[Mapping[str, TokenProbabilities], SubjectHierarchyType]
+    Tuple[Mapping[str, TokenProbabilities], SubjectHierarchy]
         A tuple containing the token probabilities for each subject (first element) as well as the corresponding
         subject hierarchy (second element)
     """
@@ -124,7 +124,7 @@ def generate_hierarchical_random_dataset_from_token_probabilities(
     n_subjects: int,
     n_subjects_per_document_interval: Tuple[int, int] = (1, 4),
     n_title_tokens_interval: Tuple[int, int] = (10, 50),
-) -> Tuple[Dataset, SubjectHierarchyType]:
+) -> Tuple[Dataset, SubjectHierarchy]:
     """Generate a random hierarchical dataset based on given token probabilities.
 
     Parameters
@@ -146,7 +146,7 @@ def generate_hierarchical_random_dataset_from_token_probabilities(
 
     Returns
     -------
-    Tuple[Dataset, SubjectHierarchyType]
+    Tuple[Dataset, SubjectHierarchy]
         a tuple containing the dataset of artificial documents and subject annotations, as well as the subject hierarchy
     """
     logger.debug("generate hierarchical dataset with %d documents", n_documents)
@@ -193,7 +193,7 @@ def generate_hierarchical_random_dataset(
     n_tokens: int,
     n_documents: int,
     n_subjects: int,
-) -> Tuple[Dataset, SubjectHierarchyType]:
+) -> Tuple[Dataset, SubjectHierarchy]:
     """Generate a random hierarchical dataset based on artificially generated tokens.
 
     A wrapper around `generate_hierarchical_random_dataset_from_token_probabilities` using random tokens from
@@ -210,7 +210,7 @@ def generate_hierarchical_random_dataset(
 
     Returns
     -------
-    Tuple[Dataset, SubjectHierarchyType]
+    Tuple[Dataset, SubjectHierarchy]
         Both the generated dataset and subject hierarchy
     """
     token_probabilities = generate_random_token_probabilties(n_tokens)
@@ -226,7 +226,7 @@ def generate_hierarchical_random_dataset_from_dbpedia(
     n_tokens: int,
     n_documents: int,
     n_subjects: int,
-) -> Tuple[Dataset, SubjectHierarchyType]:
+) -> Tuple[Dataset, SubjectHierarchy]:
     """Generate a random hierarchical dataset based on token probabilities extracted from DBpedia abstracts.
 
     A wrapper around `generate_hierarchical_random_dataset_from_token_probabilities` using tokens extracted from
@@ -245,7 +245,7 @@ def generate_hierarchical_random_dataset_from_dbpedia(
 
     Returns
     -------
-    Tuple[Dataset, SubjectHierarchyType]
+    Tuple[Dataset, SubjectHierarchy]
         Both the generated dataset and subject hierarchy
     """
     token_probabilities = token_probabilities_from_dbpedia(lang_code)

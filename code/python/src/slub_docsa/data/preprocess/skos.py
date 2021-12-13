@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Mapping, Optional, Sequence, Tuple
 import rdflib
 from rdflib.namespace import SKOS, RDF
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.load.rvk import generate_rvk_custom_skos_triples
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
@@ -43,20 +43,20 @@ def subject_labels_to_skos_graph(
 
 
 def subject_hierarchy_to_skos_graph(
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+    subject_hierarchy: SubjectHierarchy,
     lang_code: str,
-    generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Tuple[Any, Any, Any]]]] = None,
+    generate_custom_triples: Optional[Callable[[Any], List[Tuple[Any, Any, Any]]]] = None,
     mandatory_subject_list: Sequence[str] = None,
 ) -> rdflib.Graph:
     """Convert a subject hierarchy to an rdflib graph using SKOS triples.
 
     Parameters
     ----------
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType]
+    subject_hierarchy: SubjectHierarchy
         the subject hierarchy that is being converted to a SKOS rdflib graph
     lang_code: str
         a two-letter language code represeting the language of labels in the subject hierarchy
-    generate_custom_triples: Optional[Callable[[SubjectNodeType], List[Tuple[Any, Any, Any]]]] = None
+    generate_custom_triples: Optional[Callable[[SubjectNode], List[Tuple[Any, Any, Any]]]] = None
         an optional function that returns additional triples given a specific subject of the subject hierarchy
     mandatory_subject_list: Sequence[str] = None
         an optional list of subjects; if provided, only these subjects and their ancestors are converted to SKOS,

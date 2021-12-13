@@ -9,7 +9,7 @@ from typing import Callable, Iterable, Iterator, Optional, Tuple
 
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.dataset import Dataset
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.store.predictions import persisted_fit_classification_model_and_predict
 from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
@@ -35,10 +35,10 @@ def get_split_function_by_name(name: str, n_splits: int, random_state: float = N
 
 
 def do_default_score_matrix_classification_evaluation(
-    named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchyType[SubjectNodeType]]]],
+    named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchy]]],
     split_function: DatasetSplitFunction,
     named_models_generator: Callable[
-        [Iterable[str], Optional[SubjectHierarchyType[SubjectNodeType]]],
+        [Iterable[str], Optional[SubjectHierarchy]],
         NamedClassificationModels
     ],
     n_splits: int = 10,
@@ -99,7 +99,7 @@ def do_default_score_matrix_classification_evaluation(
 
 
 def do_default_score_matrix_clustering_evaluation(
-    named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchyType[SubjectNodeType]]]],
+    named_datasets: Iterator[Tuple[str, Dataset, Optional[SubjectHierarchy]]],
     named_models_generator: Callable[[Iterable[str]], NamedClusteringModels],
     named_scores_generator: Callable[[], NamedScoreLists],
     repeats: int = 10,

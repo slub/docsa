@@ -7,7 +7,7 @@ from typing import Callable, Iterator, List, Optional, Tuple
 
 from slub_docsa.common.dataset import Dataset, samples_from_dataset
 from slub_docsa.common.paths import get_cache_dir
-from slub_docsa.common.subject import SubjectHierarchyType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia, generate_random_dataset
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
@@ -46,9 +46,9 @@ def default_named_artificial_datasets(
     n_subjects: int,
     min_samples: int,
     name_subset: List[str] = None,
-) -> Iterator[Tuple[str, Dataset, Optional[SubjectHierarchyType]]]:
+) -> Iterator[Tuple[str, Dataset, Optional[SubjectHierarchy]]]:
     """Return several persisted default artificial datasets."""
-    lazy_named_datasets: List[Tuple[str, Callable[[], Tuple[Dataset, Optional[SubjectHierarchyType]]]]] = [
+    lazy_named_datasets: List[Tuple[str, Callable[[], Tuple[Dataset, Optional[SubjectHierarchy]]]]] = [
         (f"random_no_correlations_t={n_token}_d={n_docs}_s={n_subjects}_min={min_samples}", lambda:
             generate_pruned_random_no_correlations_dataset(n_token, n_docs, n_subjects, min_samples)),
         (f"random_easy_to_predict_dbpedia_d={n_docs}_s={n_subjects}_min={min_samples}", lambda:

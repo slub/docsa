@@ -10,7 +10,7 @@ from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score
 from sklearn.metrics import homogeneity_score, completeness_score
 from scipy.spatial.distance import cosine
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
 from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
@@ -46,7 +46,7 @@ def initialize_named_score_tuple_list(
 
 def default_named_multiclass_score_list(
     subject_order: Sequence[str] = None,
-    subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
+    subject_hierarchy: SubjectHierarchy = None,
 ) -> ScoreTupleList:
     """Return a list of default score functions for evaluation."""
     scores = [

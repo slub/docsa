@@ -3,11 +3,22 @@
 # pylint: disable=too-many-return-statements
 
 import logging
+import os
+import time
 
-from typing import Iterable, Optional, Sequence
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
+from typing import Iterable, Mapping, Optional, Sequence
+
+import requests
+from sqlitedict import SqliteDict
+
+from slub_docsa.common.paths import get_cache_dir
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
 
 logger = logging.getLogger(__name__)
+
+COLIANA_DDC_API_URL = "https://coli-conc.gbv.de/coli-ana/app/analyze?notation="
+
+DdcSubjectNode = SubjectNode
 
 
 def ddc_key_to_uri(key: str):
@@ -158,19 +169,62 @@ def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
     return list(extended_set)
 
 
-class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
-    """A simple subject hierarchy implementation without any ddc labels."""
+def ddc_notation_from_uri_via_coliana(
+    uri: str,
+) -> Optional[str]:
+    """Return a ddc label a reported by the coli-ana web service.
 
-    def __init__(self, subject_uris: Sequence[str] = None):
+    See: https://coli-conc.gbv.de/coli-ana/
+
+    Parameters
+    ----------
+    uri: str
+        the ddc uri as string
+
+    Returns
+    -------
+    str | None
+        the label of the matching ddc subject or None if not available
+    """
+    key = ddc_key_from_uri(uri)
+
+    logger.debug("do ddc label request to coli-ana for ddc uri: %s", uri)
+    response = requests.get(COLIANA_DDC_API_URL + key)
+
+    if not response or not response.ok:
+        logger.info("ddc request to coli-ana failed")
+        return None
+
+    json = response.json()
+    member_list = json[0]["memberList"]
+    for member in member_list:
+        if member is not None and key in member["notation"]:
+            label = member["prefLabel"]["de"]
+            logger.debug("ddc label for %s is %s", uri, label)
+            return label
+    return None
+
+
+class SimpleDdcHierarchy(SubjectHierarchy):
+    """A simple subject hierarchy implementation that is not stored."""
+
+    def __init__(
+        self,
+        subject_uris: Sequence[str] = None,
+        subject_labels: Optional[Mapping[str, str]] = None,
+    ):
         """Initialize unlabled ddc hierarchy.
 
         Parameters
         ----------
-        subject_uris: Sequence[str] = None
+        subject_uris: Optional[Sequence[str]] = None
             if set, this list is used for iterating all available ddc keys instead of assuming that only 1000 major
             keys exist
+        subject_labels: Optional[Mapping[str, str]] = None
+            an optional mapping of subject uris to labels
         """
         self.subject_uris = subject_uris
+        self.subject_labels = subject_labels
 
     def __len__(self):
         """Return the size of the provided available ddc subjects or a static length of 1000."""
@@ -192,7 +246,14 @@ class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
             a subject node describing this ddc subject
         """
         if is_valid_ddc_uri(uri):
-            return SubjectNode(uri=uri, label=ddc_key_from_uri(uri), parent_uri=ddc_parent_from_uri(uri))
+            label = ddc_key_from_uri(uri)
+            if self.subject_labels is not None and self.subject_labels.get(uri, None) is not None:
+                label = self.subject_labels[uri]
+            return SubjectNode(
+                uri=uri,
+                label=label,
+                parent_uri=ddc_parent_from_uri(uri)
+            )
         raise ValueError(f"uri {uri} is not a valid ddc uri")
 
     def __iter__(self) -> Iterable[str]:
@@ -232,6 +293,49 @@ class UnlabeledDdcHierarchy(SubjectHierarchyType[SubjectNode]):
         return self != other
 
 
-def get_generic_ddc_subject_hierarchy():
+class CachedColianaDdcLabels(SqliteDict):
+    """Cache storing DDC labels retrieved from coli-ana.
+
+    See `ddc_notation_from_uri_via_coliana` on how to retrieve labels from coli-ana.
+    """
+
+    def __init__(
+        self,
+        cache_filepath: Optional[str] = None,
+        time_between_requests: float = 0.5,
+    ):
+        """Initialize a new cache.
+
+        Parameters
+        ----------
+        cache_filepath: Optional[str] = None
+            the path to the file that is used for caching DDC labels; if None, as default path is generated at
+            `<cache_dir>/ddc/coliana_labels.sqlite`.
+        time_between_requests: float = 0.5
+            the minimum time between requests to not overflood coli-ana with too many requests
+        """
+        if cache_filepath is None:
+            cache_filepath = os.path.join(get_cache_dir(), "ddc/coliana_labels.sqlite")
+
+        os.makedirs(os.path.dirname(cache_filepath), exist_ok=True)
+        super().__init__(filename=cache_filepath, tablename="ddc_labels_by_uri", flag="c", autocommit=True)
+
+        self.time_between_requests = time_between_requests
+        self.last_request = 0
+
+    def __getitem__(self, key):
+        """Return a label for a ddc uri either from cache or by retrieving it from coli-ana."""
+        if not super().__contains__(key):
+            time.sleep(max(self.time_between_requests - (time.time() - self.last_request), 0.0))
+            super().__setitem__(key, ddc_notation_from_uri_via_coliana(key))
+            self.last_request = time.time()
+        return super().__getitem__(key)
+
+
+def get_ddc_subject_store(
+    subject_uris: Optional[Sequence[str]] = None,
+    cache_filepath: Optional[str] = None,
+) -> SubjectHierarchy:
     """Return an instance of the UnlabledDdcHierarchy."""
-    return UnlabeledDdcHierarchy()
+    subject_labels = CachedColianaDdcLabels(cache_filepath)
+    return SimpleDdcHierarchy(subject_uris=subject_uris, subject_labels=subject_labels)

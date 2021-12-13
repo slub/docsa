@@ -1,22 +1,26 @@
 """Persistent storage for subject hierarchies."""
 
-import dbm
-import pickle  # nosec
 import logging
 import os
 
-from typing import Callable, Generic, Iterable, cast
+from typing import Callable, Iterable
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectNode
+from sqlitedict import SqliteDict
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
 from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
 
 logger = logging.getLogger(__name__)
 
 
-class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[SubjectNodeType]):
+class SubjectHierarchySqliteStore(SqliteDict):
     """Stores a subject hierarchy in a python dbm database."""
 
-    def __init__(self, filepath: str, read_only: bool = True):
+    def __init__(
+        self,
+        filepath: str,
+        read_only: bool = True,
+        autocommit: bool = True,
+    ):
         """Initialize store with a filepath.
 
         Parameters
@@ -27,54 +31,13 @@ class SubjectHierarchyDbmStore(Generic[SubjectNodeType], SubjectHierarchyType[Su
             whether to open the database in read-only mode
         """
         flag = "r" if read_only else "c"
-        self.store = dbm.open(filepath, flag)
-
-    # pylint: disable=no-self-use
-    def subject_node_to_bytes(self, subject_node: SubjectNodeType) -> bytes:
-        """Convert subject node to bytes for storage in dbm database."""
-        return pickle.dumps(subject_node)  # nosec
-
-    # pylint: disable=no-self-use
-    def bytes_to_subject_node(self, data: bytes) -> SubjectNodeType:
-        """Convert bytes data to subject node when reading from dbm database."""
-        return pickle.loads(data)  # nosec
-
-    def __getitem__(self, uri: str) -> SubjectNodeType:
-        """Retrieve subject node from dbm database."""
-        if self.store is None:
-            raise RuntimeError("dbm store already closed")
-        return self.bytes_to_subject_node(self.store.__getitem__(uri))
-
-    def __setitem__(self, uri: str, subject_node: SubjectNodeType):
-        """Save subject node to dbm database."""
-        if self.store is None:
-            raise RuntimeError("dbm store already closed")
-        self.store.__setitem__(uri, self.subject_node_to_bytes(subject_node))
-
-    def __iter__(self):
-        """Iterate over all subject nodes in dbm database."""
-        if self.store is None:
-            raise RuntimeError("dbm store already closed")
-        for uri in self.store.keys():
-            yield cast(bytes, uri).decode()
-
-    def __len__(self) -> int:
-        """Return number of subject nodes in dbm database."""
-        if self.store is None:
-            raise RuntimeError("dbm store already closed")
-        return self.store.__len__()
-
-    def close(self):
-        """Close dbm database."""
-        if self.store:
-            self.store.close()
-            self.store = None
+        super().__init__(filename=filepath, tablename="subject_nodes", flag=flag, autocommit=autocommit)
 
 
 def load_persisted_subject_hierarchy_from_lazy_subject_generator(
-    lazy_subject_generator: Callable[[], Iterable[SubjectNodeType]],
+    lazy_subject_generator: Callable[[], Iterable[SubjectNode]],
     filepath: str,
-) -> SubjectHierarchyType[SubjectNodeType]:
+) -> SubjectHierarchy:
     """Load a subject hierarchy if it was stored before, or otherwise store it using the provided subject generator.
 
     Parameters
@@ -86,27 +49,29 @@ def load_persisted_subject_hierarchy_from_lazy_subject_generator(
 
     Returns
     -------
-    SubjectHierarchyType[SubjectNodeType]
+    SubjectHierarchy
         the subject hierarchy as loaded from the persisted database
     """
     if not os.path.exists(filepath):
-        store = SubjectHierarchyDbmStore[SubjectNodeType](filepath, read_only=False)
+        store = SubjectHierarchySqliteStore(filepath, read_only=False, autocommit=False)
 
         for i, subject_node in enumerate(lazy_subject_generator()):
             store[subject_node.uri] = subject_node
             if i % 10000 == 0:
+                store.commit()
                 logger.debug("added %d subjects to store so far", i)
 
+        store.commit()
         store.close()
 
-    return SubjectHierarchyDbmStore[SubjectNodeType](filepath, read_only=True)
+    return SubjectHierarchySqliteStore(filepath)
 
 
 if __name__ == "__main__":
     import tempfile
 
     with tempfile.TemporaryDirectory(suffix="_subject_store") as td:
-        s = SubjectHierarchyDbmStore[SubjectNode](os.path.join(td, "data"))
+        s = SubjectHierarchySqliteStore(os.path.join(td, "data"), read_only=False)
 
         subject1 = SubjectNode("uri://subject1", "subject 1", None)
         subject2 = SubjectNode("uri://subject2", "subject 2", "uri://subject1")

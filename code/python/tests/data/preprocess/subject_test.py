@@ -2,12 +2,12 @@
 
 import pytest
 
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNode
+from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
 from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
 from slub_docsa.data.preprocess.subject import prune_subject_uri_to_level, prune_subject_uris_to_level
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level
 
-example_subject_hierarchy: SubjectHierarchyType[SubjectNode] = {
+example_subject_hierarchy: SubjectHierarchy[SubjectNode] = {
     "uri://subject1": SubjectNode(uri="uri://subject1", label="subject1", parent_uri=None),
     "uri://subject2": SubjectNode(uri="uri://subject2", label="subject2", parent_uri=None),
     "uri://subject3": SubjectNode(uri="uri://subject3", label="subject3", parent_uri="uri://subject1"),

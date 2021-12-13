@@ -25,7 +25,7 @@ from rdflib.namespace import SKOS
 
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.document import Document
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
 from slub_docsa.data.load.nltk import download_nltk
@@ -126,7 +126,7 @@ class AnnifModel(ClassificationModel):
         model_type: str,
         lang_code: str,
         subject_order: Sequence[str] = None,
-        subject_hierarchy: SubjectHierarchyType[SubjectNodeType] = None,
+        subject_hierarchy: SubjectHierarchy = None,
         data_dir: str = None,
         max_document_length: int = 10000
     ):

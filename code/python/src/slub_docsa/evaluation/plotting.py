@@ -496,7 +496,7 @@ def subject_distribution_by_cluster_plot(
             sb_labels.append(subject_labels[subject_uri])
             sb_parents.append(f"Cluster {i+1}")
             sb_values.append(count)
-            sb_hovers.append("<br>".join(with_subject_labels[:20]))
+            sb_hovers.append("<br>".join([label[:120] for label in with_subject_labels[:20]]))
 
         sb_ids.append(f"Cluster {i+1}")
         sb_labels.append(f"Cluster {i+1}")
@@ -570,7 +570,7 @@ def cluster_distribution_by_subject_plot(
             sb_labels.append(f"Cluster {cluster_id + 1}")
             sb_parents.append(subject_uri)
             sb_values.append(len(docs_of_cluster_idx))
-            sb_hovers.append("<br>".join(docs_of_cluster_labels[:20]))
+            sb_hovers.append("<br>".join([label[:120] for label in docs_of_cluster_labels[:20]]))
 
             subject_total_count += len(docs_of_cluster_idx)
 

@@ -12,7 +12,7 @@ from slub_docsa.common.document import Document
 
 from slub_docsa.common.score import ClusteringScoreFunction, IncidenceDecisionFunctionType
 from slub_docsa.common.similarity import IndexedDocumentDistanceFunction, IndexedDocumentDistanceGenerator
-from slub_docsa.common.subject import SubjectHierarchyType, SubjectNodeType, SubjectTargets
+from slub_docsa.common.subject import SubjectHierarchy, SubjectTargets
 from slub_docsa.data.preprocess.subject import children_map_from_subject_hierarchy, subject_ancestors_list
 from slub_docsa.evaluation.incidence import extend_incidence_list_to_ancestors, is_crisp_cluster_membership
 from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments
@@ -175,7 +175,7 @@ def absolute_confusion_from_incidence(true_incidence, predicted_incidence) -> Tu
 
 
 def cesa_bianchi_h_loss(
-    subject_hierarchy: Optional[SubjectHierarchyType[SubjectNodeType]],
+    subject_hierarchy: Optional[SubjectHierarchy],
     subject_order: Optional[Sequence[str]],
     log_factor: Optional[float] = None,
 ) -> Callable[[np.ndarray, np.ndarray], float]:
@@ -193,7 +193,7 @@ def cesa_bianchi_h_loss(
 
     Parameters
     ----------
-    subject_hierarchy: Optional[SubjectHierarchyType[SubjectNodeType]]
+    subject_hierarchy: Optional[SubjectHierarchy]
         the subject hierarchy used to evaluate the serverness of prediction mistakes; if no subject hierarchy is
         provided, a score of `numpy.nan` is returned
     subject_order: Optional[Sequence[str]]
@@ -221,7 +221,7 @@ def cesa_bianchi_h_loss(
 
     def _find_ancestor_node_with_error(
             subject_uri: str,
-            subject_hierarchy: SubjectHierarchyType[SubjectNodeType],
+            subject_hierarchy: SubjectHierarchy,
             incidence_list: Sequence[int],
     ) -> str:
         if subject_order is None:
