@@ -1,11 +1,13 @@
 """Experiments command."""
 
 import argparse
-from slub_docsa.cli.common import add_logging_arguments, setup_logging_from_args
+from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments, setup_logging_from_args
 from slub_docsa.cli.qucosa import available_qucosa_clustering_model_names, available_qucosa_dataset_names
 from slub_docsa.cli.qucosa import available_qucosa_classification_model_names
+from slub_docsa.cli.common import setup_storage_directories
 from slub_docsa.experiments.qucosa.classify_many import qucosa_experiments_classify_many
 from slub_docsa.experiments.qucosa.cluster_many import qucosa_experiments_cluster_many
+from slub_docsa.experiments.qucosa.cluster_one import qucosa_experiments_cluster_one
 
 
 def experiments_subparser(parser: argparse.ArgumentParser):
@@ -21,9 +23,10 @@ def _experiments_qucosa_subparser(parser: argparse.ArgumentParser):
     subparser = parser.add_subparsers()
     _experiments_qucosa_classify_many_subparser(subparser.add_parser("classify_many"))
     _experiments_qucosa_cluster_many_subparser(subparser.add_parser("cluster_many"))
+    _experiments_qucosa_cluster_one_subparser(subparser.add_parser("cluster_one"))
 
 
-def _add_expimernts_qucosa_common_arguments(parser: argparse.ArgumentParser):
+def _add_experiments_qucosa_common_arguments(parser: argparse.ArgumentParser):
     """Add common arguments for experiments qucosa commands."""
     parser.add_argument(
         "--datasets",
@@ -37,6 +40,7 @@ def _add_expimernts_qucosa_common_arguments(parser: argparse.ArgumentParser):
 def _experiments_qucosa_classify_many_action(args):
     """Perform `experiments qucosa classify_many` action."""
     setup_logging_from_args(args)
+    setup_storage_directories(args)
 
     dataset_subset = args.datasets
     model_subset = args.models
@@ -68,7 +72,8 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
     """Return sub-parser for `experiments qucosa classify_many` command."""
     parser.set_defaults(func=_experiments_qucosa_classify_many_action)
     add_logging_arguments(parser)
-    _add_expimernts_qucosa_common_arguments(parser)
+    add_storage_directory_arguments(parser)
+    _add_experiments_qucosa_common_arguments(parser)
 
     model_names = available_qucosa_classification_model_names(False)
     parser.add_argument(
@@ -90,6 +95,7 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
 def _experiments_qucosa_cluster_many_action(args):
     """Perform `experiments qucosa cluster_many` action."""
     setup_logging_from_args(args)
+    setup_storage_directories(args)
 
     dataset_subset = args.datasets
     model_subset = args.models
@@ -118,7 +124,8 @@ def _experiments_qucosa_cluster_many_action(args):
 def _experiments_qucosa_cluster_many_subparser(parser: argparse.ArgumentParser):
     parser.set_defaults(func=_experiments_qucosa_cluster_many_action)
     add_logging_arguments(parser)
-    _add_expimernts_qucosa_common_arguments(parser)
+    add_storage_directory_arguments(parser)
+    _add_experiments_qucosa_common_arguments(parser)
 
     model_names = available_qucosa_clustering_model_names()
     parser.add_argument(
@@ -134,6 +141,50 @@ def _experiments_qucosa_cluster_many_subparser(parser: argparse.ArgumentParser):
         "-r",
         help="the number of clustering repetitons, default 10",
         default=10,
+    )
+
+    parser.add_argument(
+        "--limit",
+        "-l",
+        help="the maximum number documents to consider for clustering, default all",
+    )
+
+
+def _experiments_qucosa_cluster_one_action(args):
+    setup_logging_from_args(args)
+    setup_storage_directories(args)
+
+    dataset_name = args.dataset
+    model_name = args.model
+    max_documents = None if args.limit is None else int(args.limit)
+
+    qucosa_experiments_cluster_one(
+        dataset_name,
+        model_name,
+        max_documents
+    )
+
+
+def _experiments_qucosa_cluster_one_subparser(parser: argparse.ArgumentParser):
+    parser.set_defaults(func=_experiments_qucosa_cluster_one_action)
+    add_logging_arguments(parser)
+    add_storage_directory_arguments(parser)
+
+    dataset_names = available_qucosa_dataset_names()
+    model_names = available_qucosa_clustering_model_names()
+
+    parser.add_argument(
+        "--dataset",
+        "-d",
+        help="which dataset to cluster: " + ", ".join(dataset_names),
+        default="qucosa_de_fulltexts_langid_rvk",
+    )
+
+    parser.add_argument(
+        "--model",
+        "-m",
+        help="which clustering algorithm to apply: " + ", ".join(model_names),
+        default="tfidf_10k_kMeans_c=20",
     )
 
     parser.add_argument(
