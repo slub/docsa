@@ -1,6 +1,6 @@
 """Clustering experiments for qucosa data."""
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-many-locals
 
 import logging
 import os
@@ -39,11 +39,11 @@ def qucosa_experiments_cluster_one(
         sampled_idx = np.random.choice(range(len(dataset.documents)), size=max_documents, replace=False)
         documents = [dataset.documents[i] for i in sampled_idx]
         subject_targets = [dataset.subjects[i] for i in sampled_idx]
-        subject_targets = prune_subject_targets_to_level(2, subject_targets, subject_hierarchy)
     else:
         documents = dataset.documents
         subject_targets = dataset.subjects
 
+    subject_targets = prune_subject_targets_to_level(2, subject_targets, subject_hierarchy)
     subject_order = unique_subject_order(subject_targets)
     model = load_qucosa_cluster_model_by_name(model_name, len(subject_order))
 
