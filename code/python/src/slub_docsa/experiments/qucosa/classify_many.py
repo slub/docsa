@@ -60,9 +60,12 @@ if __name__ == "__main__":
             # "qucosa_de_titles_langid_rvk",
             # "qucosa_de_abstracts_langid_rvk",
             # "qucosa_de_fulltexts_langid_rvk",
-            "qucosa_de_titles_langid_ddc",
-            "qucosa_de_abstracts_langid_ddc",
-            "qucosa_de_fulltexts_langid_ddc",
+            # "qucosa_de_titles_langid_ddc",
+            # "qucosa_de_abstracts_langid_ddc",
+            # "qucosa_de_fulltexts_langid_ddc",
+            "qucosa_de_complete_but_only_titles_rvk",
+            "qucosa_de_complete_but_only_abstracts_rvk",
+            "qucosa_de_complete_but_only_fulltexts_rvk",
         ],
         model_subset=[
             # ### "random", ####
@@ -95,5 +98,5 @@ if __name__ == "__main__":
         load_cached_predictions=True,
         random_state=123,
         split_function_name="random",
-        stop_after_evaluating_split=0
+        stop_after_evaluating_split=3
     )

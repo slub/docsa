@@ -576,6 +576,51 @@ def _make_title_and_fulltext_doc(doc: QucosaJsonDocument, lang_code: Optional[st
     return Document(uri=doc_uri, title=doc_title, fulltext=doc_fulltext)
 
 
+def _make_filtered_complete_doc_generator(make_func: Any):
+    """Return a function that filters documents based on whether they contain both title, abstract and fulltext.
+
+    However, only extract text based on another function, e.g., that only extracts the title from the documents.
+
+    The idea is to generate dataset variants that can be fairly compared with each other, since every dataset variant
+    is based on the exact same document set.
+    """
+
+    def _make_doc(doc: QucosaJsonDocument, lang_code: Optional[str]) -> Optional[Document]:
+        doc_uri = "uri://" + _get_document_id_from_qucosa_metadate(doc)
+        doc_title = _get_document_title_from_qucosa_metadata(doc, lang_code, "title")
+        doc_subtitle = _get_document_title_from_qucosa_metadata(doc, lang_code, "subtitle")
+        doc_abstract = _get_document_abstract_from_qucosa_metadata(doc, lang_code)
+        doc_fulltext = _get_document_fulltext_from_qucosa_metadata(doc, lang_code)
+
+        if doc_title is None or len(doc_title) < 1:
+            logger.debug("qucosa document with no title or of wrong language: %s", doc_uri)
+            return None
+
+        full_title = doc_title
+        if doc_subtitle is not None:
+            full_title = doc_title + " " + doc_subtitle
+
+        if len(full_title) < 10:
+            logger.debug("qucosa document with short full title '%s': %s", full_title, doc_uri)
+            return None
+
+        if doc_abstract is None:
+            logger.debug("qucosa document with no abstract: %s", doc_uri)
+            return None
+
+        if len(doc_abstract) < 20:
+            logger.debug("qucosa document with too short abstract '%s': %s", doc_abstract, doc_uri)
+            return None
+
+        if doc_fulltext is None:
+            logger.debug("qucosa document with no fulltext: %s", doc_uri)
+            return None
+
+        return make_func(doc, lang_code)
+
+    return _make_doc
+
+
 def get_qucosa_ddc_subject_store(
     ddc_list_filepath: str = None,
 ) -> SubjectHierarchy:
@@ -612,7 +657,7 @@ def qucosa_subject_hierarchy_by_subject_schema(
 
 def read_qucosa_samples(
     qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    metadata_variant: Union[Literal["titles"], Literal["abstracts"], Literal["fulltexts"]] = "titles",
+    metadata_variant: str = "titles",
     subject_schema: Union[Literal["rvk"], Literal["ddc"]] = "rvk",
     lang_code: Optional[str] = "de",
 ) -> Iterator[Sample]:
@@ -641,6 +686,9 @@ def read_qucosa_samples(
         "titles": _make_title_only_doc,
         "abstracts": _make_title_and_abstract_doc,
         "fulltexts": _make_title_and_fulltext_doc,
+        "complete_but_only_titles": _make_filtered_complete_doc_generator(_make_title_only_doc),
+        "complete_but_only_abstracts": _make_filtered_complete_doc_generator(_make_title_and_abstract_doc),
+        "complete_but_only_fulltexts": _make_filtered_complete_doc_generator(_make_title_and_fulltext_doc),
     }
 
     _subject_getter_map = {

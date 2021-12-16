@@ -54,18 +54,14 @@ def _default_pruning(samples_iterator, min_samples, subject_hierarchy):
 
 def _load_qucosa_samples(
     subject_schema: Union[Literal["rvk"], Literal["ddc"]],
-    text_source: Union[Literal["titles"], Literal["abstracts"], Literal["fulltexts"]] = "titles",
+    text_source: str = "titles",
     lang_code: str = None,
     langid_check: bool = False,
     stemming: bool = False,
 ) -> Iterator[Sample]:
     subject_hierarchy = qucosa_subject_hierarchy_by_subject_schema(subject_schema)
     qucosa_iterator = read_qucosa_documents_from_directory()
-    sample_iterator = read_qucosa_samples(qucosa_iterator, "titles", subject_schema, lang_code)
-    if text_source == "abstracts":
-        sample_iterator = read_qucosa_samples(qucosa_iterator, "abstracts", subject_schema, lang_code)
-    if text_source == "fulltexts":
-        sample_iterator = read_qucosa_samples(qucosa_iterator, "fulltexts", subject_schema, lang_code)
+    sample_iterator = read_qucosa_samples(qucosa_iterator, text_source, subject_schema, lang_code)
 
     if langid_check:
         if lang_code is None:
@@ -101,6 +97,8 @@ def qucosa_named_datasets_tuple_list():
             lambda: _load_qucosa_samples("rvk", "titles", "de", True, False), lazy_rvk),
         ("qucosa_de_titles_langid_ddc",
             lambda: _load_qucosa_samples("ddc", "titles", "de", True, False), lazy_ddc),
+        ("qucosa_de_complete_but_only_titles_rvk",
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_titles", "de", False, False), lazy_rvk),
         ("qucosa_de_abstracts_rvk",
             lambda: _load_qucosa_samples("rvk", "abstracts", "de", False, False), lazy_rvk),
         ("qucosa_de_abstracts_ddc",
@@ -109,6 +107,8 @@ def qucosa_named_datasets_tuple_list():
             lambda: _load_qucosa_samples("rvk", "abstracts", "de", True, False), lazy_rvk),
         ("qucosa_de_abstracts_langid_ddc",
             lambda: _load_qucosa_samples("ddc", "abstracts", "de", True, False), lazy_ddc),
+        ("qucosa_de_complete_but_only_abstracts_rvk",
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_abstracts", "de", False, False), lazy_rvk),
         ("qucosa_de_fulltexts_rvk",
             lambda: _load_qucosa_samples("rvk", "fulltexts", "de", False, False), lazy_rvk),
         ("qucosa_de_fulltexts_ddc",
@@ -116,7 +116,9 @@ def qucosa_named_datasets_tuple_list():
         ("qucosa_de_fulltexts_langid_rvk",
             lambda: _load_qucosa_samples("rvk", "fulltexts", "de", True, False), lazy_rvk),
         ("qucosa_de_fulltexts_langid_ddc",
-            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", True, False), lazy_ddc)
+            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", True, False), lazy_ddc),
+        ("qucosa_de_complete_but_only_fulltexts_rvk",
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_fulltexts", "de", False, False), lazy_rvk),
     ]
     return datasets
 
