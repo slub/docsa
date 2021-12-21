@@ -89,7 +89,7 @@ Python API. A list of sub-modules can be found below. The most relevant classes 
   found in `slub_docsa.models.clustering`
 - `slub_docsa.common.paths` - Storage configuration methods, which handle where various data is stored
 
-### An Example
+### Example: Train a Model and Predict
 
 Let's look at a simple example. The task is to train a classification model for the following documents:
 
@@ -156,7 +156,7 @@ model = ScikitClassifier(
 Before training the model, the target subject annotations need to be transformed to a matrix representation, which
 encodes which document is annotated with which subject, often called incidence matrix.
 
-```
+```python
 from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.incidence import unique_subject_order
 
@@ -173,7 +173,7 @@ print(incidence_matrix)
 The result will be a fixed ordering of subjects and a matrix that encodes which document (rows) is annotated by which
 subject (columns):
 
-```
+```python
 ['uri://subject1', 'uri://subject3', 'uri://subject2', 'uri://subject4']
 [[1. 0. 1. 0.]
  [1. 1. 0. 1.]
@@ -182,13 +182,13 @@ subject (columns):
 
 Then, the model can be trained:
 
-```
+```python
 model.fit(dataset.documents, incidence_matrix)
 ```
 
 In order to predict subject for new documents, we can provide a list of yet unknown documents.
 
-```
+```python
 new_documents = [
     Document(uri="uri://new_document1", title="Title of the new document"),
     Document(uri="uri://new_document2", title="Boring subject"),
@@ -201,7 +201,7 @@ print(predicted_probabilities)
 The result will be a probability matrix, which encodes which of the new documents is associated with which subject and
 to what degree (as a value between 0 and 1):
 
-```
+```python
 [[0.5 0.  1.  0. ]
  [0.5 0.5 0.5 0.5]]
 ```
@@ -211,7 +211,7 @@ which binarizes the matrix to an incidence matrix. Several strategies, e.g., bas
 the top-k subjects are implemented in `slub_docsa.evaluation.incidence`. In this example, we apply the top-2 decision
 strategy, which chooses two subjects with highest probability as the output:
 
-```
+```python
 from slub_docsa.evaluation.incidence import top_k_incidence_decision
 
 incidence_decision_function = top_k_incidence_decision(k=2)
@@ -221,7 +221,7 @@ print(predicted_incidence)
 
 The result will be a binary incidence matrix:
 
-```
+```python
 [[1. 0. 1. 0.]
  [0. 0. 1. 1.]]
 ```
@@ -232,7 +232,7 @@ the k-nearest neighor model.
 In order to retrieve the actual subjects represented by this incidence matrix, we can apply the following reverse
 function:
 
-```
+```python
 from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 predicted_subjects = subject_targets_from_incidence_matrix(predicted_incidence, subject_order)
@@ -241,7 +241,7 @@ print(predicted_subjects)
 
 The output will be:
 
-```
+```python
 [['uri://subject1', 'uri://subject2'], ['uri://subject2', 'uri://subject4']]
 ```
 
@@ -250,7 +250,7 @@ predicted incidence and true incidence. The most common performance scores are p
 this library provides an interface `slub_docsa.evaluation.score.scikit_incidence_metric` to the scikit-learn library,
 such that scores can be easily calculated:
 
-```
+```python
 from slub_docsa.evaluation.score import scikit_incidence_metric
 from sklearn.metrics import f1_score
 
@@ -271,8 +271,250 @@ print("f1 score is", score)
 
 The output will be:
 
-```
+```python
 f1 score is 0.8571428571428571
 ```
+
+### Example: Compare Models and Plot
+
+The following example describes how a single dataset can be evaluate by comparing multiple different models based on
+multiple scores via cross-validation. Similar to before, we first have to define the dataset that is being used.
+In this example, let's use an aritificially generated hierarchical dataset, see
+`slub_docsa.data.artificial.hierarchical`.
+
+The dataset is generated based on a selection of tokens (or words). In order to extract common english words, we use
+DBpedia as a resource. We download and iterate over 1000 abstracts from DBpedia to extract common english words via
+`slub_docsa.data.artificial.tokens.token_probabilities_from_dbpedia`.
+
+```python
+from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
+
+token_probabilities = token_probabilities_from_dbpedia("en", n_docs=1000)
+
+print(len(token_probabilities))
+```
+
+The result will be 10.079 different common english tokens (or words).
+
+```python
+10079
+```
+
+Each token is further characterized by its probability of occurrence within DBpedia. For example, the following 5
+tokens are extracted with their respective occurrence probability:
+
+```python
+for t in list(token_probabilities.keys())[:5]:
+    print(t, ":", token_probabilities[t])
+```
+
+The output will be:
+
+```python
+animalia : 1.575721286418858e-05
+is : 0.023509761593369365
+an : 0.00877676756535304
+illustrated : 3.151442572837716e-05
+book : 0.00039393032160471456
+```
+
+Based on these simple token statistics, we can generate 1000 random artificial documents and 10 random artificial
+hierarchical subjects:
+
+```python
+from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset_from_token_probabilities
+
+dataset, subject_hierarchy = generate_hierarchical_random_dataset_from_token_probabilities(
+    token_probabilities, n_documents=1000, n_subjects=10
+)
+
+print(dataset.documents[0])
+```
+
+Each document will consist of a sequence of random english tokens (or words):
+
+```python
+<Document
+  title="practical of molecule with greek along particular include second known and power alexandre was to ag"
+  abstract="None"
+  fulltext="None"
+>
+```
+
+Also, each document is assigned to one or multiple artificial subjects structured in a simple hierarchy:
+
+```python
+from slub_docsa.common.subject import print_subject_hierarchy
+
+print_subject_hierarchy(subject_hierarchy)
+```
+
+The output will be:
+
+```python
+uri://random/subject/1
+    uri://random/subject/7
+    uri://random/subject/6
+    uri://random/subject/5
+    uri://random/subject/4
+uri://random/subject/2
+    uri://random/subject/10
+    uri://random/subject/9
+    uri://random/subject/8
+uri://random/subject/3
+```
+
+In order to be able to apply cross-validation in a meaningful way, a minimum number of examples for each subject is
+desired. Since documents and their subject annotations are generated randomly, it is possible that one or more subjects
+do not have sufficient examples assigned to them. In the following, we will check that each subject consists of at
+least 10 examples. Subjects that consist of less than 10 examples will be pruned.
+
+```python
+from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
+from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
+
+min_samples = 10
+
+dataset.subjects = prune_subject_targets_to_minimum_samples(
+    min_samples, dataset.subjects, subject_hierarchy
+)
+dataset = filter_subjects_with_insufficient_samples(
+    dataset, min_samples
+)
+```
+
+In order to verify whether some subjects have been pruned, we can calculate the unique subject list:
+
+```python
+from slub_docsa.evaluation.incidence import unique_subject_order
+
+subject_order = unique_subject_order(dataset.subjects)
+print(len(subject_order))
+```
+
+Depending on the random generation process, the result may vary. In this case, one subject was pruned.
+
+```python
+9
+```
+
+Next, we need to define multiple classification models that will be evaluated:
+
+```python
+from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel
+from slub_docsa.models.classification.scikit import ScikitClassifier
+from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import f1_score
+
+models = [
+    OracleModel(),
+    NihilisticModel(),
+    ScikitClassifier(
+        predictor=KNeighborsClassifier(n_neighbors=1),
+        vectorizer=TfidfStemmingVectorizer("en", max_features=2000),
+    )
+]
+```
+
+Since the predictive performance can be evaluated in various ways, we also need to define multiple score functions:
+
+```python
+from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
+from slub_docsa.evaluation.incidence import positive_top_k_incidence_decision
+
+scores = [
+    # f1 score for best threshold
+    scikit_metric_for_best_threshold_based_on_f1score(
+        f1_score, average="micro", zero_division=0
+    ),
+    # f1 score for top-3 selection
+    scikit_incidence_metric(
+        positive_top_k_incidence_decision(3),
+        f1_score,
+        average="micro",
+        zero_division=0
+    ),
+    # hierarchical loss
+    scikit_metric_for_best_threshold_based_on_f1score(
+        cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
+    )
+]
+```
+
+Finally, we can apply cross-validation to our dataset. In order to get additional information during the evaluation,
+we can optionally set up the python logging library:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+Next, we will trigger an evaluation pipeline, which will train each model multiple times for each cross-validation
+split, and calculate each score function by comparing the model predictions with the test dataset.
+
+```python
+from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
+from slub_docsa.evaluation.split import scikit_kfold_splitter
+
+n_splits = 10
+split_function = scikit_kfold_splitter(n_splits)
+
+score_matrix, _ = score_classification_models_for_dataset(
+    n_splits,
+    dataset,
+    subject_order,
+    models,
+    split_function,
+    scores,
+    [],
+)
+```
+
+The console output will contain a number of status messages reporting the evaluation progress:
+
+```python
+INFO:slub_docsa.evaluation.pipeline:prepare 1-th cross validation split
+INFO:slub_docsa.evaluation.pipeline:evaluate 1-th cross validation split with 900 training and 100 test samples
+INFO:slub_docsa.evaluation.pipeline:evaluate model <OracleModel> for 1-th split
+INFO:slub_docsa.evaluation.pipeline:do training
+INFO:slub_docsa.evaluation.pipeline:do prediction
+INFO:slub_docsa.evaluation.pipeline:do global scoring
+INFO:slub_docsa.evaluation.pipeline:do per-subject scoring
+INFO:slub_docsa.evaluation.pipeline:overall scores are: [1. 1. 0.]
+...
+```
+
+In some cases, the cross-validation splits will result in training and test sets that are not well balanced with
+respect to one or more subjects. In these cases warning messages might be shown:
+
+```python
+WARNING:slub_docsa.evaluation.condition:subject 'uri://random/subject/3' is outside
+    target split ratio interval of (0.05, 0.2) with 18 training and 5 test samples
+```
+
+The resulting score matrix contains each score value for each model and cross-validation split. In order to visualize
+the score matrix, it can be plotted:
+
+```python
+from slub_docsa.evaluation.plotting import score_matrix_box_plot
+from slub_docsa.evaluation.plotting import write_multiple_figure_formats
+
+figure = score_matrix_box_plot(
+    score_matrix,
+    model_names=["oracle", "nihilistic", "knn k=1"],
+    score_names=["t=best f1_score", "top-3 f1_score", "h-loss"],
+    score_ranges=[(0, 1), (0, 1), (0, None)]
+)
+
+write_multiple_figure_formats(figure, filepath="example_score_matrix")
+```
+
+The result will be three files that illustrate the performance of each model in a box plot:
+
+- `example_score_matrix.html`
+- `example_score_matrix.jpg`
+- `example_score_matrix.pdf`
 
 """
