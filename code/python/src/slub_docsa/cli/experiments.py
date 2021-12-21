@@ -2,8 +2,8 @@
 
 import argparse
 from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments, setup_logging_from_args
-from slub_docsa.cli.qucosa import available_qucosa_clustering_model_names, available_qucosa_dataset_names
-from slub_docsa.cli.qucosa import available_qucosa_classification_model_names
+from slub_docsa.cli.qucosa import add_common_qucosa_arguments, available_qucosa_clustering_model_names
+from slub_docsa.cli.qucosa import available_qucosa_classification_model_names, available_qucosa_dataset_names
 from slub_docsa.cli.common import setup_storage_directories
 from slub_docsa.experiments.qucosa.classify_many import qucosa_experiments_classify_many
 from slub_docsa.experiments.qucosa.cluster_many import qucosa_experiments_cluster_many
@@ -45,6 +45,7 @@ def _experiments_qucosa_classify_many_action(args):
     dataset_subset = args.datasets
     model_subset = args.models
     n_splits = int(args.cross_splits)
+    check_qucosa_download = args.check_qucosa_download
 
     avaiable_datasets = available_qucosa_dataset_names()
     avaiable_models = available_qucosa_classification_model_names()
@@ -64,7 +65,8 @@ def _experiments_qucosa_classify_many_action(args):
         random_state=None,
         load_cached_predictions=False,
         split_function_name="random",
-        stop_after_evaluating_split=None
+        stop_after_evaluating_split=None,
+        check_qucosa_download=check_qucosa_download,
     )
 
 
@@ -73,6 +75,7 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
     parser.set_defaults(func=_experiments_qucosa_classify_many_action)
     add_logging_arguments(parser)
     add_storage_directory_arguments(parser)
+    add_common_qucosa_arguments(parser)
     _add_experiments_qucosa_common_arguments(parser)
 
     model_names = available_qucosa_classification_model_names(False)
@@ -101,6 +104,7 @@ def _experiments_qucosa_cluster_many_action(args):
     model_subset = args.models
     repeats = int(args.repeats)
     max_documents = None if args.limit is None else int(args.limit)
+    check_qucosa_download = args.check_qucosa_download
 
     avaiable_datasets = available_qucosa_dataset_names()
     avaiable_models = available_qucosa_clustering_model_names()
@@ -117,7 +121,8 @@ def _experiments_qucosa_cluster_many_action(args):
         dataset_subset=dataset_subset,
         model_subset=model_subset,
         repeats=repeats,
-        max_documents=max_documents
+        max_documents=max_documents,
+        check_qucosa_download=check_qucosa_download,
     )
 
 
@@ -125,6 +130,7 @@ def _experiments_qucosa_cluster_many_subparser(parser: argparse.ArgumentParser):
     parser.set_defaults(func=_experiments_qucosa_cluster_many_action)
     add_logging_arguments(parser)
     add_storage_directory_arguments(parser)
+    add_common_qucosa_arguments(parser)
     _add_experiments_qucosa_common_arguments(parser)
 
     model_names = available_qucosa_clustering_model_names()
@@ -157,17 +163,20 @@ def _experiments_qucosa_cluster_one_action(args):
     dataset_name = args.dataset
     model_name = args.model
     max_documents = None if args.limit is None else int(args.limit)
+    check_qucosa_download = args.check_qucosa_download
 
     qucosa_experiments_cluster_one(
         dataset_name,
         model_name,
-        max_documents
+        max_documents,
+        check_qucosa_download
     )
 
 
 def _experiments_qucosa_cluster_one_subparser(parser: argparse.ArgumentParser):
     parser.set_defaults(func=_experiments_qucosa_cluster_one_action)
     add_logging_arguments(parser)
+    add_common_qucosa_arguments(parser)
     add_storage_directory_arguments(parser)
 
     dataset_names = available_qucosa_dataset_names()

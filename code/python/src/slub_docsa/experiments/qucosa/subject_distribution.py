@@ -120,8 +120,8 @@ if __name__ == "__main__":
 
     from slub_docsa.common.paths import get_figures_dir
 
-    # subject_schema = "rvk"
-    subject_schema = "ddc"
+    # subject_schema = "ddc"
+    subject_schema = "rvk"
 
     subject_store = {
         "rvk": get_rvk_subject_store(),

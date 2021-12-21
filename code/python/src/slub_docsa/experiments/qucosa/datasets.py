@@ -1,5 +1,7 @@
 """Provides various variants of the qucosa dataset."""
 
+# pylint: disable=too-many-arguments
+
 import logging
 import os
 
@@ -58,9 +60,12 @@ def _load_qucosa_samples(
     lang_code: str = None,
     langid_check: bool = False,
     stemming: bool = False,
+    check_qucosa_download: bool = False,
 ) -> Iterator[Sample]:
     subject_hierarchy = qucosa_subject_hierarchy_by_subject_schema(subject_schema)
-    qucosa_iterator = read_qucosa_documents_from_directory()
+    qucosa_iterator = read_qucosa_documents_from_directory(
+        check_elasticsearch_document_count=check_qucosa_download,
+    )
     sample_iterator = read_qucosa_samples(qucosa_iterator, text_source, subject_schema, lang_code)
 
     if langid_check:
@@ -76,7 +81,9 @@ def _load_qucosa_samples(
     return _default_pruning(sample_iterator, 10, subject_hierarchy)
 
 
-def qucosa_named_datasets_tuple_list():
+def qucosa_named_datasets_tuple_list(
+    check_qucosa_download: bool = False,
+):
     """Return list of qucosa datasets as tuples."""
     def lazy_rvk():
         return qucosa_subject_hierarchy_by_subject_schema("rvk")
@@ -84,51 +91,54 @@ def qucosa_named_datasets_tuple_list():
     def lazy_ddc():
         return qucosa_subject_hierarchy_by_subject_schema("ddc")
 
+    cqd = check_qucosa_download
+
     datasets: List[Tuple[str, Callable[[], Iterator[Sample]], Callable[[], SubjectHierarchy]]] = [
         ("qucosa_all_titles_rvk",
-            lambda: _load_qucosa_samples("rvk", "titles", None, False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "titles", None, False, False, cqd), lazy_rvk),
         ("qucosa_all_titles_ddc",
-            lambda: _load_qucosa_samples("ddc", "titles", None, False, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "titles", None, False, False, cqd), lazy_ddc),
         ("qucosa_de_titles_rvk",
-            lambda: _load_qucosa_samples("rvk", "titles", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "titles", "de", False, False, cqd), lazy_rvk),
         ("qucosa_de_titles_ddc",
-            lambda: _load_qucosa_samples("ddc", "titles", "de", False, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "titles", "de", False, False, cqd), lazy_ddc),
         ("qucosa_de_titles_langid_rvk",
-            lambda: _load_qucosa_samples("rvk", "titles", "de", True, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "titles", "de", True, False, cqd), lazy_rvk),
         ("qucosa_de_titles_langid_ddc",
-            lambda: _load_qucosa_samples("ddc", "titles", "de", True, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "titles", "de", True, False, cqd), lazy_ddc),
         ("qucosa_de_complete_but_only_titles_rvk",
-            lambda: _load_qucosa_samples("rvk", "complete_but_only_titles", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_titles", "de", False, False, cqd), lazy_rvk),
         ("qucosa_de_abstracts_rvk",
-            lambda: _load_qucosa_samples("rvk", "abstracts", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "abstracts", "de", False, False, cqd), lazy_rvk),
         ("qucosa_de_abstracts_ddc",
-            lambda: _load_qucosa_samples("ddc", "abstracts", "de", False, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "abstracts", "de", False, False, cqd), lazy_ddc),
         ("qucosa_de_abstracts_langid_rvk",
-            lambda: _load_qucosa_samples("rvk", "abstracts", "de", True, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "abstracts", "de", True, False, cqd), lazy_rvk),
         ("qucosa_de_abstracts_langid_ddc",
-            lambda: _load_qucosa_samples("ddc", "abstracts", "de", True, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "abstracts", "de", True, False, cqd), lazy_ddc),
         ("qucosa_de_complete_but_only_abstracts_rvk",
-            lambda: _load_qucosa_samples("rvk", "complete_but_only_abstracts", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_abstracts", "de", False, False, cqd), lazy_rvk),
         ("qucosa_de_fulltexts_rvk",
-            lambda: _load_qucosa_samples("rvk", "fulltexts", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "fulltexts", "de", False, False, cqd), lazy_rvk),
         ("qucosa_de_fulltexts_ddc",
-            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", False, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", False, False, cqd), lazy_ddc),
         ("qucosa_de_fulltexts_langid_rvk",
-            lambda: _load_qucosa_samples("rvk", "fulltexts", "de", True, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "fulltexts", "de", True, False, cqd), lazy_rvk),
         ("qucosa_de_fulltexts_langid_ddc",
-            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", True, False), lazy_ddc),
+            lambda: _load_qucosa_samples("ddc", "fulltexts", "de", True, False, cqd), lazy_ddc),
         ("qucosa_de_complete_but_only_fulltexts_rvk",
-            lambda: _load_qucosa_samples("rvk", "complete_but_only_fulltexts", "de", False, False), lazy_rvk),
+            lambda: _load_qucosa_samples("rvk", "complete_but_only_fulltexts", "de", False, False, cqd), lazy_rvk),
     ]
     return datasets
 
 
 def qucosa_named_datasets(
-    name_subset: List[str] = None
+    name_subset: List[str] = None,
+    check_qucosa_download: bool = False,
 ) -> Iterator[Tuple[str, Dataset, SubjectHierarchy]]:
     """Return default qucosa dataset variants."""
     quocsa_cache_dir = os.path.join(get_cache_dir(), "qucosa")
-    dataset_list = qucosa_named_datasets_tuple_list()
+    dataset_list = qucosa_named_datasets_tuple_list(check_qucosa_download)
 
     # filter data sets based on name subset parameter
     if name_subset is not None:

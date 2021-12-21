@@ -28,7 +28,8 @@ def qucosa_experiments_classify_many(
     load_cached_predictions: bool = False,
     random_state: Optional[int] = None,
     split_function_name: Union[Literal["random"], Literal["stratified"]] = "random",
-    stop_after_evaluating_split: Optional[int] = None
+    stop_after_evaluating_split: Optional[int] = None,
+    check_qucosa_download: bool = False,
 ):
     """Perform qucosa experiments comparing many classification models for many dataset variants."""
     filename_suffix = f"split={split_function_name}"
@@ -40,7 +41,7 @@ def qucosa_experiments_classify_many(
         return initialize_classification_models_from_tuple_list(model_list, model_subset)
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
-        named_datasets=qucosa_named_datasets(dataset_subset),
+        named_datasets=qucosa_named_datasets(dataset_subset, check_qucosa_download),
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
         named_models_generator=_model_list_generator,
         n_splits=n_splits,

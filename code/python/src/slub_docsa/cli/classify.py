@@ -12,8 +12,9 @@ import pickle  # nosec
 
 from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments, read_uft8_from_stdin
 from slub_docsa.cli.common import setup_logging_from_args, setup_storage_directories
-from slub_docsa.cli.qucosa import available_qucosa_dataset_names, available_qucosa_classification_model_names
+from slub_docsa.cli.qucosa import add_common_qucosa_arguments, available_qucosa_dataset_names
 from slub_docsa.cli.qucosa import load_qucosa_dataset_by_name, load_qucosa_classification_model_by_name
+from slub_docsa.cli.qucosa import available_qucosa_classification_model_names
 from slub_docsa.common.dataset import SimpleDataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
@@ -49,13 +50,14 @@ def _classify_qucosa_train_action(args):
     model_name = args.model
     persist_dir = args.persist_dir
     max_documents = args.limit
+    check_qucosa_download = args.check_qucosa_download
 
     if persist_dir is None:
         persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
 
     # load dataset and model
     logger.info("load dataset '%s'", dataset_name)
-    dataset, _ = load_qucosa_dataset_by_name(dataset_name)
+    dataset, _ = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
 
     if max_documents is not None:
         logger.info("use only the first %d examples for training", int(max_documents))
@@ -95,6 +97,7 @@ def _classify_qucosa_predict_action(args):
     persist_dir = args.persist_dir
     max_results = int(args.results)
     qucosa_id = args.id
+    check_qucosa_download = args.check_qucosa_download
 
     if persist_dir is None:
         persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
@@ -130,7 +133,7 @@ def _classify_qucosa_predict_action(args):
 
     # load dataset and model
     logger.info("load dataset '%s'", dataset_name)
-    _, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name)
+    _, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
 
     logger.info("load subject order from disk at '%s'", persist_dir)
     with open(os.path.join(persist_dir, "subject_order.pickle"), "rb") as file:
@@ -188,12 +191,14 @@ def _classify_qucosa_train_subparser(parser: argparse.ArgumentParser):
     """Return sub-parser for classify qucosa train command."""
     parser.set_defaults(func=_classify_qucosa_train_action)
     add_logging_arguments(parser)
+    add_common_qucosa_arguments(parser)
     _add_classify_qucosa_common_arguments(parser)
 
     parser.add_argument(
         "--limit",
         "-l",
-        help="limit the number of training examples to this many examples",
+        help="""limit the number of training examples to this many examples,
+        the default is that all examples are used for training""",
     )
 
 
@@ -201,6 +206,7 @@ def _classify_qucosa_predict_subparser(parser: argparse.ArgumentParser):
     """Return sub-parser for classify qucosa predict command."""
     parser.set_defaults(func=_classify_qucosa_predict_action)
     add_logging_arguments(parser)
+    add_common_qucosa_arguments(parser)
     _add_classify_qucosa_common_arguments(parser)
 
     parser.add_argument(
@@ -212,6 +218,6 @@ def _classify_qucosa_predict_subparser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--results",
         "-r",
-        help="the number of results, 0 means all",
+        help="the number of results, 0 means all, default is 10",
         default=10
     )

@@ -229,7 +229,7 @@ def read_qucosa_documents_from_directory(
         already exists.
     check_elasticsearch_document_count: bool = False
         If true, will query the SLUB elastic search server for the current amount of qucos documents and compare
-        that to the number of documents stored on disc; it they do not match, a warning message is printed
+        that to the number of documents stored on disc; it they do not match, an error is thrown
 
     Returns
     -------
@@ -252,9 +252,9 @@ def read_qucosa_documents_from_directory(
                     dir_count += sum(1 for line in f_jsonl)
         logger.debug("downloaded qucosa json files contain %d qucosa documents", dir_count)
         if dir_count != es_count:
-            logger.warning(
-                "number of downloaded qucosa documents (%d) does not match SLUB elastic search server (%d)",
-                dir_count, es_count
+            raise RuntimeError(
+                f"number of downloaded qucosa documents ({dir_count}) "
+                + f"does not match SLUB elastic search server ({es_count})"
             )
 
     if not os.path.exists(directory):

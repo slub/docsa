@@ -24,6 +24,7 @@ def qucosa_experiments_cluster_many(
     model_subset: List[str],
     repeats: int = 10,
     max_documents: int = None,
+    check_qucosa_download: bool = False,
 ):
     """Perform qucosa clustering experiment comparing multiple models and dataset variants."""
     def _model_generator(subject_order):
@@ -39,7 +40,7 @@ def qucosa_experiments_cluster_many(
         )
 
     evaluation_result = do_default_score_matrix_clustering_evaluation(
-        named_datasets=qucosa_named_datasets(dataset_subset),
+        named_datasets=qucosa_named_datasets(dataset_subset, check_qucosa_download),
         named_models_generator=_model_generator,
         named_scores_generator=_score_generator,
         repeats=repeats,

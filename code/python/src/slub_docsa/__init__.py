@@ -148,7 +148,7 @@ from slub_docsa.models.classification.scikit import ScikitClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
 model = ScikitClassifier(
-    predictor=KNeighborsClassifier(n_neighbors=1, weights="distance"),
+    predictor=KNeighborsClassifier(n_neighbors=2),
     vectorizer=vectorizer
 )
 ```

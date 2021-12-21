@@ -31,9 +31,10 @@ def qucosa_experiments_cluster_one(
     dataset_name: str,
     model_name: str,
     max_documents: Optional[int] = None,
+    check_qucosa_download: bool = False,
 ):
     """Run clustering experiment evaluating single dataset."""
-    _, dataset, subject_hierarchy = list(qucosa_named_datasets([dataset_name]))[0]
+    _, dataset, subject_hierarchy = list(qucosa_named_datasets([dataset_name], check_qucosa_download))[0]
 
     if max_documents is not None:
         sampled_idx = np.random.choice(range(len(dataset.documents)), size=max_documents, replace=False)
