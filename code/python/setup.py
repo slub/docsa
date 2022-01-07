@@ -23,7 +23,7 @@ setup(
         ],
     },
     install_requires=[
-        "lxml==4.6.3",
+        "lxml==4.6.5",
         "plotly==5.2.1",
         "pandas==1.1.5",
         "rdflib==5.0.0",
