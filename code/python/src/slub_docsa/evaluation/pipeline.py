@@ -130,9 +130,9 @@ def score_classification_models_for_dataset(
         every subject calculated for every model, score function and split.
 
     """
-    # check minimum requirements for cross-validation
+    logger.info("check minimum requirements for cross-validation")
     if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
-        raise ValueError("dataset contains subjects with insufficient number of samples")
+        logger.warning("dataset contains subjects with insufficient number of samples")
 
     overall_score_matrix = np.empty((len(models), len(overall_score_functions), n_splits))
     overall_score_matrix[:, :, :] = np.NaN
