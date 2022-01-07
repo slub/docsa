@@ -18,7 +18,7 @@ from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseRelu
 from slub_docsa.models.classification.ann_torch import TorchBertSequenceClassificationHeadModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer, get_qucosa_tfidf_vectorizer
 from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_dbmdz_bert_vectorizer
 from slub_docsa.experiments.common.models import NamedClassificationModelTupleList, NamedClusteringModelTupleList
 from slub_docsa.models.clustering.scikit import ScikitClusteringModel
@@ -35,6 +35,10 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         ("tfidf_10k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
             vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+        )),
+        ("tfidf_no_stem_10k_knn_k=1", lambda: ScikitClassifier(
+            predictor=KNeighborsClassifier(n_neighbors=1),
+            vectorizer=get_qucosa_tfidf_vectorizer(max_features=10000),
         )),
         ("tfidf_40k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
@@ -79,6 +83,10 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         ("tfidf_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
             vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+        )),
+        ("tfidf_no_stem_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
+            epochs=50,
+            vectorizer=get_qucosa_tfidf_vectorizer(max_features=10000),
         )),
         ("tfidf_40k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
