@@ -29,6 +29,7 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
+from slub_docsa.evaluation.incidence import subject_idx_from_incidence_matrix
 from slub_docsa.data.load.nltk import download_nltk
 
 logger = logging.getLogger(__name__)
@@ -179,7 +180,6 @@ class AnnifModel(ClassificationModel):
 
     def _init_subject_skos_graph(self):
         if self.subject_hierarchy is not None and self.subject_order is not None:
-
             self.subject_skos_graph = subject_hierarchy_to_skos_graph(
                 subject_hierarchy=self.subject_hierarchy,
                 lang_code=self.lang_code,
@@ -247,12 +247,13 @@ class AnnifModel(ClassificationModel):
                 ]
 
         subject_vocab = _CustomAnnifSubjectCorpus(annif_subject_list, languages=[self.lang_code])
+        train_idxs_targets = subject_idx_from_incidence_matrix(train_targets)
 
         # define corpus
         annif_document_list = [
             AnnifDocument(
                 text=document_as_concatenated_string(d, max_length=self.max_document_length),
-                subject_set=train_targets[i]
+                subject_set=train_idxs_targets[i]
             )
             for i, d in enumerate(train_documents)
         ]

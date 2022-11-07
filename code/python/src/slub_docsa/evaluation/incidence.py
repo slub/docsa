@@ -100,6 +100,27 @@ def subject_targets_from_incidence_matrix(
     return list(map(lambda l: list(map(lambda i: subject_order[i], np.where(l == 1)[0])), incidence_array))
 
 
+def subject_idx_from_incidence_matrix(
+    incidence_matrix: np.ndarray,
+):
+    """Return subject indexes for an incidence matrix.
+
+    Parameters
+    ----------
+    incidence_matrix: np.ndarray
+        An incidence matrix representing which document is classified by which document.
+
+    Returns
+    -------
+    Sequence[Iterable[int]]
+        An order list of lists of subjects indexes. Each list entry corresponds to a row of `incidence_matrix`,
+        which contains the list of indexes (columns) that equals to 1 for the corresponding element in
+        `incidence_matrix`.
+    """
+    incidence_array = np.array(incidence_matrix)
+    return list(map(lambda l: list(np.where(l == 1)[0]), incidence_array))
+
+
 def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFunctionType:
     """Select subjects based on a threshold over probabilities.
 

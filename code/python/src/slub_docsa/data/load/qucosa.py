@@ -158,7 +158,7 @@ def number_of_qucosa_metadata_in_elasticsearch(
 
 def save_qucosa_documents_to_directory(
     qucosa_documents: Iterable[QucosaJsonDocument],
-    directory: str = None,
+    directory: Optional[str] = None,
     max_documents_per_file: int = 100
 ):
     """Save qucosa documents to a directory as gzip compressed jsonl files.
@@ -214,7 +214,7 @@ def save_qucosa_documents_to_directory(
 
 
 def read_qucosa_documents_from_directory(
-    directory: str = None,
+    directory: Optional[str] = None,
     fallback_retrieve_from_elasticsearch: bool = True,
     check_elasticsearch_document_count: bool = False,
 ) -> Iterable[QucosaJsonDocument]:
@@ -622,7 +622,7 @@ def _make_filtered_complete_doc_generator(make_func: Any):
 
 
 def get_qucosa_ddc_subject_store(
-    ddc_list_filepath: str = None,
+    ddc_list_filepath: Optional[str] = None,
 ) -> SubjectHierarchy:
     """Return the ddc subject hierarchy which contains only subjects present in the qucosa dataset."""
     if ddc_list_filepath is None:
@@ -656,7 +656,7 @@ def qucosa_subject_hierarchy_by_subject_schema(
 
 
 def read_qucosa_samples(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
+    qucosa_iterator: Optional[Iterable[QucosaJsonDocument]] = None,
     metadata_variant: str = "titles",
     subject_schema: Union[Literal["rvk"], Literal["ddc"]] = "rvk",
     lang_code: Optional[str] = "de",
@@ -711,8 +711,8 @@ def read_qucosa_samples(
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    filepath: str = None,
+    qucosa_iterator: Optional[Iterable[QucosaJsonDocument]] = None,
+    filepath: Optional[str] = None,
 ):
     """Save all qucosa documents as annif tsv file using only the title as text and RVK as subject annotations.
 

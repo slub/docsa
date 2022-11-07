@@ -327,7 +327,7 @@ def prune_subject_targets_to_minimum_samples(
     while len(subjects_to_be_checked) > 0:
         # only consider childless subjects, whose counts can not increase further
         childless_subjects = [s for s in subjects_to_be_checked if s not in subject_children]
-        logger.debug("prune to parent iteration %d considerung %d childless subjects", i + 1, len(childless_subjects))
+        logger.debug("prune to parent iteration %d considering %d childless subjects", i + 1, len(childless_subjects))
 
         # find subjects that need pruning
         childless_subjects_to_be_pruned = {

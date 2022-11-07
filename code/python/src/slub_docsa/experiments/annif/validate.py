@@ -7,10 +7,8 @@ from typing import cast
 
 from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
-from slub_docsa.common.dataset import dataset_from_samples
 
 from slub_docsa.common.paths import get_annif_dir
-from slub_docsa.data.load.qucosa import read_qucosa_samples, read_qucosa_documents_from_directory
 from slub_docsa.data.load.rvk import get_rvk_subject_store
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
@@ -21,31 +19,34 @@ from slub_docsa.evaluation.incidence import unique_subject_order
 from slub_docsa.evaluation.score import absolute_confusion_from_incidence
 from slub_docsa.evaluation.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     MIN_SAMPLES = 10
     LIMIT = 5
     MODEL_TYPE = "tfidf"
     LANG_CODE = "de"
 
-    # load data
-    dataset = dataset_from_samples(read_qucosa_samples(read_qucosa_documents_from_directory(), "abstracts", "rvk"))
+    logger.info("load dataset")
+    _, dataset, _ = next(iter(qucosa_named_datasets(["qucosa_de_titles_rvk"])))
+
+    logger.info("load rvk subjects")
     rvk_hierarchy = get_rvk_subject_store()
 
-    # do pruning
+    logger.info("do pruning on rvk subjects")
     dataset.subjects = prune_subject_targets_to_minimum_samples(MIN_SAMPLES, dataset.subjects, rvk_hierarchy)
     dataset = filter_subjects_with_insufficient_samples(dataset, MIN_SAMPLES)
 
-    # calculate subject list on whole dataset
+    logger.info("calculate relevant subject list from dataset")
     subject_order = unique_subject_order(dataset.subjects)
     rvk_labels = {uri: rvk_hierarchy[uri].label for uri in subject_order}
 
-    # create experiment directory
+    logger.info("create annif comparison_experiment directory")
     os.makedirs(os.path.join(get_annif_dir(), "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")

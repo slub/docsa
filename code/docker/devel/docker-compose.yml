@@ -7,8 +7,8 @@ services:
       context: ../../../
       dockerfile: code/docker/devel/Dockerfile.python
       args:
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+        # UID: ${UID:-1000}
+        # GID: ${GID:-1000}
         BASE_IMAGE: ${BASE_IMAGE}
     security_opt:
       - label=disable
@@ -20,9 +20,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.annif
-      args:
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+      # args:
+        # UID: ${UID:-1000}
+        # GID: ${GID:-1000}
     ports:
       - "127.0.0.1:5000:5000/tcp" # annif development server
     volumes:
