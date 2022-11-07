@@ -30,7 +30,6 @@ from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
 from slub_docsa.data.load.nltk import download_nltk
-from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +72,7 @@ class _CustomAnnifProject:
         """Set the datadir, subject index and analyzer."""
         self.datadir = datadir
         self.subjects = AnnifSubjectIndex()
+        self.subjects.load_subjects(subject_corpus)
         self.vocab = _CustomAnnifVocabulary(
             subject_index=self.subjects,
             subject_corpus=subject_corpus,
@@ -86,19 +86,20 @@ class _CustomAnnifSubjectCorpus:
 
     subjects: Iterable[AnnifSubject]
     concepts: Iterable[str]
-
+    languages: Iterable[str]
     subjects_by_uri: Mapping[str, AnnifSubject]
 
-    def __init__(self, subjects: Iterable[AnnifSubject]):
+    def __init__(self, subjects: Iterable[AnnifSubject], languages: Iterable[str]):
         """Set the list of subjects."""
         self.subjects = subjects
         self.concepts = [s.uri for s in subjects]
         self.subjects_by_uri = {s.uri: s for s in subjects}
+        self.languages = languages
 
     def get_concept_labels(self, concept, _label_types, _language):
         """Return a list of labels for each subject."""
         if concept in self.subjects_by_uri:
-            return [self.subjects_by_uri[concept].labels]
+            return [self.subjects_by_uri[concept].labels[_language]]
         return []
 
 
@@ -222,19 +223,17 @@ class AnnifModel(ClassificationModel):
 
             # define subjects
             numbered_subjects = [str(i) for i in range(self.n_unique_subject)]
-            train_subject_targets = subject_targets_from_incidence_matrix(train_targets, numbered_subjects)
             annif_subject_list = [
-                AnnifSubject(uri=uri, labels=uri, notation=None) for uri in numbered_subjects
+                AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in numbered_subjects
             ]
         else:
             # use uri from subject order to identify columns in train_targets
             self.n_unique_subject = len(self.subject_order)
-            train_subject_targets = subject_targets_from_incidence_matrix(train_targets, self.subject_order)
 
             if self.subject_hierarchy is None:
                 # create Annif subjects from subject order only (label info via subject hierarchy not available)
                 annif_subject_list = [
-                    AnnifSubject(uri=uri, labels=uri, notation=None) for uri in self.subject_order
+                    AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in self.subject_order
                 ]
             else:
                 # create Annif subjects with label info from subject hierarchy
@@ -242,18 +241,18 @@ class AnnifModel(ClassificationModel):
                 annif_subject_list = [
                     AnnifSubject(
                         uri=uri,
-                        labels=self.subject_hierarchy[uri].label,
+                        labels={self.lang_code: self.subject_hierarchy[uri].label},
                         notation=None
                     ) for uri in self.subject_order
                 ]
 
-        subject_vocab = _CustomAnnifSubjectCorpus(annif_subject_list)
+        subject_vocab = _CustomAnnifSubjectCorpus(annif_subject_list, languages=[self.lang_code])
 
         # define corpus
         annif_document_list = [
             AnnifDocument(
                 text=document_as_concatenated_string(d, max_length=self.max_document_length),
-                subject_set=train_subject_targets[i]
+                subject_set=train_targets[i]
             )
             for i, d in enumerate(train_documents)
         ]
@@ -329,7 +328,7 @@ class AnnifModel(ClassificationModel):
 
             results = self.model.suggest(document_as_concatenated_string(doc, max_length=self.max_document_length))
             results = cast(VectorSuggestionResult, results)
-            annif_score_vector = results.as_vector(self.project.subjects)
+            annif_score_vector = results.as_vector(len(self.project.subjects))
 
             for j in range(self.n_unique_subject):
                 if self.subject_order is None:
