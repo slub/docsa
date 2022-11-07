@@ -9,7 +9,7 @@ import os
 import logging
 import tempfile
 import time
-from typing import Iterable, Mapping, Optional, Sequence, Any
+from typing import Iterable, Mapping, Optional, Sequence, Any, cast
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from annif.corpus import SubjectIndex as AnnifSubjectIndex
 from annif.backend import get_backend
 from annif.analyzer.analyzer import Analyzer
 from annif.analyzer.snowball import SnowballAnalyzer
+from annif.suggestion import VectorSuggestionResult
 
 import rdflib
 from rdflib.namespace import SKOS
@@ -46,7 +47,7 @@ class _CustomAnnifVocabulary:
     subjects: AnnifSubjectIndex
     skos: Any
 
-    def __init__(self, subject_index, subject_corpus, subject_skos_graph: rdflib.Graph = None):
+    def __init__(self, subject_index, subject_corpus, subject_skos_graph: Optional[rdflib.Graph] = None):
         """Set the subject index."""
         self.subjects = subject_index
         self.skos = subject_corpus
@@ -68,10 +69,10 @@ class _CustomAnnifProject:
     vocab: _CustomAnnifVocabulary
     analyzer: Analyzer
 
-    def __init__(self, datadir, subject_corpus, analyzer, subject_skos_graph: rdflib.Graph = None):
+    def __init__(self, datadir, subject_corpus, analyzer, subject_skos_graph: Optional[rdflib.Graph] = None):
         """Set the datadir, subject index and analyzer."""
         self.datadir = datadir
-        self.subjects = AnnifSubjectIndex(subject_corpus)
+        self.subjects = AnnifSubjectIndex()
         self.vocab = _CustomAnnifVocabulary(
             subject_index=self.subjects,
             subject_corpus=subject_corpus,
@@ -97,7 +98,7 @@ class _CustomAnnifSubjectCorpus:
     def get_concept_labels(self, concept, _label_types, _language):
         """Return a list of labels for each subject."""
         if concept in self.subjects_by_uri:
-            return [self.subjects_by_uri[concept].label]
+            return [self.subjects_by_uri[concept].labels]
         return []
 
 
@@ -113,7 +114,7 @@ class _CustomAnnifDocumentCorpus:
     def is_empty(self):
         """Check whether the iterable of documents is empty."""
         try:
-            return next(self.documents.__iter__()) is None
+            return next(iter(self.documents)) is None
         except StopIteration:
             return True
 
@@ -125,9 +126,9 @@ class AnnifModel(ClassificationModel):
         self,
         model_type: str,
         lang_code: str,
-        subject_order: Sequence[str] = None,
-        subject_hierarchy: SubjectHierarchy = None,
-        data_dir: str = None,
+        subject_order: Optional[Sequence[str]] = None,
+        subject_hierarchy: Optional[SubjectHierarchy] = None,
+        data_dir: Optional[str] = None,
         max_document_length: int = 10000
     ):
         """Initialize model with a Annif model type identifier and data directory.
@@ -223,7 +224,7 @@ class AnnifModel(ClassificationModel):
             numbered_subjects = [str(i) for i in range(self.n_unique_subject)]
             train_subject_targets = subject_targets_from_incidence_matrix(train_targets, numbered_subjects)
             annif_subject_list = [
-                AnnifSubject(uri=uri, label=uri, notation=None, text=None) for uri in numbered_subjects
+                AnnifSubject(uri=uri, labels=uri, notation=None) for uri in numbered_subjects
             ]
         else:
             # use uri from subject order to identify columns in train_targets
@@ -233,7 +234,7 @@ class AnnifModel(ClassificationModel):
             if self.subject_hierarchy is None:
                 # create Annif subjects from subject order only (label info via subject hierarchy not available)
                 annif_subject_list = [
-                    AnnifSubject(uri=uri, label=uri, notation=None, text=None) for uri in self.subject_order
+                    AnnifSubject(uri=uri, labels=uri, notation=None) for uri in self.subject_order
                 ]
             else:
                 # create Annif subjects with label info from subject hierarchy
@@ -241,9 +242,8 @@ class AnnifModel(ClassificationModel):
                 annif_subject_list = [
                     AnnifSubject(
                         uri=uri,
-                        label=self.subject_hierarchy[uri].label,
-                        notation=None,
-                        text=None
+                        labels=self.subject_hierarchy[uri].label,
+                        notation=None
                     ) for uri in self.subject_order
                 ]
 
@@ -253,8 +253,7 @@ class AnnifModel(ClassificationModel):
         annif_document_list = [
             AnnifDocument(
                 text=document_as_concatenated_string(d, max_length=self.max_document_length),
-                uris=train_subject_targets[i],
-                labels=None
+                subject_set=train_subject_targets[i]
             )
             for i, d in enumerate(train_documents)
         ]
@@ -329,6 +328,7 @@ class AnnifModel(ClassificationModel):
         for i, doc in enumerate(test_documents):
 
             results = self.model.suggest(document_as_concatenated_string(doc, max_length=self.max_document_length))
+            results = cast(VectorSuggestionResult, results)
             annif_score_vector = results.as_vector(self.project.subjects)
 
             for j in range(self.n_unique_subject):
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     dataset = get_static_mini_dataset()
-    model = AnnifModel("tfidf", "english")
+    model = AnnifModel("tfidf", "en")
 
     my_subject_order = unique_subject_order(dataset.subjects)
     incidence_matrix = subject_incidence_matrix_from_targets(dataset.subjects, my_subject_order)

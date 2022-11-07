@@ -147,7 +147,9 @@ def load_persisted_dataset_from_lazy_sample_iterator(
     lazy_sample_iterator: Callable[[], Iterator[Sample]]
         a method that can be called to retrieve a sample iterator that is used to populate
         a not yet existing dataset store; if the dataset store already exists, this method is not called
-    filepath
+    filepath: str
+        the filepath to load the sqlite database from
+
     """
     if not os.path.exists(filepath):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)

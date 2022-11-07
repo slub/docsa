@@ -1,8 +1,12 @@
 """Load and save data as TSV files."""
 
-from typing import Mapping
+import os
+import gzip
 
-from slub_docsa.common.dataset import Dataset
+from typing import Iterable, Mapping
+
+from slub_docsa.common.dataset import Dataset, SimpleDataset
+from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 
 
@@ -53,3 +57,42 @@ def save_subject_labels_as_annif_tsv(
     with open(tsv_filepath, "w", encoding="utf8") as f_tsv:
         for uri, label in subject_labels.items():
             f_tsv.write(f"<{uri}>\t{label}\n")
+
+
+def load_dataset_from_gzipped_annif_tsv(
+    tsv_filepath: str,
+):
+    """Load both documents and subjects from a gzipped tsv file as suggested by Annif.
+
+    Parameters
+    ----------
+    tsv_filepath: str
+        the path to the tsv file that is being loaded
+
+    Returns
+    -------
+    SimpleDataset
+        the documents and subjects loaded as SimpleDataset
+    """
+    # write documents
+    uri_prefix = os.path.basename(tsv_filepath)
+    documents: Iterable[Document] = []
+    subjects: Iterable[Iterable[str]] = []
+    i = 0
+    with gzip.open(tsv_filepath, "rt", encoding="utf8") as f_tsv:
+        while True:
+            line = f_tsv.readline()
+
+            if not line:
+                break
+
+            text, label_str = line.split("\t")
+            labels = [label[1:-1] for label in label_str.strip().split(" ")]
+
+            uri = uri_prefix + "#" + str(i)
+            documents.append(Document(uri=uri, title=text))
+            subjects.append(labels)
+
+            i += 1
+
+    return SimpleDataset(documents=documents, subjects=subjects)

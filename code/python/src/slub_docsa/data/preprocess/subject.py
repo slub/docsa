@@ -314,6 +314,7 @@ def prune_subject_targets_to_minimum_samples(
 
     Returns
     -------
+    SubjectTargets
         the same subject target list as `subject_targets`,  where some subjects are replaced with their parent subject
         in case they do not have a sufficient number of samples
     """

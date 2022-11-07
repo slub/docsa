@@ -217,7 +217,7 @@ def cesa_bianchi_h_loss(
         return _nan_results
 
     children_map = children_map_from_subject_hierarchy(subject_hierarchy)
-    number_of_root_nodes = sum([1 for v in subject_hierarchy.values() if v.parent_uri is None])
+    number_of_root_nodes = sum(1 for v in subject_hierarchy.values() if v.parent_uri is None)
 
     def _find_ancestor_node_with_error(
             subject_uri: str,

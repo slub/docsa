@@ -54,7 +54,7 @@ def persisted_fit_classification_model_and_predict(
 
         # calculate hash over train and test data
         hasher = hashlib.sha1()  # nosec
-        hasher.update(model.__str__().encode())
+        hasher.update(str(model).encode())
 
         for doc in train_documents:
             hasher.update(document_as_concatenated_string(doc).encode())

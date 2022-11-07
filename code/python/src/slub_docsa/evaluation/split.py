@@ -14,25 +14,25 @@ from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_target
 
 logger = logging.getLogger(__name__)
 
-SequenceType = TypeVar("SequenceType")
+ST = TypeVar("ST")
 """An arbitrary type used by `IndexedSequence`."""
 
 DatasetSplitFunction = Callable[[Dataset], Iterable[Tuple[Dataset, Dataset]]]
 """A splitting function that, given a dataset, returns an iterator over multiple training and test subsets."""
 
 
-class IndexedSequence(Sequence[SequenceType]):
+class IndexedSequence(Sequence[ST]):
     """Provides indexed access to an arbitrary sequence.
 
     Is used to provide transparent access to training and test sets without copying any data.
     """
 
-    def __init__(self, sequence: Sequence[SequenceType], idx: Sequence[int]):
+    def __init__(self, sequence: Sequence[ST], idx: Sequence[int]):
         """Initialize indexed sequence.
 
         Parameters
         ----------
-        sequence: Sequence[SequenceType]
+        sequence: Sequence[ST]
             the sequence that is supossed to be access via an index
         idx: Sequence[int]
             the index at which sequence is being accessed
@@ -49,7 +49,7 @@ class IndexedSequence(Sequence[SequenceType]):
                 return True
         return False
 
-    def __iter__(self) -> Iterator[SequenceType]:
+    def __iter__(self) -> Iterator[ST]:
         """Iterate over indexed sequence."""
         for i in self.idx:
             yield self.sequence[i]
@@ -58,7 +58,7 @@ class IndexedSequence(Sequence[SequenceType]):
         """Return length of index."""
         return self.idx.__len__()
 
-    def __getitem__(self, i) -> SequenceType:
+    def __getitem__(self, i) -> ST:
         """Return item at position of index."""
         return self.sequence[self.idx[i]]
 

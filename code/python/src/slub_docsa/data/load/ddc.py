@@ -189,7 +189,7 @@ def ddc_notation_from_uri_via_coliana(
     key = ddc_key_from_uri(uri)
 
     logger.debug("do ddc label request to coli-ana for ddc uri: %s", uri)
-    response = requests.get(COLIANA_DDC_API_URL + key)
+    response = requests.get(COLIANA_DDC_API_URL + key, timeout=10)
 
     if not response or not response.ok:
         logger.info("ddc request to coli-ana failed")
@@ -276,12 +276,12 @@ class SimpleDdcHierarchy(SubjectHierarchy):
 
     def values(self) -> Iterable[SubjectNode]:
         """Return a list over all major level ddc subjects nodes."""
-        return [self.__getitem__(k) for k in iter(self)]
+        return [self[k] for k in iter(self)]
 
-    def get(self, k: str, default: Optional[SubjectNode] = None) -> Optional[SubjectNode]:
+    def get(self, key: str, default: Optional[SubjectNode] = None) -> Optional[SubjectNode]:
         """Return a ddc subject node for a given ddc uri."""
-        if k in self:
-            return self.__getitem__(k)
+        if key in self:
+            return self[key]
         return default
 
     def __eq__(self, other):
