@@ -2,8 +2,8 @@ version: '2.3'
 
 services:
 
-  ubuntu_18.04:
+  ubuntu_20.04:
     build:
       context: ../../../
-      dockerfile: code/docker/installation_instructions/Dockerfile.ubuntu_18.04
+      dockerfile: code/docker/installation_instructions/Dockerfile.ubuntu_20.04
 

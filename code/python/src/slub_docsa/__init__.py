@@ -17,7 +17,7 @@ Some important features include:
 
 ## Installation
 
-This project requires [Python](https://www.python.org/) v3.6 or above and uses [pip](https://pypi.org/project/pip/)
+This project requires [Python](https://www.python.org/) v3.8 or above and uses [pip](https://pypi.org/project/pip/)
 for dependency management. Besides, this package uses [pyTorch](https://pytorch.org/) to train
 [Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) via GPUs.
 Make sure to install the latest Nvidia graphics drivers and check
@@ -44,7 +44,7 @@ Use *make* to install python dependencies by executing the following commands:
 - `make docs`
   (generate API documentation, requires test dependencies)
 
-### From Source using Ubuntu 18.04
+### From Source using Ubuntu 20.04
 
 Install essentials like *python3*, *pip* and *make*:
 
