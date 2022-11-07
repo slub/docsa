@@ -47,7 +47,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         epochs: int = 50,
         batch_size: int = 32,
         lr: float = 0.001,
-        plot_training_history_filepath: str = None,
+        plot_training_history_filepath: Optional[str] = None,
     ):
         """Initialize model.
 

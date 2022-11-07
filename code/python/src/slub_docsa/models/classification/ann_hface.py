@@ -54,7 +54,7 @@ class HuggingfaceSequenceClassificationModel(ClassificationModel):
         model_identifier: str,
         epochs: int = 5,
         batch_size: int = 8,
-        cache_dir: str = None,
+        cache_dir: Optional[str] = None,
     ):
         """Initialize model.
 
@@ -96,7 +96,7 @@ class HuggingfaceSequenceClassificationModel(ClassificationModel):
                 cache_dir=self.cache_dir,
             )
 
-    def _tokenize_documents(self, documents: Sequence[Document], max_samples: int = None):
+    def _tokenize_documents(self, documents: Sequence[Document], max_samples: Optional[int] = None):
         corpus = [document_as_concatenated_string(d) for d in documents]
         if max_samples is not None:
             corpus = corpus[:max_samples]

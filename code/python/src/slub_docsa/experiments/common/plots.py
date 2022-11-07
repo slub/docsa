@@ -1,7 +1,7 @@
 """Common plots that are can be printed as part of an evaluation experiment."""
 
 import os
-from typing import List, NamedTuple, Optional, Sequence
+from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
 
@@ -16,7 +16,7 @@ class DefaultScoreMatrixDatasetResult(NamedTuple):
     """Stores evaluation result matrices as well as model and score info."""
 
     dataset_name: str
-    model_names: List[str]
+    model_names: Sequence[str]
     overall_score_matrix: np.ndarray
     per_class_score_matrix: Optional[np.ndarray]
     overall_score_lists: NamedScoreLists
@@ -133,7 +133,7 @@ def write_precision_recall_plot(
     recall_idx = score_names.index("top3 recall micro")
 
     figure = precision_recall_plot(
-        evaluation_result.overall_score_matrix[:, [precision_idx, recall_idx], :],
+        evaluation_result.overall_score_matrix[:, [precision_idx, recall_idx], :],  # type: ignore
         evaluation_result.model_names,
     )
     write_multiple_figure_formats(figure, plot_filepath)
@@ -172,7 +172,7 @@ def write_per_subject_precision_recall_vs_samples_plot(
     samples_idx = score_names.index("# test samples")
 
     figure = per_subject_precision_recall_vs_samples_plot(
-        evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],
+        evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],  # type: ignore
         evaluation_result.model_names,
     )
     write_multiple_figure_formats(figure, plot_filepath)

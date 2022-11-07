@@ -8,6 +8,7 @@ import os
 from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
 from slub_docsa.experiments.artificial.datasets import default_named_artificial_datasets
+from slub_docsa.experiments.artificial.models import default_artificial_named_classification_model_list
 from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
 from slub_docsa.experiments.common.pipeline import get_split_function_by_name
@@ -35,17 +36,18 @@ if __name__ == "__main__":
     model_name_subset = [
         "oracle",
         "nihilistic",
-        # "random",
-        "tfidf knn k=1",
-        "dbmdz bert knn k=1",
-        "random vectorizer knn k=1",
-        # "knn k=3",
-        # "mlp",
-        # "rforest",
-        # "annif tfidf",
+        "random",
+        "tfidf_10k_knn_k=1",
+        "tfidf_10k_knn_k=3",
+        "tfidf_10k_dtree",
+        "tfidf_10k_rforest",
+        "tfidf_10k_log_reg",
+        "tfidf_10k_nbayes",
+        "tfidf_10k_svc",
+        "annif_tfidf",
         # "annif omikuji",
         # "annif vw_multi",
-        # "annif fasttext",
+        "annif_fasttext",
         # "annif mllm",
         # "annif yake",
         # "annif stwfsa"
@@ -57,6 +59,7 @@ if __name__ == "__main__":
 
     def _model_list_generator(subject_order, subject_hierarchy):
         model_list = default_dummy_named_model_list() \
+            + default_artificial_named_classification_model_list() \
             + default_annif_named_model_list("en", subject_order, subject_hierarchy)
         return initialize_classification_models_from_tuple_list(model_list, model_name_subset)
 

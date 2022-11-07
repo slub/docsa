@@ -125,7 +125,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
         print(
@@ -134,7 +134,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
         print(
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
     print("...")

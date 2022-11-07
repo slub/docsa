@@ -3,7 +3,7 @@
 # pylint: disable=dangerous-default-value, too-many-arguments, too-many-locals
 
 import math
-from typing import Iterable, Mapping, Optional, Sequence, cast, Any, List, Tuple
+from typing import Iterable, Mapping, Optional, Sequence, cast, Any, Tuple
 
 import numpy as np
 
@@ -21,9 +21,9 @@ def _get_marker_color(i, colorlist=px.colors.qualitative.Plotly):
 
 def score_matrix_box_plot(
     score_matrix: np.ndarray,
-    model_names: List[str],
-    score_names: List[str],
-    score_ranges: List[Tuple[Optional[float], Optional[float]]],
+    model_names: Sequence[str],
+    score_names: Sequence[str],
+    score_ranges: Sequence[Tuple[Optional[float], Optional[float]]],
     columns: int = 1
 ) -> Any:
     """Return box plot visualizing the overall score matrix.
@@ -76,11 +76,11 @@ def score_matrix_box_plot(
 
 
 def score_matrices_box_plot(
-    score_matrices: List[np.ndarray],
-    dataset_names: List[str],
-    model_names: List[str],
-    score_names: List[str],
-    score_ranges: List[Tuple[Optional[float], Optional[float]]],
+    score_matrices: Sequence[np.ndarray],
+    dataset_names: Sequence[str],
+    model_names: Sequence[str],
+    score_names: Sequence[str],
+    score_ranges: Sequence[Tuple[Optional[float], Optional[float]]],
     columns: int = 1
 ) -> Any:
     """Return box plot for multiple score matrices evaluated for different datasets.
@@ -164,7 +164,7 @@ def score_matrices_box_plot(
 
 def precision_recall_plot(
     score_matrix: np.ndarray,
-    model_names: List[str],
+    model_names: Sequence[str],
 ) -> Any:
     """Return a precision recall scatter plot.
 
@@ -207,7 +207,7 @@ def precision_recall_plot(
 
 def per_subject_precision_recall_vs_samples_plot(
     score_matrix: np.ndarray,
-    model_names: List[str],
+    model_names: Sequence[str],
 ) -> Any:
     """Return plot showing precision vs. number of test examples per subject.
 
@@ -275,9 +275,9 @@ def _calculate_score_histogram_bin(values, score_range):
 
 def per_subject_score_histograms_plot(
     score_matrix: np.ndarray,
-    model_names: List[str],
-    score_names: List[str],
-    score_ranges: List[Tuple[Optional[float], Optional[float]]],
+    model_names: Sequence[str],
+    score_names: Sequence[str],
+    score_ranges: Sequence[Tuple[Optional[float], Optional[float]]],
 ) -> Any:
     """Return a plot of score histograms illustrating the score distribution for all subjects individually.
 
@@ -345,12 +345,12 @@ def per_subject_score_histograms_plot(
 
 
 def ann_training_history_plot(
-    training_loss: List[float],
-    test_loss: List[float],
-    train_best_threshold_f1_score: List[float],
-    test_best_threshold_f1_score: List[float],
-    train_top3_f1_score: List[float],
-    test_top3_f1_score: List[float],
+    training_loss: Sequence[float],
+    test_loss: Sequence[float],
+    train_best_threshold_f1_score: Sequence[float],
+    test_best_threshold_f1_score: Sequence[float],
+    train_top3_f1_score: Sequence[float],
+    test_top3_f1_score: Sequence[float],
 ) -> Any:
     """Return a illustration of scores that were recorded for each epoch while training a neural network.
 

@@ -85,7 +85,7 @@ def score_classification_models_for_dataset(
     overall_score_functions: Sequence[MultiClassScoreFunctionType],
     per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
     fit_and_predict: FitClassificationModelAndPredictCallable = fit_classification_model_and_predict_test_documents,
-    stop_after_evaluating_split: int = None,
+    stop_after_evaluating_split: Optional[int] = None,
     use_test_data_as_validation_data: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Evaluate a dataset using cross-validation for a number of models and score functions.
@@ -182,9 +182,8 @@ def score_classification_models_for_dataset(
 
             logger.info("do per-subject scoring")
             for s_i in range(len(subject_order)):
-                per_class_test_incidence_matrix = test_incidence_matrix[:, [s_i]]
-                per_class_predicted_subject_probabilities = \
-                    predicted_subject_probabilities[:, [s_i]]
+                per_class_test_incidence_matrix = test_incidence_matrix[:, [s_i]]  # type: ignore
+                per_class_predicted_subject_probabilities = predicted_subject_probabilities[:, [s_i]]  # type: ignore
 
                 # calculate score for subset of documents that are annotated with a subject
                 for k, score_function in enumerate(per_class_score_functions):
@@ -207,7 +206,7 @@ def score_clustering_models_for_documents(
     models: Sequence[ClusteringModel],
     scores: Sequence[ClusteringScoreFunction],
     repeats: int = 10,
-    max_documents: int = None,
+    max_documents: Optional[int] = None,
 ) -> np.ndarray:
     """Evaluate clustering models by fitting, predicting and scoring them on a single dataset.
 

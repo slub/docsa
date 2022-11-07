@@ -45,8 +45,8 @@ def initialize_named_score_tuple_list(
 
 
 def default_named_multiclass_score_list(
-    subject_order: Sequence[str] = None,
-    subject_hierarchy: SubjectHierarchy = None,
+    subject_order: Optional[Sequence[str]] = None,
+    subject_hierarchy: Optional[SubjectHierarchy] = None,
 ) -> ScoreTupleList:
     """Return a list of default score functions for evaluation."""
     scores = [
@@ -146,7 +146,7 @@ def default_named_clustering_score_list(
         ("homogeneity", (0, 1), scikit_clustering_label_score_function(homogeneity_score)),
         ("completeness", (0, 1), scikit_clustering_label_score_function(completeness_score)),
         ("intra cluster tfidf cosine", (0, None), clustering_membership_score_function(
-            indexed_document_distance_generator_from_vectorizer(vectorizer, cosine),
+            indexed_document_distance_generator_from_vectorizer(vectorizer, cosine),  # type: ignore
             intra_cluster_distance
         )),
     ]

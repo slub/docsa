@@ -24,7 +24,7 @@ from slub_docsa.experiments.common.scores import default_named_multiclass_score_
 logger = logging.getLogger(__name__)
 
 
-def get_split_function_by_name(name: str, n_splits: int, random_state: float = None) -> DatasetSplitFunction:
+def get_split_function_by_name(name: str, n_splits: int, random_state: Optional[float] = None) -> DatasetSplitFunction:
     """Return split function that matches simplified name."""
     # set up split function
     if name == "random":
@@ -42,10 +42,10 @@ def do_default_score_matrix_classification_evaluation(
         NamedClassificationModels
     ],
     n_splits: int = 10,
-    overall_score_name_subset: Iterable[str] = None,
-    per_class_score_name_subset: Iterable[str] = None,
+    overall_score_name_subset: Optional[Iterable[str]] = None,
+    per_class_score_name_subset: Optional[Iterable[str]] = None,
     load_cached_predictions: bool = False,
-    stop_after_evaluating_split: int = None,
+    stop_after_evaluating_split: Optional[int] = None,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     results: DefaultScoreMatrixResult = []
@@ -103,7 +103,7 @@ def do_default_score_matrix_clustering_evaluation(
     named_models_generator: Callable[[Iterable[str]], NamedClusteringModels],
     named_scores_generator: Callable[[], NamedScoreLists],
     repeats: int = 10,
-    max_documents: int = None,
+    max_documents: Optional[int] = None,
 ) -> DefaultScoreMatrixResult:
     """Run clustering algorithms on each dataset and calculate multiple scores."""
     results: DefaultScoreMatrixResult = []

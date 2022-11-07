@@ -45,7 +45,7 @@ def default_named_artificial_datasets(
     n_docs: int,
     n_subjects: int,
     min_samples: int,
-    name_subset: List[str] = None,
+    name_subset: Optional[List[str]] = None,
 ) -> Iterator[Tuple[str, Dataset, Optional[SubjectHierarchy]]]:
     """Return several persisted default artificial datasets."""
     lazy_named_datasets: List[Tuple[str, Callable[[], Tuple[Dataset, Optional[SubjectHierarchy]]]]] = [

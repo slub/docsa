@@ -60,7 +60,7 @@ def subject_incidence_matrix_from_targets(
         by which subject. The column order corresponds to the order of subjects found in `subject_order`.
         The order of row corresponds to the order of `targets`.
     """
-    incidence_matrix = np.zeros((len(targets), len(subject_order)))
+    incidence_matrix = np.zeros((len(targets), len(subject_order)), dtype=np.int32)
     for i, uri_list in enumerate(targets):
         for uri in uri_list:
             if uri in subject_order:

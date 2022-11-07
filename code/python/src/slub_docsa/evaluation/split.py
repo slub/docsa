@@ -2,7 +2,7 @@
 
 import logging
 
-from typing import Callable, Sequence, Iterator, TypeVar, Iterable, Tuple
+from typing import Callable, Sequence, Iterator, TypeVar, Iterable, Tuple, Optional, cast
 import numpy as np
 
 from sklearn.model_selection import KFold
@@ -100,13 +100,13 @@ def scikit_base_folder_splitter(
         for train_idx_list, test_idx_list in folder.split(features, targets):
 
             train_dataset = SimpleDataset(
-                documents=IndexedSequence(dataset.documents, train_idx_list),
-                subjects=IndexedSequence(dataset.subjects, train_idx_list),
+                documents=IndexedSequence(dataset.documents, cast(Sequence[int], train_idx_list)),
+                subjects=IndexedSequence(dataset.subjects, cast(Sequence[int], train_idx_list)),
             )
 
             test_dataset = SimpleDataset(
-                documents=IndexedSequence(dataset.documents, test_idx_list),
-                subjects=IndexedSequence(dataset.subjects, test_idx_list),
+                documents=IndexedSequence(dataset.documents, cast(Sequence[int], test_idx_list)),
+                subjects=IndexedSequence(dataset.subjects, cast(Sequence[int], test_idx_list)),
             )
 
             yield train_dataset, test_dataset
@@ -116,7 +116,7 @@ def scikit_base_folder_splitter(
 
 def scikit_kfold_splitter(
     n_splits: int,
-    random_state: float = None,
+    random_state: Optional[float] = None,
 ) -> DatasetSplitFunction:
     """Return a function that splits a dataset randomly into `n_splits` using scikit's KFold class.
 
@@ -138,7 +138,7 @@ def scikit_kfold_splitter(
 
 def skmultilearn_iterative_stratification_splitter(
     n_splits: int,
-    random_state: float = None,
+    random_state: Optional[float] = None,
 ) -> DatasetSplitFunction:
     """Return a function that splits a dataset randomly into `n_splits` using skmultilearn's IterativeStratification.
 

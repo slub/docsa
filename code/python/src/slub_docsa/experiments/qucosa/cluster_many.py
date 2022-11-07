@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List
+from typing import Sequence, Optional
 
 from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.experiments.common.models import initialize_clustering_models_from_tuple_list
@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 def qucosa_experiments_cluster_many(
-    dataset_subset: List[str],
-    model_subset: List[str],
+    dataset_subset: Sequence[str],
+    model_subset: Sequence[str],
     repeats: int = 10,
-    max_documents: int = None,
+    max_documents: Optional[int] = None,
     check_qucosa_download: bool = False,
 ):
     """Perform qucosa clustering experiment comparing multiple models and dataset variants."""

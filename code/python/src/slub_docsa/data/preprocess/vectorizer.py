@@ -6,7 +6,7 @@ import logging
 import os
 import pickle  # nosec
 
-from typing import Iterator, Optional, cast
+from typing import Iterator, Optional, Any, cast
 from itertools import islice
 
 import torch
@@ -114,7 +114,7 @@ class TfidfVectorizer(PersistableVectorizer):
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
-        for row in self.vectorizer.transform(list(texts)).toarray():
+        for row in cast(Any, self.vectorizer.transform(list(texts))).toarray():
             if not np.any(row):
                 # add random value if row is all zero, so cosine distance is well defined
                 row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
@@ -154,7 +154,7 @@ class TfidfStemmingVectorizer(TfidfVectorizer):
         lang_code: str,
         remove_stopwords: bool = True,
         max_features=10000,
-        stemming_cache_filepath: str = None,
+        stemming_cache_filepath: Optional[str] = None,
         **kwargs
     ):
         """Initialize vectorizer.
@@ -408,7 +408,7 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         batch_size: int = 4,
         subtext_samples: int = 1,
         hidden_states: int = 1,
-        cache_dir: str = None,
+        cache_dir: Optional[str] = None,
     ):
         """Initialize vectorizer.
 
@@ -442,20 +442,22 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         if self.model is None:
             try:
                 # try offline loading first
-                self.tokenizer = AutoTokenizer.from_pretrained(
+                self.tokenizer = cast(Module, AutoTokenizer.from_pretrained(
                     self.model_identifier,
                     cache_dir=self.cache_dir,
                     local_files_only=True
-                )
-                self.model = BertModel.from_pretrained(
+                ))
+                self.model = cast(Module, BertModel.from_pretrained(
                     self.model_identifier,
                     cache_dir=self.cache_dir,
                     local_files_only=True,
-                )
+                ))
             except OSError:
                 # check online again
-                self.tokenizer = AutoTokenizer.from_pretrained(self.model_identifier, cache_dir=self.cache_dir)
-                self.model = BertModel.from_pretrained(self.model_identifier, cache_dir=self.cache_dir)
+                self.tokenizer = cast(Module, AutoTokenizer.from_pretrained(
+                    self.model_identifier, cache_dir=self.cache_dir
+                ))
+                self.model = cast(Module, BertModel.from_pretrained(self.model_identifier, cache_dir=self.cache_dir))
             self.model.to(self.device)
 
     def fit(self, texts: Iterator[str]):

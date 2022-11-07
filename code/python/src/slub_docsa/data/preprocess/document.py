@@ -6,7 +6,7 @@ import logging
 import os
 import functools
 
-from typing import Callable, Iterator, List
+from typing import Callable, Iterator, List, Optional
 
 from sqlitedict import SqliteDict
 
@@ -30,7 +30,7 @@ def document_as_concatenated_string(
     skip_authors: bool = False,
     skip_abstract: bool = False,
     skip_fulltext: bool = False,
-    max_length: int = None,
+    max_length: Optional[int] = None,
 ) -> str:
     """Convert a document to a string by simple concatenation of all meta data.
 

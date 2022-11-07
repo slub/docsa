@@ -96,4 +96,4 @@ class RandomModel(ClassificationModel):
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict random probabilities between 0 and 1 for each class individually."""
-        return np.random.random(size=(len(test_documents), self.n_subjects))
+        return np.random.random(size=(len(test_documents), self.n_subjects))  # type: ignore

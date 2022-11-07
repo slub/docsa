@@ -46,7 +46,7 @@ def subject_hierarchy_to_skos_graph(
     subject_hierarchy: SubjectHierarchy,
     lang_code: str,
     generate_custom_triples: Optional[Callable[[Any], List[Tuple[Any, Any, Any]]]] = None,
-    mandatory_subject_list: Sequence[str] = None,
+    mandatory_subject_list: Optional[Sequence[str]] = None,
 ) -> rdflib.Graph:
     """Convert a subject hierarchy to an rdflib graph using SKOS triples.
 

@@ -5,7 +5,7 @@
 import logging
 import os
 
-from typing import Callable, Iterator, List, Tuple, Union
+from typing import Callable, Iterator, List, Tuple, Union, Sequence, Optional
 from typing_extensions import Literal
 
 from slub_docsa.common.dataset import Dataset, dataset_from_samples, samples_from_dataset
@@ -55,7 +55,7 @@ def _prune_min_samples(samples_iterator, min_samples, subject_hierarchy):
 def _load_qucosa_samples(
     subject_schema: Union[Literal["rvk"], Literal["ddc"]],
     text_source: str = "titles",
-    lang_code: str = None,
+    lang_code: Optional[str] = None,
     langid_check: bool = False,
     pruning_method: str = "min_samples_10",
     check_qucosa_download: bool = False,
@@ -182,7 +182,7 @@ def qucosa_named_datasets_tuple_list(
 
 
 def qucosa_named_datasets(
-    name_subset: List[str] = None,
+    name_subset: Optional[Sequence[str]] = None,
     check_qucosa_download: bool = False,
 ) -> Iterator[Tuple[str, Dataset, SubjectHierarchy]]:
     """Return default qucosa dataset variants."""
