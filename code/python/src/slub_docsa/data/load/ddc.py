@@ -210,7 +210,7 @@ class SimpleDdcHierarchy(SubjectHierarchy):
 
     def __init__(
         self,
-        subject_uris: Sequence[str] = None,
+        subject_uris: Optional[Sequence[str]] = None,
         subject_labels: Optional[Mapping[str, str]] = None,
     ):
         """Initialize unlabled ddc hierarchy.
@@ -272,11 +272,11 @@ class SimpleDdcHierarchy(SubjectHierarchy):
 
     def keys(self) -> Iterable[str]:
         """Return a list over all major level ddc uris."""
-        return iter(self)
+        return iter(self)  # type: ignore
 
     def values(self) -> Iterable[SubjectNode]:
         """Return a list over all major level ddc subjects nodes."""
-        return [self[k] for k in iter(self)]
+        return [self[k] for k in iter(self)]  # type: ignore
 
     def get(self, key: str, default: Optional[SubjectNode] = None) -> Optional[SubjectNode]:
         """Return a ddc subject node for a given ddc uri."""

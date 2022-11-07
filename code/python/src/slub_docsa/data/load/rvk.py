@@ -56,7 +56,7 @@ class RvkSubjectNode(SubjectNode):
 
 def _download_rvk_xml(
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = None,
+    xml_filepath: Optional[str] = None,
 ) -> None:
     """Download the RVK xml file from rvk.uni-regensburg.de."""
     if xml_filepath is None:
@@ -97,7 +97,7 @@ def rvk_notation_to_uri(notation: str) -> str:
 
 def read_rvk_subjects_from_file(
     filepath: str,
-    depth: int = None
+    depth: Optional[int] = None
 ) -> Iterable[RvkSubjectNode]:
     """Read classes and their labels from the official RVK xml zip archive file.
 
@@ -138,9 +138,9 @@ def read_rvk_subjects_from_file(
 
 
 def read_rvk_subjects(
-    depth: int = None,
+    depth: Optional[int] = None,
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = None,
+    xml_filepath: Optional[str] = None,
 ) -> Iterable[RvkSubjectNode]:
     """Download and read RVK subjects and their labels.
 
@@ -169,10 +169,10 @@ def read_rvk_subjects(
 
 
 def get_rvk_subject_store(
-    store_filepath: str = None,
-    depth: int = None,
+    store_filepath: Optional[str] = None,
+    depth: Optional[int] = None,
     download_url: str = RVK_XML_URL,
-    xml_filepath: str = None,
+    xml_filepath: Optional[str] = None,
 ) -> SubjectHierarchy:
     """Store all RVK classes in a dictionary indexed by notation.
 
@@ -215,7 +215,7 @@ def get_rvk_subject_store(
 
 def convert_rvk_classes_to_annif_tsv(
     rvk_subject_hierarchy: SubjectHierarchy,
-    tsv_filepath: str = None,
+    tsv_filepath: Optional[str] = None,
 ):
     """Convert RVK classes to tab-separated values file required by Annif.
 
