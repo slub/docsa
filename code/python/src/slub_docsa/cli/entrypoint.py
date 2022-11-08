@@ -34,6 +34,7 @@ import argparse
 import logging
 from slub_docsa.cli.classify import classify_subparser
 from slub_docsa.cli.experiments import experiments_subparser
+from slub_docsa.cli.serve import serve_subparser
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ def main():
 
     classify_subparser(root_parser_subparsers.add_parser("classify", help="train and predict classification models"))
     experiments_subparser(root_parser_subparsers.add_parser("experiments", help="run pre-built experiments"))
+    serve_subparser(root_parser_subparsers.add_parser("serve", help="run rest service"))
 
     args = root_parser.parse_args()
 

@@ -1,0 +1,539 @@
+openapi: 3.0.2 # https://spec.openapis.org/oas/v3.0.2
+
+info:
+  title: Bibliographic Classification Service
+  description: >
+    This is a <b>description</b>
+    with multiple <br />lines
+  version: 0.0.1-draft
+  contact:
+    name: SLUB Dresden
+    url: https://slub-dresden.de
+  license:
+    name: License Name
+    url: https://some-url.com
+
+servers:
+  - url: http://localhost:5000/v1
+    description: local development server
+  - url: https://docsa.slub-dresden.de/v1
+    description: SLUB server
+
+# -----------------------------------------------------------------------------
+
+paths:
+
+  /models:
+    get:
+      summary: List available models for language and classification schema
+      description: |
+        Lists available models, optionally filtered by certain criteria, e.g.
+        the language that is supported by a model, or the classification
+        schema that is used for prediction.
+      tags:
+        - Model Discovery and Classification
+      operationId: slub_docsa.serve.rest.models.find
+      parameters:
+        - name: language
+          description: |
+            the ISO 639-1 language code, if provided, lists only models that
+            are designed to classify documents of a certain language, e.g.
+            "de", "en"
+          examples:
+            none:
+              summary: no language restriction
+              value:
+            german:
+              summary: only models designed for german documents
+              value: de
+          in: query
+          schema:
+            type: string
+        - name: schema_id
+          description: |
+            if provided, lists only models that are capable to predict
+            subjects of that classification schema
+          in: query
+          schema:
+            type: string
+        - name: find_best
+          description: |
+            if true, only one model is returned that is considered the
+            current best model for the provided language and schema
+            (both language and schema are required)
+          in: query
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: |
+            Success, meaning the list of ids of all models or models that
+            match the specified criteria (language, schema)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                results:
+                  summary: 3 results
+                  value: [
+                    "60915cae-7b5d-4396-9bd7-177fe7bdffe6",
+                    "9dedfa23-f744-4d4a-8848-48786231bffa",
+                    "503a11c6-55b3-4c34-86af-af32691a1c74"
+                  ]
+                none:
+                  summary: no results
+                  value: []
+    post:
+      summary: Add new model
+      deprecated: true
+      tags:
+        - Model Discovery and Classification
+      operationId: slub_docsa.serve.rest.models.add
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+  /models/{model_id}:
+    get:
+      summary: Get basic information about a model
+      description: |
+        Returns various information about a model with a specific
+        <em>model_id</em>, in particular the document input languages that
+        are supported by this model, and the schema that is used to predict
+        subjects.
+      tags:
+        - Model Discovery and Classification
+      operationId: slub_docsa.serve.rest.models.get
+      parameters:
+        - $ref: "#/components/parameters/ModelId"
+      responses:
+          200:
+            description: success
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/ModelInfo"
+                example: {
+                  "creation_date": "2022-11-02 13:14:00",
+                  "description": "the model description",
+                  "supported_languages": ["de"],
+                  "schema_id": "rvk",
+                  "statistics": {
+                    "number_of_samples": 10000,
+                    "number_of_subjects": 100,
+                    "scores": {
+                      "f1_t=0.5": 0.85,
+                    }
+                  }
+                }
+          404:
+            description: model not found
+    delete:
+      summary: Delete a model
+      deprecated: true
+      tags:
+        - Model Discovery and Classification
+      operationId: slub_docsa.serve.rest.models.delete
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+        404:
+          description: model not found
+
+  /models/{model_id}/classify:
+    post:
+      summary: Classify multiple documents by title, abstract or fulltext
+      description: |
+        Classifies a list of documents by applying the specified model.
+        Results can be filtered via a minimum certainty <em>threshold</em>
+        or by specifying a maximum number of subjects (<em>limit</em>) that
+        is returned.
+      tags:
+        - Model Discovery and Classification
+      operationId: slub_docsa.serve.rest.models.classify
+      parameters:
+        - $ref: "#/components/parameters/ModelId"
+        - $ref: "#/components/parameters/ClassificationLimit"
+        - $ref: "#/components/parameters/ClassificationThreshold"
+      requestBody:
+        description: |
+          a list of documents that are supposed to be classified
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Document"
+            examples:
+              multiple:
+                summary: multiple documents, title only
+                value: [
+                  { "title": "Title of the first document" },
+                  { "title": "Title of the second document" },
+                  { "title": "Title of the third document" },
+                ]
+              full:
+                summary: single document, all info
+                value: [
+                  {
+                    "title": "This is the title",
+                    "abstract": "This is a summary used for classication.",
+                    "fulltext": "This the long unformatted raw text of a document."
+                  }
+                ]
+
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassificationResults"
+              examples:
+                results:
+                  summary: 3 documents, t=0.1, limit=3
+                  value: [
+                    [
+                      { "subject_uri": "subject_1", "score": 0.7 },
+                      { "subject_uri": "subject_2", "score": 0.5 },
+                      { "subject_uri": "subject_3", "score": 0.4 },
+                    ],
+                    [
+                      { "subject_uri": "subject_2", "score": 0.9 },
+                      { "subject_uri": "subject_4", "score": 0.1 },
+                    ],
+                    [
+                      { "subject_uri": "subject_1", "score": 0.2 },
+                      { "subject_uri": "subject_5", "score": 0.1 },
+                    ]
+                  ]
+                no_results:
+                  summary: 3 documents, t=0.99, limit=3
+                  value: [[], [], []]
+        400:
+          description: |
+            bad request, meaning json request body is not formatted correctly
+          content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/SchemaValidationError"
+        404:
+          description: |
+            model not found
+        413:
+          description: |
+            contents are too large, meaning the server either does not accept
+            the total amount of bytes in the request, or the server has an upper
+            limit on the number of documents that can be classified as one
+            batch
+        429:
+          description: |
+            too many requests (e.g. quota reached)
+        500:
+          description: |
+            unexpected error during classification, please contact service
+            provider
+
+  /schemas:
+    get:
+      summary: List all available classification schemas
+      description: |
+        Lists all available classification schemas supported by at
+        least one model.
+      tags:
+        - Classification Schemas and Subjects
+      operationId: slub_docsa.serve.rest.schemas.find
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+  /schemas/{schema_id}:
+    get:
+      summary: Get basic information about a schema
+      tags:
+        - Classification Schemas and Subjects
+      operationId: slub_docsa.serve.rest.schemas.get
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+  /schemas/{schema_id}/subjects:
+    get:
+      summary: List all subjects
+      tags:
+        - Classification Schemas and Subjects
+      operationId: slub_docsa.serve.rest.schemas.subjects_find
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /schemas/{schema_id}/subjects/{subject_uri}:
+    get:
+      summary: Get information about a subject
+      tags:
+        - Classification Schemas and Subjects
+      operationId: slub_docsa.serve.rest.schemas.subjects_get
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubjectInfo"
+
+  /schemas/{schema_id}/subjects/{subject_uri}/children:
+    get:
+      summary: Get children subjects of a subject
+      tags:
+        - Classification Schemas and Subjects
+      operationId: slub_docsa.serve.rest.schemas.subjects_children
+      parameters:
+        - $ref: "#/components/parameters/SchemaId"
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/DummyResponse"
+
+  /languages:
+    get:
+      summary: List all supported languages
+      tags:
+        - Language Detection
+      operationId: slub_docsa.serve.rest.languages.find
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+  /languages/detect:
+    post:
+      summary: Detect most likely language of document
+      tags:
+        - Language Detection
+      operationId: slub_docsa.serve.rest.languages.detect
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+  /pdf/extract:
+    post:
+      summary: Extract document information from pdf
+      deprecated: true
+      tags:
+        - PDF Fulltext Extraction
+      operationId: slub_docsa.serve.rest.pdf.extract
+      responses:
+        200:
+          $ref: "#/components/responses/DummyResponse"
+
+# -----------------------------------------------------------------------------
+
+components:
+
+  responses:
+
+    DummyResponse:
+      description: success
+      content:
+        application/json:
+          schema:
+            type: string
+
+  parameters:
+
+    ModelId:
+      name: model_id
+      in: path
+      description: |
+        the id of the model that is used for classification
+      example: ee59c770-5aa4-11ed-9378-d8bbc10e832b
+      schema:
+        type: string
+      required: true
+
+    SchemaId:
+      name: schema_id
+      in: path
+      description: |
+        the id of the classification schema
+      example: rvk
+      schema:
+        type: string
+      required: true
+
+    ClassificationLimit:
+      name: limit
+      in: query
+      description: |
+        maximum number of classification results (subjects) to be returned
+        for each document that is classified
+      examples:
+        five:
+          summary: limit = 5
+          description: at most 5 subjects are returned
+          value: 5
+        none:
+          summary: no limit
+          description: limit will depend on server settings
+          value:
+      schema:
+        type: integer
+
+    ClassificationThreshold:
+      name: threshold
+      in: query
+      description: |
+        the minimum certainty <em>score</em> required in order for a
+        prediction (subject) to be considered a sufficient classification
+        result
+      examples:
+        none:
+          summary: no threshold
+          description: |
+            classification results are not filtered by certainty <em>score</em>
+          value:
+        five:
+          summary: threshold = 0.5
+          description: only subjects with at least 0.5 score are returned
+          value: 0.5
+      schema:
+        type: number
+
+  schemas:
+
+    Document:
+      type: object
+      description: |
+        Provides information about a document
+      properties:
+        title:
+          type: string
+          maxLength: 1024
+          description: |
+            the title of a document (optional)
+        abstract:
+          type: string
+          description: |
+            the abstract of a document (optional)
+        fulltext:
+          type: string
+          description: |
+            the full text of a document as raw text without any
+            formatting other than line breaks (optional)
+
+    ClassificationResult:
+      type: object
+      description: |
+        Describes that the provided document was classified as the
+        subject of <em>subject_uri</em> to a certainty of <em>score</em>
+      properties:
+        subject_uri:
+          type: string
+          description: |
+            the uri of the subject that is classified for the provided document
+        score:
+          type: number
+          description: |
+            a score describing the certainty of the classification, usually
+            between 0 (unlikely) and 1 (most likely)
+
+    ClassificationResults:
+      type: array
+      description: |
+        A list of classification results sorted in descending order by the
+        certainty <em>score</em>
+      items:
+        $ref: "#/components/schemas/ClassificationResult"
+
+    ModelInfo:
+      type: object
+      properties:
+        creation_date:
+          type: string
+          description: |
+            the date the model was created
+        description:
+          type: string
+          description: |
+            a short description of the model, the data it was trained on, etc.
+        supported_languages:
+          type: array
+          description: |
+            the list of languages supported by this model
+          items:
+            type: string
+        schema_id:
+          type: string
+          description: |
+            the id of the schema that is used for classification by this model
+        statistics:
+          type: object
+          description: |
+            some information about the performance of this model
+          properties:
+            number_of_samples:
+              type: integer
+              description: |
+                the number of samples this model was trained on
+            number_of_subjects:
+              type: integer
+              description: |
+                the number of subjects this model is able to distinguish
+            scores:
+              type: object
+              description: |
+                various scores that have been calculated during training of
+                this model
+              additionalProperties:
+                type: number
+
+    SubjectInfo:
+      type: object
+      description: |
+        information about this subject
+      properties:
+        label:
+          type: string
+          description: |
+            a human readable label of this subject
+        parent_subject_uri:
+          type: string
+          description: |
+            the subject uri of the parent subject for this subject
+            (or null if root subject)
+        has_children:
+          type: boolean
+          description: |
+            whether this subject has any children subjects
+        breadcrumb:
+          type: array
+          description: |
+            a list of strings of human readable labels for each ancestor
+            subject
+          items:
+            type: string
+
+    SchemaValidationError:
+      type: object
+      properties:
+        error:
+          type: string

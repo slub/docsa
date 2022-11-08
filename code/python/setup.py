@@ -26,7 +26,7 @@ setup(
         "lxml==4.9.1",
         "plotly==5.11.0",
         "pandas==1.5.1",
-        "rdflib==5.0.0",
+        "rdflib==6.2.0",
         "langid==1.1.6",
         "kaleido==0.2.1",
         "elasticsearch>=7.0.0,<8.0.0",
@@ -38,6 +38,8 @@ setup(
         "fasttext-wheel==0.9.2",
         "omikuji==0.5.0",
         "vowpalwabbit==9.5.0",
+        "flask==2.2.2",
+        "connexion[swagger-ui]==2.14.1"
     ],
     extras_require={
         "dev": [
