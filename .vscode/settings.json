@@ -9,7 +9,7 @@
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Args": ["--max-line-length=120", "--ignore=D301,W503"],
     "python.linting.banditEnabled": true,
-    "python.linting.banditArgs": ["--configfile code/python/bandit.yml"],
+    "python.linting.banditArgs": ["-c", "code/python/.bandit.yaml"],
     "python.linting.enabled": true,
     "files.trimTrailingWhitespace": true,
     "[markdown]": {
@@ -17,4 +17,9 @@
     },
     "editor.rulers": [120],
     "terminal.integrated.scrollback": 10000,
+    "python.testing.pytestArgs": [
+        "code/python/tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }
