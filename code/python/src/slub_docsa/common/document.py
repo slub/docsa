@@ -2,7 +2,7 @@
 
 # pylint: disable=too-few-public-methods, too-many-arguments
 
-from typing import Iterable, Optional
+from typing import Sequence, Optional
 
 
 class Document:
@@ -14,7 +14,7 @@ class Document:
     title: str
     """The title of the document."""
 
-    authors: Iterable[str]
+    authors: Optional[Sequence[str]]
     """A list of author names for this document."""
 
     abstract: Optional[str]
@@ -27,7 +27,7 @@ class Document:
         """Initialize document."""
         self.uri = uri
         self.title = title
-        self.authors = authors if authors is not None else list([])
+        self.authors = authors
         self.abstract = abstract
         self.fulltext = fulltext
 
