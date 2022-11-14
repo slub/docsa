@@ -5,50 +5,23 @@ import pickle  # nosec
 import json
 import logging
 
-from typing import Callable, Mapping, NamedTuple, Sequence
+from typing import Callable, Mapping, Sequence, NamedTuple
 
 from slub_docsa.common.model import PersistableClassificationModel
+from slub_docsa.serve.common import PublishedClassificationModelInfo, PublishedClassificationModel
 
 
 logger = logging.getLogger(__name__)
 
 
-class PublishedClassificationModelInfo(NamedTuple):
-    """Information about a published classification model."""
+class StoredClassificationModelInfo(NamedTuple):
+    """Remembers which model is stored in which directory."""
 
-    model_id: str
-    """A unique identifier for a specfic instance of a model."""
-
-    model_type: str
-    """The model type identifier that can be used to instanciate a new model."""
-
-    schema_id: str
-    """The identifier of the classification schema the model was trained for."""
-
-    creation_date: str
-    """The date the model was created (in format 'YYYY-MM-DD HH:MM:SS' in UTC time)."""
-
-    supported_languages: Sequence[str]
-    """The list of ISO 639-1 language codes of languages supported by this model."""
-
-    description: str
-    """A description of the model."""
-
-    tags: Sequence[str]
-    """A list of arbitrary tags associated with this model."""
-
-
-class PublishedClassificationModel(NamedTuple):
-    """Object that keeps track of a model, its descriptive information and the subject order."""
+    directory: str
+    """The directory of the model"""
 
     info: PublishedClassificationModelInfo
-    """the information about the model"""
-
-    model: PersistableClassificationModel
-    """the actual model itself"""
-
-    subject_order: Sequence[str]
-    """the subject order"""
+    """The information about the model"""
 
 
 def save_published_classification_model_info(
@@ -70,7 +43,7 @@ def save_published_classification_model_info(
 
 def load_published_classification_model_info(
     directory: str,
-):
+) -> PublishedClassificationModelInfo:
     """Load information about model from a directory."""
     with open(os.path.join(directory, "classification_model_info.json"), "rt", encoding="utf8") as file:
         data = json.load(file)
@@ -127,14 +100,17 @@ def load_published_classification_model(
     )
 
 
-def find_classification_model_directories(
+def find_stored_classification_model_infos(
     directory: str,
-):
+) -> Mapping[str, StoredClassificationModelInfo]:
     """Index all subdirectories by their model ids read from the stored model information."""
     models_map = {}
     for name in os.listdir(directory):
         subdirectory = os.path.join(directory, name)
         if os.path.isdir(subdirectory):
-            model_info = load_published_classification_model_info(subdirectory)
-            models_map[model_info.model_id] = subdirectory
+            try:
+                model_info = load_published_classification_model_info(subdirectory)
+                models_map[model_info.model_id] = StoredClassificationModelInfo(directory=subdirectory, info=model_info)
+            except Exception as error:  # pylint: disable=broad-except
+                logger.warning("error '%s' loading model from directory '%s'", str(error), subdirectory)
     return models_map

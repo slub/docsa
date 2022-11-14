@@ -1,1 +1,1 @@
-"""REST handler methods."""
+"""REST endpoints and service implementation."""

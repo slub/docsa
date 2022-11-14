@@ -66,7 +66,7 @@ class NihilisticModel(ClassificationModel):
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
-        """Return test targets as provided by `OracleModel.set_test_targets()`."""
+        """Return 0.0 score for each class and document."""
         if self.n_subjects is None:
             raise ValueError("number of subjects not known, did you call fit?")
         return np.zeros((len(test_documents), self.n_subjects))
@@ -74,6 +74,35 @@ class NihilisticModel(ClassificationModel):
     def __str__(self):
         """Return string describing model."""
         return "<NihilisticModel>"
+
+
+class OptimisticModel(ClassificationModel):
+    """Model that always predicts 1.0 probabilitiy for every class."""
+
+    def __init__(self):
+        """Initialize model."""
+        self.n_subjects = None
+
+    def fit(
+        self,
+        train_documents: Sequence[Document],
+        train_targets: np.ndarray,
+        validation_documents: Optional[Sequence[Document]] = None,
+        validation_targets: Optional[np.ndarray] = None,
+    ):
+        """Do not learn anything, just remember how many different classes there are."""
+        self.n_subjects = train_targets.shape[1]
+        return self
+
+    def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
+        """Return 1.0 score for each class and document."""
+        if self.n_subjects is None:
+            raise ValueError("number of subjects not known, did you call fit?")
+        return np.ones((len(test_documents), self.n_subjects))
+
+    def __str__(self):
+        """Return string describing model."""
+        return "<OptimisticModel>"
 
 
 class RandomModel(ClassificationModel):

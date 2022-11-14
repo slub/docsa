@@ -32,20 +32,20 @@ paths:
         schema that is used for prediction.
       tags:
         - Model Discovery and Classification
-      operationId: slub_docsa.serve.rest.models.find
+      operationId: models.find
       parameters:
-        - name: language
+        - name: languages
           description: |
-            the ISO 639-1 language code, if provided, lists only models that
-            are designed to classify documents of a certain language, e.g.
-            "de", "en"
+            comma separated list of the ISO 639-1 language codes; if provided,
+            only models that are designed to classify documents of a certain
+            set of languages are returned, e.g. "de", "de,en"
           examples:
             none:
               summary: no language restriction
               value:
             german:
               summary: only models designed for german documents
-              value: de
+              value: "de"
           in: query
           schema:
             type: string
@@ -91,7 +91,7 @@ paths:
       deprecated: true
       tags:
         - Model Discovery and Classification
-      operationId: slub_docsa.serve.rest.models.add
+      operationId: models.add
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -106,7 +106,7 @@ paths:
         subjects.
       tags:
         - Model Discovery and Classification
-      operationId: slub_docsa.serve.rest.models.get
+      operationId: models.get
       parameters:
         - $ref: "#/components/parameters/ModelId"
       responses:
@@ -136,7 +136,7 @@ paths:
       deprecated: true
       tags:
         - Model Discovery and Classification
-      operationId: slub_docsa.serve.rest.models.delete
+      operationId: models.delete
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -153,7 +153,7 @@ paths:
         is returned.
       tags:
         - Model Discovery and Classification
-      operationId: slub_docsa.serve.rest.models.classify
+      operationId: models.classify
       parameters:
         - $ref: "#/components/parameters/ModelId"
         - $ref: "#/components/parameters/ClassificationLimit"
@@ -247,7 +247,7 @@ paths:
         least one model.
       tags:
         - Classification Schemas and Subjects
-      operationId: slub_docsa.serve.rest.schemas.find
+      operationId: schemas.find
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -257,7 +257,7 @@ paths:
       summary: Get basic information about a schema
       tags:
         - Classification Schemas and Subjects
-      operationId: slub_docsa.serve.rest.schemas.get
+      operationId: schemas.get
       parameters:
         - $ref: "#/components/parameters/SchemaId"
       responses:
@@ -269,7 +269,7 @@ paths:
       summary: List all subjects
       tags:
         - Classification Schemas and Subjects
-      operationId: slub_docsa.serve.rest.schemas.subjects_find
+      operationId: schemas.subjects_find
       parameters:
         - $ref: "#/components/parameters/SchemaId"
       responses:
@@ -287,7 +287,7 @@ paths:
       summary: Get information about a subject
       tags:
         - Classification Schemas and Subjects
-      operationId: slub_docsa.serve.rest.schemas.subjects_get
+      operationId: schemas.subjects_get
       parameters:
         - $ref: "#/components/parameters/SchemaId"
       responses:
@@ -303,7 +303,7 @@ paths:
       summary: Get children subjects of a subject
       tags:
         - Classification Schemas and Subjects
-      operationId: slub_docsa.serve.rest.schemas.subjects_children
+      operationId: schemas.subjects_children
       parameters:
         - $ref: "#/components/parameters/SchemaId"
       responses:
@@ -319,7 +319,7 @@ paths:
       summary: List all supported languages
       tags:
         - Language Detection
-      operationId: slub_docsa.serve.rest.languages.find
+      operationId: languages.find
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -329,7 +329,7 @@ paths:
       summary: Detect most likely language of document
       tags:
         - Language Detection
-      operationId: slub_docsa.serve.rest.languages.detect
+      operationId: languages.detect
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -340,7 +340,7 @@ paths:
       deprecated: true
       tags:
         - PDF Fulltext Extraction
-      operationId: slub_docsa.serve.rest.pdf.extract
+      operationId: pdf.extract
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
@@ -445,6 +445,9 @@ components:
       description: |
         Describes that the provided document was classified as the
         subject of <em>subject_uri</em> to a certainty of <em>score</em>
+      required:
+        - subject_uri
+        - score
       properties:
         subject_uri:
           type: string
@@ -466,7 +469,23 @@ components:
 
     ModelInfo:
       type: object
+      required:
+        - model_id
+        - model_type
+        - schema_id
+        - creation_date
+        - description
+        - supported_languages
+        - tags
       properties:
+        model_id:
+          type: string
+          description: |
+            the id of the model
+        model_type:
+          type: string
+          description: |
+            the type of the model
         creation_date:
           type: string
           description: |
@@ -479,12 +498,19 @@ components:
           type: array
           description: |
             the list of languages supported by this model
+          minItems: 1
           items:
             type: string
         schema_id:
           type: string
           description: |
             the id of the schema that is used for classification by this model
+        tags:
+          type: array
+          description: |
+            a list of arbitrary tags
+          items:
+            type: string
         statistics:
           type: object
           description: |
@@ -510,6 +536,11 @@ components:
       type: object
       description: |
         information about this subject
+      required:
+        - label
+        - parent_subject_uri
+        - has_children
+        - breadcrumb
       properties:
         label:
           type: string

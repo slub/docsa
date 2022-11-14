@@ -15,9 +15,9 @@ from slub_docsa.evaluation.split import scikit_kfold_train_test_split
 from slub_docsa.experiments.artificial.datasets import default_named_artificial_datasets
 from slub_docsa.experiments.artificial.models import default_artificial_named_classification_model_list
 from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
-from slub_docsa.serve.store.models import PublishedClassificationModelInfo, find_classification_model_directories
-from slub_docsa.serve.setup.classify import generate_classification_model_load_and_classify_function
-from slub_docsa.serve.setup.classify import get_classification_model_type_map
+from slub_docsa.serve.rest.service.models import classify_with_limit_and_threshold
+from slub_docsa.serve.store.models import PublishedClassificationModelInfo, load_published_classification_model
+from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
 from slub_docsa.serve.store.models import save_as_published_classification_model
 
 
@@ -94,11 +94,12 @@ if __name__ == "__main__":
         )
     )
 
-    load_and_classify = generate_classification_model_load_and_classify_function(
-        find_classification_model_directories(models_directory),
-        get_classification_model_type_map(),
+    published_model = load_published_classification_model(model_directory, get_classic_classification_models_map())
+    results = classify_with_limit_and_threshold(
+        published_model.model,
+        published_model.subject_order,
+        test_dataset.documents,
+        limit=3
     )
-
-    results = load_and_classify(model_id, test_dataset.documents, limit=3)
     import json
     print(json.dumps(results))
