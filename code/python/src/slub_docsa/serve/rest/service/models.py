@@ -131,6 +131,7 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
 
     def __init__(self, directory: str):
         """Init."""
+        logger.info("load one model at a time")
         self.model_types = get_classic_classification_models_map()
         self.model_infos = find_stored_classification_model_infos(directory)
         self.loaded_model: Optional[PublishedClassificationModel] = None
@@ -169,12 +170,14 @@ class AllStoredModelRestService(PartialAllModelsRestService, PartialModelInfosRe
 
     def __init__(self, directory: str):
         """Init."""
+        logger.info("load all stored models into memory")
         self.model_types = get_classic_classification_models_map()
         self.model_infos = find_stored_classification_model_infos(directory)
         self.models = {
             model_id: load_published_classification_model(info.directory, self.model_types)
             for model_id, info in self.model_infos.items()
         }
+        logger.info("discovered %d models %s", len(self.model_infos), str(list(self.model_infos.keys())))
 
     def _get_model_infos_dict(self) -> Mapping[str, PublishedClassificationModelInfo]:
         return {model_id: info.info for model_id, info in self.model_infos.items()}
