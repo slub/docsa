@@ -112,7 +112,7 @@ class LanguagesRestService:
         """Return the list of available languages."""
         raise NotImplementedError()
 
-    def detect(self, documents: Sequence[Document]):
+    def detect(self, documents: Sequence[Document]) -> Sequence[str]:
         """Detect the language of each document."""
         raise NotImplementedError()
 

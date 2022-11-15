@@ -8,6 +8,7 @@ from flask import Flask
 from flask.testing import FlaskClient
 from slub_docsa.serve.app import create_webapp
 from slub_docsa.serve.common import SimpleRestService
+from slub_docsa.serve.rest.service.languages import LangidLanguagesRestService
 from slub_docsa.serve.rest.service.testing import MockupClassificationModelsRestService
 
 
@@ -17,7 +18,7 @@ def rest_service():
     return SimpleRestService(
         MockupClassificationModelsRestService(),
         None,
-        None
+        LangidLanguagesRestService()
     )
 
 

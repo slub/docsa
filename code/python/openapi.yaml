@@ -178,27 +178,12 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/Document"
+              $ref: "#/components/schemas/DocumentList"
             examples:
               multiple:
-                summary: multiple documents, title only
-                value: [
-                  { "title": "Title of the first document" },
-                  { "title": "Title of the second document" },
-                  { "title": "Title of the third document" },
-                ]
+                $ref: "#/components/examples/MultipleDocumentsTitleOnly"
               full:
-                summary: single document, all info
-                value: [
-                  {
-                    "title": "This is the title",
-                    "abstract": "This is a summary used for classication.",
-                    "fulltext": "This the long unformatted raw text of a document."
-                  }
-                ]
-
+                $ref: "#/components/examples/SingleDocumentAllInfo"
       responses:
         200:
           description: |
@@ -333,7 +318,18 @@ paths:
       operationId: languages.find
       responses:
         200:
-          $ref: "#/components/responses/DummyResponse"
+          description: |
+            the list of language codes of supported languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                results:
+                  summary: german and english
+                  value: ["de", "en"]
 
   /languages/detect:
     post:
@@ -341,9 +337,33 @@ paths:
       tags:
         - Language Detection
       operationId: languages.detect
+      requestBody:
+        description: |
+          a list of documents that are analyzed for their language
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentList"
+            examples:
+              multiple:
+                $ref: "#/components/examples/MultipleDocumentsTitleOnly"
+              full:
+                $ref: "#/components/examples/SingleDocumentAllInfo"
       responses:
         200:
-          $ref: "#/components/responses/DummyResponse"
+          description: |
+            successful language detection, returning the list of predicted language codes
+            for all documents in the same order as they were provided in the request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                results:
+                  summary: 3 documents
+                  value: ["de", "en", "en"]
         400:
           $ref: "#/components/responses/BadRequestResponse"
 
@@ -480,6 +500,18 @@ components:
           description: |
             the full text of a document as raw text without any
             formatting other than line breaks (optional)
+      anyOf:
+        - required:
+          - title
+        - required:
+          - abstract
+        - required:
+          - fulltext
+
+    DocumentList:
+      type: array
+      items:
+        $ref: "#/components/schemas/Document"
 
     ClassificationResult:
       type: object
@@ -623,3 +655,20 @@ components:
           type: string
         status:
           type: number
+  examples:
+    MultipleDocumentsTitleOnly:
+      summary: multiple documents, title only
+      value: [
+        { "title": "Title of the first document" },
+        { "title": "Das ist ein Buchtitel" },
+        { "title": "Title of the third document" },
+      ]
+    SingleDocumentAllInfo:
+      summary: single document, all info
+      value: [
+        {
+          "title": "This is the title",
+          "abstract": "This is a summary used for classication.",
+          "fulltext": "This the long unformatted raw text of a document."
+        }
+      ]

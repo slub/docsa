@@ -33,14 +33,14 @@ def rest_service() -> RestService:
     return cast(RestService, service)
 
 
-def create_webapp(service: RestService):
+def create_webapp(service: RestService, debug: bool = False):
     """Create root web application."""
     # remember webapp context
     if CONTEXT.get("rest_service") is not None:
         logger.warning("overwriting rest service means `create_webapp` was called twice!")
     CONTEXT["rest_service"] = service
 
-    app = FlaskApp(__name__, specification_dir=OPENAPI_DIRECTORY, debug=True)
+    app = FlaskApp(__name__, specification_dir=OPENAPI_DIRECTORY, debug=debug)
     app.app.before_request(validate_max_request_body_length)
     app.add_api(
         specification="openapi.yaml",
