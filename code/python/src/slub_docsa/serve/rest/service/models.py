@@ -44,7 +44,12 @@ class PartialModelInfosRestService(ClassificationModelsRestService):
         """
         raise NotImplementedError()
 
-    def find_models(self, languages: Optional[Sequence[str]] = None, schema_id: Optional[str] = None) -> Sequence[str]:
+    def find_models(
+        self,
+        languages: Optional[Sequence[str]] = None,
+        schema_id: Optional[str] = None,
+        tags: Optional[Sequence[str]] = None,
+    ) -> Sequence[str]:
         """List available models matching certain criteria like supported languages."""
         model_ids = []
         for model_id, info in self._get_model_infos_dict().items():
@@ -55,6 +60,10 @@ class PartialModelInfosRestService(ClassificationModelsRestService):
 
             # skip models that do not match requested schema_id
             if schema_id is not None and schema_id != info.schema_id:
+                continue
+
+            # skip models that are not labelled with tags
+            if tags is not None and any(tag not in info.tags for tag in tags):
                 continue
 
             model_ids.append(model_id)

@@ -57,7 +57,12 @@ class ClassificationResult(NamedTuple):
 class ClassificationModelsRestService:
     """The interface of the rest service dealing with classification models."""
 
-    def find_models(self, languages: Optional[Sequence[str]] = None, schema_id: Optional[str] = None) -> Sequence[str]:
+    def find_models(
+        self,
+        languages: Optional[Sequence[str]] = None,
+        schema_id: Optional[str] = None,
+        tags: Optional[Sequence[str]] = None,
+    ) -> Sequence[str]:
         """List available models matching certain criteria like supported languages."""
         raise NotImplementedError()
 

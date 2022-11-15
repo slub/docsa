@@ -56,6 +56,20 @@ paths:
           in: query
           schema:
             type: string
+        - name: tags
+          description: |
+            comma separated list of tags; if provided, only models that
+            are labelled with these tags are returned, e.g. "k10plus"
+          examples:
+            none:
+              summary: no tags
+              value:
+            german:
+              summary: only models labelled with "k10plus"
+              value: "k10plus"
+          in: query
+          schema:
+            type: string
         - name: find_best
           description: |
             if true, only one model is returned that is considered the
@@ -130,7 +144,7 @@ paths:
                   }
                 }
           404:
-            description: model not found
+            $ref: "#/components/responses/ModelNotFoundResponse"
     delete:
       summary: Delete a model
       deprecated: true
@@ -187,7 +201,10 @@ paths:
 
       responses:
         200:
-          description: success
+          description: |
+            successful classification, returning the list of predicted subjects and
+            their scores for all documents in the same order as they were provided
+            in the request
           content:
             application/json:
               schema:
@@ -216,15 +233,9 @@ paths:
                   summary: 3 documents, t=0.99, limit=3
                   value: [[], [], []]
         400:
-          description: |
-            bad request, meaning json request body is not formatted correctly
-          content:
-              application/json:
-                schema:
-                  $ref: "#/components/schemas/SchemaValidationError"
+          $ref: "#/components/responses/BadRequestResponse"
         404:
-          description: |
-            model not found
+          $ref: "#/components/responses/ModelNotFoundResponse"
         413:
           description: |
             contents are too large, meaning the server either does not accept
@@ -333,6 +344,8 @@ paths:
       responses:
         200:
           $ref: "#/components/responses/DummyResponse"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
 
   /pdf/extract:
     post:
@@ -357,6 +370,34 @@ components:
         application/json:
           schema:
             type: string
+
+    BadRequestResponse:
+      description: |
+        bad request, meaning json request body is not formatted correctly
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorInfo"
+          example: {
+            "type": "about:blank",
+            "title": "BadRequest",
+            "detail": "a description of why the request body is not valid",
+            "status": 400
+          }
+
+    ModelNotFoundResponse:
+      description: |
+        the model with the specified id could not be found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorInfo"
+          example: {
+            "type": "ModelNotFoundException",
+            "title": "model could not be found",
+            "detail": "model with with id \"some-id\" could not be found",
+            "status": 404
+          }
 
   parameters:
 
@@ -563,8 +604,22 @@ components:
           items:
             type: string
 
-    SchemaValidationError:
+    ErrorInfo:
       type: object
+      description: |
+        error description as detailed in
+        https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-http-problem-00#section-3.1
+      required:
+        - type
+        - title
+        - detail
+        - status
       properties:
-        error:
+        type:
           type: string
+        title:
+          type: string
+        detail:
+          type: string
+        status:
+          type: number

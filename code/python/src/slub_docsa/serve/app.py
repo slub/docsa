@@ -9,8 +9,11 @@ from connexion import FlaskApp
 from connexion.resolver import RelativeResolver
 
 from slub_docsa.common.paths import ROOT_DIR
+from slub_docsa.serve.exceptions import generate_connexion_exception_handler
+from slub_docsa.serve.rest.service.models import ModelNotFoundException
 from slub_docsa.serve.routes import app as routes
 from slub_docsa.serve.common import RestService
+from slub_docsa.serve.validate import validate_max_request_body_length
 
 
 logger = logging.getLogger(__name__)
@@ -38,11 +41,14 @@ def create_webapp(service: RestService):
     CONTEXT["rest_service"] = service
 
     app = FlaskApp(__name__, specification_dir=OPENAPI_DIRECTORY, debug=True)
+    app.app.before_request(validate_max_request_body_length)
     app.add_api(
         specification="openapi.yaml",
         resolver=RelativeResolver("slub_docsa.serve.rest.endpoints"),
         validate_responses=True
     )
+
+    app.add_error_handler(ModelNotFoundException, generate_connexion_exception_handler("model not found", 404))
     app.app.register_blueprint(routes)  # type: ignore
 
     return app

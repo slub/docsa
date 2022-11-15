@@ -15,11 +15,13 @@ def _service() -> ClassificationModelsRestService:
 def find(
     languages: Optional[str] = None,
     schema_id: Optional[str] = None,
+    tags: Optional[str] = None,
     find_best: bool = False  # pylint: disable=unused-argument
 ):
     """List all available models."""
     language_list = None if languages is None else list(map(str.strip, languages.split(",")))
-    return _service().find_models(language_list, schema_id)
+    tag_list = None if tags is None else list(map(str.strip, tags.split(",")))
+    return _service().find_models(language_list, schema_id, tag_list)
 
 
 def add():
