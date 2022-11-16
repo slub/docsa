@@ -5,6 +5,7 @@
 import logging
 import os
 import pickle  # nosec
+import gzip
 
 from typing import Iterator, Optional, Any, cast
 from itertools import islice
@@ -87,7 +88,7 @@ class PersistableVectorizer(AbstractVectorizer):
 class TfidfVectorizer(PersistableVectorizer):
     """Vectorizer using Scikit TfidfVectorizer."""
 
-    PERSIST_FILENAME = "tfidf_vectorizer.pickle"
+    PERSIST_FILENAME = "tfidf_vectorizer.pickle.gz"
 
     def __init__(self, max_features=10000, **kwargs):
         """Initialize vectorizer.
@@ -125,7 +126,7 @@ class TfidfVectorizer(PersistableVectorizer):
         if not self.fitted_once:
             raise ValueError("can not persist tfidf vectorizer that was not fitted before")
 
-        with open(os.path.join(persist_dir, self.PERSIST_FILENAME), "wb") as file:
+        with gzip.open(os.path.join(persist_dir, self.PERSIST_FILENAME), "wb") as file:
             pickle.dump(self.vectorizer, file)
 
     def load(self, persist_dir: str):
@@ -138,7 +139,7 @@ class TfidfVectorizer(PersistableVectorizer):
         if not os.path.exists(vectorizer_path):
             raise ValueError(f"vectorizer state does not exists at {vectorizer_path}")
 
-        with open(vectorizer_path, "rb") as file:
+        with gzip.open(vectorizer_path, "rb") as file:
             self.vectorizer = pickle.load(file)  # nosec
 
     def __str__(self):

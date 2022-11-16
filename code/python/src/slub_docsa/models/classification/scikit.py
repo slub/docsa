@@ -3,6 +3,7 @@
 import os
 import pickle  # nosec
 import logging
+import gzip
 
 from typing import Iterable, Optional, Sequence, Any
 
@@ -95,7 +96,7 @@ class ScikitClassifier(PersistableClassificationModel):
 
         logger.info("save scikit predictor to %s", persist_dir)
         os.makedirs(persist_dir, exist_ok=True)
-        with open(os.path.join(persist_dir, "scikit_predictor.pickle"), "wb") as file:
+        with gzip.open(os.path.join(persist_dir, "scikit_predictor.pickle.gz"), "wb") as file:
             pickle.dump(self.predictor, file)
 
         logger.info("save vectorizer to %s", persist_dir)
@@ -105,13 +106,13 @@ class ScikitClassifier(PersistableClassificationModel):
 
     def load(self, persist_dir):
         """Load scikit predictor class from disc using pickle."""
-        predictor_path = os.path.join(persist_dir, "scikit_predictor.pickle")
+        predictor_path = os.path.join(persist_dir, "scikit_predictor.pickle.gz")
 
         if not os.path.exists(predictor_path):
             raise ValueError(f"can not load predictor state from file that does not exist at {predictor_path}")
 
         logger.info("load scikit predictor from %s", predictor_path)
-        with open(predictor_path, "rb") as file:
+        with gzip.open(predictor_path, "rb") as file:
             self.predictor = pickle.load(file)  # nosec
 
         logger.info("load vectorizer from %s", persist_dir)
