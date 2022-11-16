@@ -34,7 +34,7 @@ def save_published_classification_model_info(
             "model_id": model_info.model_id,
             "model_type": model_info.model_type,
             "schema_id": model_info.schema_id,
-            "creation_date": model_info.creation_date,  # datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "creation_date": model_info.creation_date,
             "supported_languages": model_info.supported_languages,
             "description": model_info.description,
             "tags": model_info.tags,

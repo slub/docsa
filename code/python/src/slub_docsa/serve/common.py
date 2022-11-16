@@ -1,5 +1,7 @@
 """The webapp context."""
 
+from datetime import datetime
+
 from typing import Sequence, Optional, NamedTuple
 
 from slub_docsa.common.document import Document
@@ -157,3 +159,8 @@ class SimpleRestService(RestService):
     def get_languages_service(self) -> LanguagesRestService:
         """Return language service implementation."""
         return self.languages_service
+
+
+def current_date_as_model_creation_date():
+    """Return current date and time in format required by creation date property."""
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
