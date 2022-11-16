@@ -164,3 +164,9 @@ def test_classify_too_large_request_body(rest_client: FlaskClient):
         content_type="application/json"
     )
     assert response.status_code == 413
+
+
+def test_subjects_list_complete(rest_client: FlaskClient):
+    """Check that list of subject supported by a model is complete."""
+    response = rest_client.get("v1/models/nihilistic/subjects")
+    assert set(json.loads(response.data)) == set(["yes", "no"])

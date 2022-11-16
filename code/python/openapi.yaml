@@ -223,9 +223,38 @@ paths:
           description: |
             too many requests (e.g. quota reached)
         500:
+          $ref: "#/components/responses/UnexpectedErrorResponse"
+
+  /models/{model_id}/subjects:
+    get:
+      summary: List all subjects supported by this model
+      description: |
+        Returns the list of URIs of subjects that are supported by this model
+      tags:
+        - Model Discovery and Classification
+      operationId: models.subjects
+      parameters:
+        - $ref: "#/components/parameters/ModelId"
+      responses:
+        200:
           description: |
-            unexpected error during classification, please contact service
-            provider
+            the list of URIs of subjects supported by this model
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                results:
+                  summary: 3 subjects
+                  value: ["subject_uri1", "subject_uri2", "subject_uri3"]
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        404:
+          $ref: "#/components/responses/ModelNotFoundResponse"
+        500:
+          $ref: "#/components/responses/UnexpectedErrorResponse"
 
   /schemas:
     get:
@@ -238,11 +267,23 @@ paths:
       operationId: schemas.find
       responses:
         200:
-          $ref: "#/components/responses/DummyResponse"
+          description: |
+            the list of available classification schemas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                results:
+                  summary: rvk and ddc
+                  value: ["rvk", "ddc"]
 
   /schemas/{schema_id}:
     get:
       summary: Get basic information about a schema
+      deprecated: true
       tags:
         - Classification Schemas and Subjects
       operationId: schemas.get
@@ -410,6 +451,10 @@ components:
             "detail": "model with with id \"some-id\" could not be found",
             "status": 404
           }
+
+    UnexpectedErrorResponse:
+      description: |
+        unexpected error, please contact service provider
 
   parameters:
 

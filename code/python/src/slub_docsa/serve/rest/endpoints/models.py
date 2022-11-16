@@ -68,3 +68,8 @@ def classify(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshol
         for result in results
     ]
     return response
+
+
+def subjects(model_id):
+    """Return subjects supported by a model."""
+    return _service().subjects(model_id)

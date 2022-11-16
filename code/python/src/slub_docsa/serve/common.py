@@ -80,6 +80,10 @@ class ClassificationModelsRestService:
         """Perform classification for a list of documents."""
         raise NotImplementedError()
 
+    def subjects(self, model_id: str) -> Sequence[str]:
+        """Return subjects supported by a model."""
+        raise NotImplementedError()
+
 
 class SchemasRestService:
     """The interface of the REST service dealing with schema queries."""

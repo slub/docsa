@@ -125,6 +125,12 @@ class PartialAllModelsRestService(ClassificationModelsRestService):
             threshold
         )
 
+    def subjects(self, model_id: str) -> Sequence[str]:
+        """Return subjects supported by a model."""
+        if model_id not in self._get_models_dict():
+            raise ModelNotFoundException(model_id)
+        return self._get_models_dict()[model_id].subject_order
+
 
 class SingleStoredModelRestService(PartialModelInfosRestService):
     """REST implementation that only loads a single model at a time for classification."""
@@ -140,14 +146,7 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
     def _get_model_infos_dict(self) -> Mapping[str, PublishedClassificationModelInfo]:
         return {model_id: info.info for model_id, info in self.model_infos.items()}
 
-    def classify(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[Sequence[ClassificationResult]]:
-        """Perform classification for a list of documents."""
+    def _load_model(self, model_id):
         if model_id not in self.model_infos:
             raise ModelNotFoundException(model_id)
 
@@ -156,6 +155,16 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
                 self.model_infos[model_id].directory, self.model_types
             )
 
+    def classify(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: int = 10,
+        threshold: float = 0.0
+    ) -> Sequence[Sequence[ClassificationResult]]:
+        """Perform classification for a list of documents."""
+        self._load_model(model_id)
+
         return classify_with_limit_and_threshold(
             self.loaded_model.model,
             self.loaded_model.subject_order,
@@ -163,6 +172,11 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
             limit,
             threshold
         )
+
+    def subjects(self, model_id: str) -> Sequence[str]:
+        """Return subjects supported by a model."""
+        self._load_model(model_id)
+        return self.loaded_model.subject_order
 
 
 class AllStoredModelRestService(PartialAllModelsRestService, PartialModelInfosRestService):
