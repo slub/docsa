@@ -54,13 +54,13 @@ def test_model_list_complete(rest_client: FlaskClient):
 
 def test_model_list_empty_for_unknown_language(rest_client: FlaskClient):
     """Check no model is returned for unknown language."""
-    response = rest_client.get("/v1/models?languages=blub")
+    response = rest_client.get("/v1/models?supported_languages=blub")
     assert json.loads(response.data) == []
 
 
 def test_model_list_for_known_language(rest_client: FlaskClient):
     """Check models are filtered by language."""
-    response = rest_client.get("/v1/models?languages=de")
+    response = rest_client.get("/v1/models?supported_languages=de")
     assert json.loads(response.data) == ["optimistic"]
 
 

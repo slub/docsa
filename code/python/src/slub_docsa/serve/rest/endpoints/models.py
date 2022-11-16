@@ -13,13 +13,12 @@ def _service() -> ClassificationModelsRestService:
 
 
 def find(
-    languages: Optional[str] = None,
+    supported_languages: Optional[str] = None,
     schema_id: Optional[str] = None,
     tags: Optional[str] = None,
-    find_best: bool = False  # pylint: disable=unused-argument
 ):
     """List all available models."""
-    language_list = None if languages is None else list(map(str.strip, languages.split(",")))
+    language_list = None if supported_languages is None else list(map(str.strip, supported_languages.split(",")))
     tag_list = None if tags is None else list(map(str.strip, tags.split(",")))
     return _service().find_models(language_list, schema_id, tag_list)
 
@@ -40,7 +39,6 @@ def get(model_id):
         "description": model_info.description,
         "supported_languages": model_info.supported_languages,
         "tags": model_info.tags,
-        "statistics": {},
     }
 
 
