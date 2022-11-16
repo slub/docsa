@@ -213,12 +213,12 @@ def classify_with_limit_and_threshold(
     limit = min(probabilities.shape[1], limit)
     if limit < probabilities.shape[1]:
         # find best results
-        topk_indexes = np.argpartition(probabilities, limit, axis=1)[:, -limit:]
+        topk_indexes = np.argpartition(probabilities, -limit, axis=1)[:, -limit:]
     else:
         # return all results
         topk_indexes = np.tile(np.arange(limit), (probabilities.shape[0], 1))
     topk_probabilities = np.take_along_axis(probabilities, topk_indexes, axis=1)
-    topk_sort_indexes = np.argsort(topk_probabilities, axis=1)
+    topk_sort_indexes = np.argsort(-topk_probabilities, axis=1)
     sorted_topk_indexed = np.take_along_axis(topk_indexes, topk_sort_indexes, axis=1)
     sorted_topk_probabilities = np.take_along_axis(topk_probabilities, topk_sort_indexes, axis=1)
 
