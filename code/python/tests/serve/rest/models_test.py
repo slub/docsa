@@ -8,6 +8,8 @@ from flask.testing import FlaskClient
 
 from slub_docsa.serve.common import ClassificationResult
 
+from .common import check_json_request_body_validation_error
+
 
 def _assert_classification_results_match(
     results1: Sequence[ClassificationResult],
@@ -34,16 +36,6 @@ def _assert_classification_results_match(
             for r2_ in result2:
                 if r1_.subject_uri == r2_.subject_uri:
                     assert r1_.score == r2_.score
-
-
-def _check_json_request_body_validation_error(rest_client, url):
-    body = {"something": "something"}
-    response = rest_client.post(url, data=json.dumps(body), content_type="application/json")
-    data = json.loads(response.data)
-    assert response.status_code == 400
-    assert data["title"] == "Bad Request"
-    assert data["type"] == "about:blank"
-    assert "detail" in data and len(data["detail"]) > 0
 
 
 def test_model_list_complete(rest_client: FlaskClient):
@@ -147,9 +139,9 @@ def test_classify_optimistic_model(rest_client: FlaskClient):
     _assert_classification_results_match(response_results, expected_results)
 
 
-def test_classify_wrong_json_format(rest_client: FlaskClient):
+def test_classify_invalid_json_format(rest_client: FlaskClient):
     """Check classify with incorrect json payload returns 400."""
-    _check_json_request_body_validation_error(rest_client, "/v1/models/optimistic/classify")
+    check_json_request_body_validation_error(rest_client, "/v1/models/optimistic/classify")
 
 
 def test_classify_unknown_model(rest_client: FlaskClient):

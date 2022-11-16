@@ -34,7 +34,7 @@ paths:
         - Model Discovery and Classification
       operationId: models.find
       parameters:
-        - name: languages
+        - name: supported_languages
           description: |
             comma separated list of the ISO 639-1 language codes; if provided,
             only models that are designed to classify documents of a certain
@@ -70,14 +70,6 @@ paths:
           in: query
           schema:
             type: string
-        - name: find_best
-          description: |
-            if true, only one model is returned that is considered the
-            current best model for the provided language and schema
-            (both language and schema are required)
-          in: query
-          schema:
-            type: boolean
       responses:
         200:
           description: |
