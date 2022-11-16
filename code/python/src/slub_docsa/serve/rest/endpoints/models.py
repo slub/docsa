@@ -1,11 +1,17 @@
 """REST handlers for model discovery and classification."""
 
+import time
+import logging
+
 from typing import Dict, Sequence, Optional
 
 from flask.wrappers import Response
 from slub_docsa.common.document import Document
 from slub_docsa.serve.app import rest_service
 from slub_docsa.serve.common import ClassificationModelsRestService
+
+
+logger = logging.getLogger(__name__)
 
 
 def _service() -> ClassificationModelsRestService:
@@ -49,6 +55,7 @@ def delete():
 
 def classify(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshold: float = 0.0):
     """Classify a document using a model."""
+    started = time.time() * 1000
     # read documents from request body
     documents = [
         Document(
@@ -67,6 +74,8 @@ def classify(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshol
         [{"score": r.score, "subject_uri": r.subject_uri} for r in result]
         for result in results
     ]
+
+    logger.debug("rest service model.classify took %d ms", ((time.time() * 1000) - started))
     return response
 
 

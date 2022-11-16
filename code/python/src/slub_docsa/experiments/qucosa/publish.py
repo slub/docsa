@@ -30,7 +30,7 @@ if __name__ == "__main__":
     min_samples = 10
     dataset_name = "qucosa_de_titles_rvk"
 
-    model_type = "tfidf_snowball_de_10k_knn_k=3"
+    model_type = "tfidf_snowball_de_10k_rforest"
     model_id = dataset_name + "__" + model_type
 
     named_datasets = qucosa_named_datasets([dataset_name])

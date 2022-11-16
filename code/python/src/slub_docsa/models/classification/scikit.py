@@ -4,6 +4,7 @@ import os
 import pickle  # nosec
 import logging
 import gzip
+import time
 
 from typing import Iterable, Optional, Sequence, Any
 
@@ -81,7 +82,9 @@ class ScikitClassifier(PersistableClassificationModel):
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict subject probabilities for test documents."""
         features = self._vectorize(test_documents)
+        started = time.time() * 1000
         probability_list = self.predictor.predict_proba(features)
+        logger.debug("scikit predict_proba took %d ms", ((time.time() * 1000) - started))
         if len(probability_list[0].shape) > 1:
             probability_matrix = np.stack(list(map(lambda p: p[:, -1], probability_list)), axis=0)
         else:
