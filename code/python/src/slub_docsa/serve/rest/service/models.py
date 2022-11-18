@@ -2,13 +2,13 @@
 
 import logging
 
-from typing import Sequence, Optional, Mapping
+from typing import Sequence, Optional, Mapping, Tuple
 
 import numpy as np
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
-from slub_docsa.serve.common import ClassificationResult, ClassificationModelsRestService
+from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, ClassificationModelsRestService
 from slub_docsa.serve.common import PublishedClassificationModel, PublishedClassificationModelInfo
 from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
 from slub_docsa.serve.store.models import find_stored_classification_model_infos, load_published_classification_model
@@ -75,16 +75,6 @@ class PartialModelInfosRestService(ClassificationModelsRestService):
             raise ModelNotFoundException(model_id)
         return self._get_model_infos_dict()[model_id]
 
-    def classify(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[Sequence[ClassificationResult]]:
-        """Perform classification for a list of documents."""
-        raise NotImplementedError()
-
 
 class PartialAllModelsRestService(ClassificationModelsRestService):
     """An abstract implementation of a REST service that serves already loaded classification models."""
@@ -119,11 +109,28 @@ class PartialAllModelsRestService(ClassificationModelsRestService):
 
         return classify_with_limit_and_threshold(
             pulished_model.model,
-            pulished_model.subject_order,
             documents,
             limit,
             threshold
         )
+
+    def classify_and_describe(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: int = 10,
+        threshold: float = 0.0
+    ) -> Sequence[ClassificationResult]:
+        """Perform classification for a list of documents and provide detailed classification results."""
+        predictions = self.classify(model_id, documents, limit, threshold)
+        pulished_model = self._get_models_dict()[model_id]
+
+        return [
+            ClassificationResult(document_uri=document.uri, predictions=[
+                ClassificationPrediction(score=s, subject_uri=pulished_model.subject_order[i])
+                for s, i in prediction
+            ]) for document, prediction in zip(documents, predictions)
+        ]
 
     def subjects(self, model_id: str) -> Sequence[str]:
         """Return subjects supported by a model."""
@@ -161,17 +168,33 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
         documents: Sequence[Document],
         limit: int = 10,
         threshold: float = 0.0
-    ) -> Sequence[Sequence[ClassificationResult]]:
-        """Perform classification for a list of documents."""
+    ) -> Sequence[Sequence[Tuple[float, int]]]:
+        """Perform classification for a list of documents and return tuples of score and subject order id."""
         self._load_model(model_id)
 
         return classify_with_limit_and_threshold(
             self.loaded_model.model,
-            self.loaded_model.subject_order,
             documents,
             limit,
             threshold
         )
+
+    def classify_and_describe(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: int = 10,
+        threshold: float = 0.0
+    ) -> Sequence[ClassificationResult]:
+        """Perform classification for a list of documents and provide detailed classification results."""
+        predictions = self.classify(model_id, documents, limit, threshold)
+
+        return [
+            ClassificationResult(document_uri=document.uri, predictions=[
+                ClassificationPrediction(score=s, subject_uri=self.loaded_model.subject_order[i])
+                for s, i in prediction
+            ]) for document, prediction in zip(documents, predictions)
+        ]
 
     def subjects(self, model_id: str) -> Sequence[str]:
         """Return subjects supported by a model."""
@@ -202,11 +225,10 @@ class AllStoredModelRestService(PartialAllModelsRestService, PartialModelInfosRe
 
 def classify_with_limit_and_threshold(
     model: ClassificationModel,
-    subject_order: Sequence[str],
     documents: Sequence[Document],
     limit: int = 10,
     threshold: float = 0.0
-):
+) -> Sequence[Sequence[Tuple[float, int]]]:
     """Perform classification and compile results using certain limit and threshold."""
     # do actual classification
     probabilities = model.predict_proba(documents)
@@ -224,8 +246,6 @@ def classify_with_limit_and_threshold(
 
     # compile and return results
     return [
-        [
-            ClassificationResult(score=p, subject_uri=subject_order[i])
-            for i, p in zip(indexes, probs) if p > threshold
-        ] for indexes, probs in zip(sorted_topk_indexed, sorted_topk_probabilities)
+        [(float(p), int(i)) for i, p in zip(indexes, probs) if p > threshold]
+        for indexes, probs in zip(sorted_topk_indexed, sorted_topk_probabilities)
     ]

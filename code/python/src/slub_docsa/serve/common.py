@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from typing import Sequence, Optional, NamedTuple
+from typing import Sequence, Optional, NamedTuple, Tuple
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
@@ -46,14 +46,24 @@ class PublishedClassificationModel(NamedTuple):
     """the subject order"""
 
 
-class ClassificationResult(NamedTuple):
-    """A classification result consisting of a score and the predicted subject."""
+class ClassificationPrediction(NamedTuple):
+    """A classification prediction consisting of a score and the predicted subject."""
 
     score: float
     """A certainty score for the prediction."""
 
     subject_uri: str
     """The URI of the predicted subject."""
+
+
+class ClassificationResult(NamedTuple):
+    """A classification result for a specific document."""
+
+    document_uri: str
+    """The uri of the document that was classified."""
+
+    predictions: Sequence[ClassificationPrediction]
+    """The list of individual classification predictions including a score for each predicted subject."""
 
 
 class ClassificationModelsRestService:
@@ -78,8 +88,18 @@ class ClassificationModelsRestService:
         documents: Sequence[Document],
         limit: Optional[int] = None,
         threshold: Optional[float] = None
-    ) -> Sequence[Sequence[ClassificationResult]]:
-        """Perform classification for a list of documents."""
+    ) -> Sequence[Sequence[Tuple[float, int]]]:
+        """Perform classification for a list of documents and return tuples of score and subject order id."""
+        raise NotImplementedError()
+
+    def classify_and_describe(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: Optional[int] = None,
+        threshold: Optional[float] = None
+    ) -> Sequence[ClassificationResult]:
+        """Perform classification for a list of documents and provide detailed classification results."""
         raise NotImplementedError()
 
     def subjects(self, model_id: str) -> Sequence[str]:

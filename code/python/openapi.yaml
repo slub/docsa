@@ -151,12 +151,16 @@ paths:
 
   /models/{model_id}/classify:
     post:
-      summary: Classify multiple documents by title, abstract or fulltext
+      summary: Classify multiple documents optimized for performance
       description: |
         Classifies a list of documents by applying the specified model.
-        Results can be filtered via a minimum certainty <em>threshold</em>
-        or by specifying a maximum number of subjects (<em>limit</em>) that
-        is returned.
+        The results are provided as a simple list of tuples of
+        <em>score</em> and <em>subject order id</em> for performance.
+        The actual subjects can be resolved by querying <code>
+        /models/{model_id}/subjects</code> and using the order number as
+        index in the list of subjects. Results can be filtered via a
+        minimum certainty <em>threshold</em> or by specifying a maximum
+        number of subjects (<em>limit</em>) that is returned.
       tags:
         - Model Discovery and Classification
       operationId: models.classify
@@ -187,28 +191,112 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ClassificationResults"
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: number
               examples:
                 results:
                   summary: 3 documents, t=0.1, limit=3
                   value: [
-                    [
-                      { "subject_uri": "subject_1", "score": 0.7 },
-                      { "subject_uri": "subject_2", "score": 0.5 },
-                      { "subject_uri": "subject_3", "score": 0.4 },
-                    ],
-                    [
-                      { "subject_uri": "subject_2", "score": 0.9 },
-                      { "subject_uri": "subject_4", "score": 0.1 },
-                    ],
-                    [
-                      { "subject_uri": "subject_1", "score": 0.2 },
-                      { "subject_uri": "subject_5", "score": 0.1 },
-                    ]
+                    [[0.7, 2], [0.5, 14], [0.4, 5]],
+                    [[0.9, 4], [0.1, 1]],
+                    [[0.2, 5], [0.1, 3]]
                   ]
                 no_results:
                   summary: 3 documents, t=0.99, limit=3
                   value: [[], [], []]
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        404:
+          $ref: "#/components/responses/ModelNotFoundResponse"
+        413:
+          description: |
+            contents are too large, meaning the server either does not accept
+            the total amount of bytes in the request, or the server has an upper
+            limit on the number of documents that can be classified as one
+            batch
+        429:
+          description: |
+            too many requests (e.g. quota reached)
+        500:
+          $ref: "#/components/responses/UnexpectedErrorResponse"
+
+  /models/{model_id}/classify_and_describe:
+    post:
+      summary: Classify multiple documents and provide detailed results
+      description: |
+        Classifies a list of documents by applying the specified model.
+        Results are provided including full URIs to the documents and subjects.
+        Results can be filtered via a minimum certainty <em>threshold</em>
+        or by specifying a maximum number of subjects (<em>limit</em>) that
+        is returned.
+      tags:
+        - Model Discovery and Classification
+      operationId: models.classify_and_describe
+      parameters:
+        - $ref: "#/components/parameters/ModelId"
+        - $ref: "#/components/parameters/ClassificationLimit"
+        - $ref: "#/components/parameters/ClassificationThreshold"
+      requestBody:
+        description: |
+          a list of documents that are supposed to be classified
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentList"
+            examples:
+              multiple:
+                $ref: "#/components/examples/MultipleDocumentsTitleOnly"
+              full:
+                $ref: "#/components/examples/SingleDocumentAllInfo"
+      responses:
+        200:
+          description: |
+            successful classification, returning the list of predicted subjects and
+            their scores for all documents in the same order as they were provided
+            in the request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassificationResult"
+              examples:
+                results:
+                  summary: 3 documents, t=0.1, limit=3
+                  value: [
+                    {
+                      document_uri: "uri://document_1",
+                      predictions: [
+                        { "subject_uri": "subject_1", "score": 0.7 },
+                        { "subject_uri": "subject_2", "score": 0.5 },
+                        { "subject_uri": "subject_3", "score": 0.4 },
+                      ],
+                    },
+                    {
+                      document_uri: "uri://document_2",
+                      predictions: [
+                        { "subject_uri": "subject_2", "score": 0.9 },
+                        { "subject_uri": "subject_4", "score": 0.1 },
+                      ],
+                    },
+                    {
+                      document_uri: "uri://document_3",
+                      predictions: [
+                        { "subject_uri": "subject_1", "score": 0.2 },
+                        { "subject_uri": "subject_5", "score": 0.1 },
+                      ]
+                    }
+                  ]
+                no_results:
+                  summary: 3 documents, t=0.99, limit=3
+                  value: [
+                    { document_uri: "uri://document_1", predictions: [] },
+                    { document_uri: "uri://document_2", predictions: [] },
+                    { document_uri: "uri://document_3", predictions: [] }
+                  ]
         400:
           $ref: "#/components/responses/BadRequestResponse"
         404:
@@ -523,6 +611,10 @@ components:
       description: |
         Provides information about a document
       properties:
+        uri:
+          type: string
+          description: |
+            a unique identifier for the document
         title:
           type: string
           maxLength: 1024
@@ -550,11 +642,11 @@ components:
       items:
         $ref: "#/components/schemas/Document"
 
-    ClassificationResult:
+    ClassificationPrediction:
       type: object
       description: |
-        Describes that the provided document was classified as the
-        subject of <em>subject_uri</em> to a certainty of <em>score</em>
+        Describes that a document was classified as the subject of
+        <em>subject_uri</em> to a certainty of <em>score</em>
       required:
         - subject_uri
         - score
@@ -569,13 +661,20 @@ components:
             a score describing the certainty of the classification, usually
             between 0 (unlikely) and 1 (most likely)
 
-    ClassificationResults:
-      type: array
+    ClassificationResult:
+      type: object
       description: |
-        A list of classification results sorted in descending order by the
-        certainty <em>score</em>
-      items:
-        $ref: "#/components/schemas/ClassificationResult"
+        A list of classification predictions for a specific document sorted in
+        descending order by the certainty <em>score</em>
+      properties:
+        document_uri:
+          type: string
+          description: |
+            the uri of the document that was classified
+        predictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassificationPrediction"
 
     ModelInfo:
       type: object
@@ -704,6 +803,7 @@ components:
       summary: single document, all info
       value: [
         {
+          "uri": "uri://document_id",
           "title": "This is the title",
           "abstract": "This is a summary used for classication.",
           "fulltext": "This the long unformatted raw text of a document."

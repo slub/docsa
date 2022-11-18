@@ -2,13 +2,14 @@
 
 import time
 import logging
+import json
 
 from typing import Dict, Sequence, Optional
 
 from flask.wrappers import Response
-from slub_docsa.common.document import Document
 from slub_docsa.serve.app import rest_service
 from slub_docsa.serve.common import ClassificationModelsRestService
+from slub_docsa.serve.rest.endpoints.common import parse_documents_from_request_body
 
 
 logger = logging.getLogger(__name__)
@@ -54,28 +55,38 @@ def delete():
 
 
 def classify(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshold: float = 0.0):
-    """Classify a document using a model."""
+    """Classify a document using a model optimized for performance."""
     started = time.time() * 1000
-    # read documents from request body
-    documents = [
-        Document(
-            uri=str(i),
-            title=d.get("title"),
-            abstract=d.get("abstract"),
-            fulltext=d.get("fulltext")
-        ) for i, d in enumerate(body)
-    ]
+    documents = parse_documents_from_request_body(body)
 
     # do classification
     results = _service().classify(model_id, documents, limit, threshold)
 
+    logger.debug("rest service model.classify took %d ms", ((time.time() * 1000) - started))
+    return Response(
+        json.dumps(results),
+        status=200,
+        content_type="application/json"
+    )
+
+
+def classify_and_describe(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshold: float = 0.0):
+    """Classify a document using a model and provide detailed results."""
+    # read documents from request body
+    documents = parse_documents_from_request_body(body)
+
+    # do classification
+    results = _service().classify_and_describe(model_id, documents, limit, threshold)
+
     # convert results to json response format
     response = [
-        [{"score": r.score, "subject_uri": r.subject_uri} for r in result]
-        for result in results
+        {
+            "document_uri": result.document_uri,
+            "predictions": [
+                {"score": r.score, "subject_uri": r.subject_uri} for r in result.predictions
+            ]
+        } for result in results
     ]
-
-    logger.debug("rest service model.classify took %d ms", ((time.time() * 1000) - started))
     return response
 
 

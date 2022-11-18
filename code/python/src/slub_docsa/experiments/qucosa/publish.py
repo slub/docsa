@@ -81,7 +81,6 @@ if __name__ == "__main__":
     published_model = load_published_classification_model(model_directory, get_classic_classification_models_map())
     results = classify_with_limit_and_threshold(
         published_model.model,
-        published_model.subject_order,
         test_dataset.documents,
         limit=3
     )

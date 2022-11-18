@@ -6,7 +6,8 @@ from typing import Sequence
 
 from flask.testing import FlaskClient
 
-from slub_docsa.serve.common import ClassificationResult
+from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult
+from slub_docsa.serve.rest.client.parse import parse_classification_results_from_json
 
 from .common import check_json_request_body_validation_error
 
@@ -21,21 +22,26 @@ def _assert_classification_results_match(
     """
     assert len(results1) == len(results2)
     for result1, result2 in zip(results1, results2):
-        # check there are the same number of results
-        assert len(result1) == len(result2)
+        # check that document uris match
+        assert result1.document_uri == result2.document_uri
+
+        predictions1, predictions2 = result1.predictions, result2.predictions
+
+        # check there are the same number of predictions
+        assert len(predictions1) == len(predictions2)
 
         # check both results are about the same subjects
-        assert {r.subject_uri for r in result1} == {r.subject_uri for r in result2}
+        assert {r.subject_uri for r in predictions1} == {r.subject_uri for r in predictions2}
 
         # check both results are ordered by score
-        assert all(result1[i].score >= result1[i + 1].score for i in range(len(result1) - 1))
-        assert all(result2[i].score >= result2[i + 1].score for i in range(len(result2) - 1))
+        assert all(predictions1[i].score >= predictions1[i + 1].score for i in range(len(predictions1) - 1))
+        assert all(predictions2[i].score >= predictions2[i + 1].score for i in range(len(predictions2) - 1))
 
         # check scores are the same
-        for r1_ in result1:
-            for r2_ in result2:
-                if r1_.subject_uri == r2_.subject_uri:
-                    assert r1_.score == r2_.score
+        for p1_ in predictions1:
+            for p2_ in predictions2:
+                if p1_.subject_uri == p2_.subject_uri:
+                    assert p1_.score == p2_.score
 
 
 def test_model_list_complete(rest_client: FlaskClient):
@@ -111,30 +117,52 @@ def test_classify_nihilistic_model(rest_client: FlaskClient):
     assert json.loads(response.data) == [[], [], []]
 
 
-def test_classify_optimistic_model(rest_client: FlaskClient):
+def test_classify_and_describe_nihilistic_model(rest_client: FlaskClient):
     """Check that nihistic model does not return any classification results."""
     body = [
         {"title": "Title of the first document"},
-        {"title": "Title of the second document", "abstract": "this is some abtract"},
+        {"title": "Title of the second document"},
+        {"title": "Title of the third document"},
     ]
     response = rest_client.post(
-        "/v1/models/optimistic/classify",
+        "/v1/models/nihilistic/classify_and_describe",
         data=json.dumps(body),
         content_type="application/json"
     )
-    response_results = [
-        [ClassificationResult(result["score"], result["subject_uri"]) for result in results]
-        for results in json.loads(response.data)
+    assert json.loads(response.data) == [
+        {"document_uri": "0", "predictions": []},
+        {"document_uri": "1", "predictions": []},
+        {"document_uri": "2", "predictions": []}
     ]
+
+
+def test_classify_and_describe_optimistic_model(rest_client: FlaskClient):
+    """Check that nihistic model does not return any classification results."""
+    body = [
+        {"uri": "document1", "title": "Title of the first document"},
+        {"uri": "document2", "title": "Title of the second document", "abstract": "this is some abtract"},
+    ]
+    response = rest_client.post(
+        "/v1/models/optimistic/classify_and_describe",
+        data=json.dumps(body),
+        content_type="application/json"
+    )
+    response_results = parse_classification_results_from_json(response.data)
     expected_results = [
-        [
-            ClassificationResult(score=1.0, subject_uri="yes"),
-            ClassificationResult(score=1.0, subject_uri="no")
-        ],
-        [
-            ClassificationResult(score=1.0, subject_uri="yes"),
-            ClassificationResult(score=1.0, subject_uri="no")
-        ]
+        ClassificationResult(
+            document_uri="document1",
+            predictions=[
+                ClassificationPrediction(score=1.0, subject_uri="yes"),
+                ClassificationPrediction(score=1.0, subject_uri="no")
+            ]
+        ),
+        ClassificationResult(
+            document_uri="document2",
+            predictions=[
+                ClassificationPrediction(score=1.0, subject_uri="yes"),
+                ClassificationPrediction(score=1.0, subject_uri="no")
+            ]
+        )
     ]
     _assert_classification_results_match(response_results, expected_results)
 
