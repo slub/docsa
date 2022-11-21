@@ -13,6 +13,8 @@ setup(
     url="repository url",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
+    include_package_data=True,
+    package_data={"": ["openapi.yaml"]},
     license="To be determined",
     long_description=long_description,
     long_description_content_type='text/markdown',
