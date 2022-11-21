@@ -39,7 +39,8 @@ setup(
         "omikuji==0.5.0",
         "vowpalwabbit==9.5.0",
         "flask==2.2.2",
-        "connexion[swagger-ui]==2.14.1"
+        "connexion[swagger-ui]==2.14.1",
+        "waitress==2.1.2"
     ],
     extras_require={
         "dev": [

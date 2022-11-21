@@ -21,5 +21,5 @@ def test_annif_omikuji_persistence():
 
 
 def test_annif_tfidf_persistence():
-    """Check that predictions for Annif Omikuji model are the same after persistence."""
+    """Check that predictions for Annif tfidf model are the same after persistence."""
     check_model_persistence_equal_predictions(lambda: AnnifModel("tfidf", "en"))
