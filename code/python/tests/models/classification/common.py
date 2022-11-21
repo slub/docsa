@@ -30,7 +30,7 @@ def check_model_predicts_non_zero_probabilities(model):
     """Check model returns some scores after fitting to mini dataset."""
     model = fit_model_with_mini_dataset(model)
     probabilties = model.predict_proba(mini_dataset_validation_documents())
-    assert np.min(probabilties) > 0  # nosec B101
+    assert np.max(probabilties) > 0  # nosec B101
 
 
 def check_model_persistence_equal_predictions(model_generator: Callable[[], PersistableClassificationModel]):

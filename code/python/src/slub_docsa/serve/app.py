@@ -8,7 +8,6 @@ from typing import Dict, Any, cast
 from connexion import FlaskApp
 from connexion.resolver import RelativeResolver
 
-from slub_docsa.common.paths import ROOT_DIR
 from slub_docsa.serve.exceptions import generate_connexion_exception_handler
 from slub_docsa.serve.rest.service.models import ModelNotFoundException
 from slub_docsa.serve.routes import app as routes
@@ -18,7 +17,7 @@ from slub_docsa.serve.validate import validate_max_request_body_length
 
 logger = logging.getLogger(__name__)
 
-OPENAPI_DIRECTORY = os.path.join(ROOT_DIR, "code/python/")
+OPENAPI_DIRECTORY = os.path.join(os.path.dirname(__file__), "../")
 
 CONTEXT: Dict[str, Any] = {
     "rest_service": None
