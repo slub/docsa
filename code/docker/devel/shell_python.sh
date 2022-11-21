@@ -2,4 +2,4 @@
 
 source ./common.sh
 
-${COMPOSE_CMD} -p ${PROJECT_NAME} run --rm --name ${PROJECT_NAME}_python_shell_1 python
+${DOCKER_CMD} exec -it ${PROJECT_NAME}_python_1 /bin/bash
