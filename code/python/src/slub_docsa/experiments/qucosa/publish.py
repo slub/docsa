@@ -5,6 +5,8 @@
 import logging
 import os
 
+import slub_docsa
+
 from sklearn.metrics import f1_score
 from slub_docsa.common.paths import get_serve_dir
 
@@ -68,12 +70,14 @@ if __name__ == "__main__":
         model_info=PublishedClassificationModelInfo(
             model_id=model_id,
             model_type=model_type,
+            model_version="v1",
             schema_id="rvk",
             creation_date=current_date_as_model_creation_date(),
             supported_languages=["de"],
             description=f"""qucosa model trained for dataset variant '{dataset_name}'
                 with classifiation model '{model_type}'""",
             tags=["qucosa", "only_titles"],
+            slub_docsa_version=slub_docsa.__version__,
         )
     )
 

@@ -518,3 +518,19 @@ The result will be three files that illustrate the performance of each model in 
 - `example_score_matrix.pdf`
 
 """
+
+import os
+import subprocess  # nosec
+
+
+def _git_commit_hash():
+    """Return the shortened git commit hash of this repository or an empty string if not available."""
+    try:
+        return "-" + subprocess.check_output(  # nosec
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__))).strip().decode()
+    except Exception:  # pylint: disable=broad-except
+        return ""
+
+
+__version__ = "0.1.0.dev1" + _git_commit_hash()

@@ -33,11 +33,13 @@ def save_published_classification_model_info(
         json.dump({
             "model_id": model_info.model_id,
             "model_type": model_info.model_type,
+            "model_version": model_info.model_version,
             "schema_id": model_info.schema_id,
             "creation_date": model_info.creation_date,
             "supported_languages": model_info.supported_languages,
             "description": model_info.description,
             "tags": model_info.tags,
+            "slub_docsa_version": model_info.slub_docsa_version,
         }, file)
 
 
@@ -50,11 +52,13 @@ def load_published_classification_model_info(
         return PublishedClassificationModelInfo(
             model_id=data["model_id"],
             model_type=data["model_type"],
+            model_version=data.get("model_version"),
             schema_id=data["schema_id"],
-            creation_date=data["creation_date"],
-            supported_languages=data["supported_languages"],
-            description=data["description"],
-            tags=data["tags"],
+            creation_date=data.get("creation_date"),
+            supported_languages=data.get("supported_languages", []),
+            description=data.get("description"),
+            tags=data.get("tags", []),
+            slub_docsa_version=data.get("slub_docsa_version")
         )
 
 

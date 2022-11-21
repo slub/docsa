@@ -17,20 +17,26 @@ class PublishedClassificationModelInfo(NamedTuple):
     model_type: str
     """The model type identifier that can be used to instanciate a new model."""
 
+    model_version: Optional[str]
+    """The version of the model."""
+
     schema_id: str
     """The identifier of the classification schema the model was trained for."""
 
-    creation_date: str
+    creation_date: Optional[str]
     """The date the model was created (in format 'YYYY-MM-DD HH:MM:SS' in UTC time)."""
 
     supported_languages: Sequence[str]
     """The list of ISO 639-1 language codes of languages supported by this model."""
 
-    description: str
+    description: Optional[str]
     """A description of the model."""
 
     tags: Sequence[str]
     """A list of arbitrary tags associated with this model."""
+
+    slub_docsa_version: Optional[str]
+    """The version of the slub docsa python package that was used to create this model."""
 
 
 class PublishedClassificationModel(NamedTuple):
