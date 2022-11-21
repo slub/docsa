@@ -9,7 +9,10 @@ import os
 import logging
 import tempfile
 import time
+import json
+
 from typing import Iterable, Mapping, Optional, Sequence, Any, cast
+from distutils.dir_util import copy_tree
 
 import numpy as np
 
@@ -24,7 +27,7 @@ from annif.suggestion import VectorSuggestionResult
 import rdflib
 from rdflib.namespace import SKOS
 
-from slub_docsa.common.model import ClassificationModel
+from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
@@ -121,7 +124,7 @@ class _CustomAnnifDocumentCorpus:
             return True
 
 
-class AnnifModel(ClassificationModel):
+class AnnifModel(PersistableClassificationModel):
     """Interfaces with Annif to train various models and allow predictions."""
 
     def __init__(
@@ -154,9 +157,10 @@ class AnnifModel(ClassificationModel):
         self.max_document_length = max_document_length
         self.temporary_directory = None
         self.analyzer = None
-        self.n_unique_subject = None
+        self.n_unique_subjects: int = None
         self.project = None
         self.model = None
+        self.model_params: Mapping[str, Any] = None
 
         self._init_analyzer()
         self._init_data_dir()
@@ -188,6 +192,77 @@ class AnnifModel(ClassificationModel):
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
             raise ValueError(f"annif model '{self.model_type}' requires that subject hierarchy is provided")
 
+    def _init_subject_vocab(self):
+        if self.subject_order is None:
+            # there is no info on which columns in train_targets are what subjets, generate numbered subjects
+            numbered_subjects = [str(i) for i in range(self.n_unique_subjects)]
+            annif_subject_list = [
+                AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in numbered_subjects
+            ]
+        else:
+            # use uri from subject order to identify columns in train_targets
+            if self.subject_hierarchy is None:
+                # create Annif subjects from subject order only (label info via subject hierarchy not available)
+                annif_subject_list = [
+                    AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in self.subject_order
+                ]
+            else:
+                # create Annif subjects with label info from subject hierarchy
+                logger.debug("create annif subject list from subject order and subject hierarchy")
+                annif_subject_list = [
+                    AnnifSubject(
+                        uri=uri,
+                        labels={self.lang_code: self.subject_hierarchy[uri].label},
+                        notation=None
+                    ) for uri in self.subject_order
+                ]
+
+        subject_vocab = _CustomAnnifSubjectCorpus(annif_subject_list, languages=[self.lang_code])
+
+        return subject_vocab, annif_subject_list
+
+    def _init_project(self, subject_vocab):
+        """Initialize Annif project."""
+        logger.debug("annif: creating project")
+        self.project = _CustomAnnifProject(
+            datadir=self.data_dir,
+            subject_corpus=subject_vocab,
+            analyzer=self.analyzer,
+            subject_skos_graph=self.subject_skos_graph
+        )
+
+    def _init_model(self, annif_subject_list):
+        """Initialize Annif model to be used for training or prediction."""
+        model_type = get_backend(self.model_type)
+        self.model = model_type(
+            backend_id=self.model_type,
+            config_params={
+                "limit": len(annif_subject_list),
+                "language": self.lang_code,
+            },
+            project=self.project
+        )
+
+        self.model_params = {
+            "language": self.lang_code,
+        }
+
+        if self.model_type == "fasttext":
+            self.model_params.update({
+                "dim": 100,
+                "lr": 0.25,
+                "epoch": 5,
+                "loss": "hs",
+                "chunksize": 24
+            })
+
+        if self.model_type == "stwfsa":
+            self.model_params.update({
+                "concept_type_uri": SKOS.Concept,
+                "thesaurus_relation_type_uri": SKOS.broader,
+                "thesaurus_relation_is_specialisation": False,
+            })
+
     def fit(
         self,
         train_documents: Sequence[Document],
@@ -216,37 +291,6 @@ class AnnifModel(ClassificationModel):
                 + f"incidence matrix shape {str(train_targets.shape)}"
             )
 
-        if self.subject_order is None:
-            # there is no info on which columns in train_targets are what subjets, generate numbered subjects
-            self.n_unique_subject = int(train_targets.shape[1])
-            logger.debug("there are %d unique subjects", self.n_unique_subject)
-
-            # define subjects
-            numbered_subjects = [str(i) for i in range(self.n_unique_subject)]
-            annif_subject_list = [
-                AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in numbered_subjects
-            ]
-        else:
-            # use uri from subject order to identify columns in train_targets
-            self.n_unique_subject = len(self.subject_order)
-
-            if self.subject_hierarchy is None:
-                # create Annif subjects from subject order only (label info via subject hierarchy not available)
-                annif_subject_list = [
-                    AnnifSubject(uri=uri, labels={self.lang_code: uri}, notation=None) for uri in self.subject_order
-                ]
-            else:
-                # create Annif subjects with label info from subject hierarchy
-                logger.debug("create annif subject list from subject order and subject hierarchy")
-                annif_subject_list = [
-                    AnnifSubject(
-                        uri=uri,
-                        labels={self.lang_code: self.subject_hierarchy[uri].label},
-                        notation=None
-                    ) for uri in self.subject_order
-                ]
-
-        subject_vocab = _CustomAnnifSubjectCorpus(annif_subject_list, languages=[self.lang_code])
         train_idxs_targets = subject_idx_from_incidence_matrix(train_targets)
 
         # define corpus
@@ -259,48 +303,16 @@ class AnnifModel(ClassificationModel):
         ]
         document_corpus = _CustomAnnifDocumentCorpus(annif_document_list)
 
-        # setup project
-        logger.debug("annif: creating project")
-        self.project = _CustomAnnifProject(
-            datadir=self.data_dir,
-            subject_corpus=subject_vocab,
-            analyzer=self.analyzer,
-            subject_skos_graph=self.subject_skos_graph
-        )
+        self.n_unique_subjects = int(train_targets.shape[1])
+        logger.debug("there are %d unique subjects", self.n_unique_subjects)
 
-        model_type = get_backend(self.model_type)
-        self.model = model_type(
-            backend_id=self.model_type,
-            config_params={
-                "limit": len(annif_subject_list),
-                "language": self.lang_code,
-            },
-            project=self.project
-        )
-
-        params: Mapping[str, Any] = {
-            "language": self.lang_code,
-        }
-
-        if self.model_type == "fasttext":
-            params.update({
-                "dim": 100,
-                "lr": 0.25,
-                "epoch": 5,
-                "loss": "hs",
-                "chunksize": 24
-            })
-
-        if self.model_type == "stwfsa":
-            params.update({
-                "concept_type_uri": SKOS.Concept,
-                "thesaurus_relation_type_uri": SKOS.broader,
-                "thesaurus_relation_is_specialisation": False,
-            })
+        subject_vocab, annif_subject_list = self._init_subject_vocab()
+        self._init_project(subject_vocab)
+        self._init_model(annif_subject_list)
 
         if self.model_type != "yake":
             logger.debug("annif: call train on model with %d documents", len(document_corpus.documents))
-            self.model.train(document_corpus, params=params)
+            self.model.train(document_corpus, params=self.model_params)
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
@@ -317,10 +329,10 @@ class AnnifModel(ClassificationModel):
             The matrix of subject probabilities with a shape of (n_docs, n_subjects). The column order has to match
             the order that was provided as `train_targets` to the `fit` method.
         """
-        if self.model is None or self.project is None or self.n_unique_subject is None:
+        if self.model is None or self.project is None or self.n_unique_subjects is None:
             raise RuntimeError("project and model is not available, call fit before predict!")
 
-        probabilities = np.empty((len(test_documents), self.n_unique_subject))
+        probabilities = np.empty((len(test_documents), self.n_unique_subjects))
         probabilities[:, :] = np.nan
 
         last_info_time = time.time()
@@ -331,7 +343,7 @@ class AnnifModel(ClassificationModel):
             results = cast(VectorSuggestionResult, results)
             annif_score_vector = results.as_vector(len(self.project.subjects))
 
-            for j in range(self.n_unique_subject):
+            for j in range(self.n_unique_subjects):
                 if self.subject_order is None:
                     idx = int(self.project.subjects[j][0])
                 else:
@@ -353,6 +365,46 @@ class AnnifModel(ClassificationModel):
 
         return probabilities
 
+    def save(self, persist_dir: str):
+        """Save annif model to a directory."""
+        if self.model is None or self.project is None or self.n_unique_subjects is None:
+            raise RuntimeError("model has not been trained yet, call fit before saving!")
+
+        if self.model_type in ["yake", "stwfsa", "mllm"]:
+            raise ValueError(f"annif model '{self.model_type}' can not be saved (yet)")
+
+        # save data directory contents
+        copy_tree(self.data_dir, os.path.join(persist_dir, "annif"))
+
+        # save required properties
+        annif_parameters = {
+            "lang_code": self.lang_code,
+            "model_type": self.model_type,
+            "max_document_length": self.max_document_length,
+            "n_unique_subjects": self.n_unique_subjects,
+        }
+
+        with open(os.path.join(persist_dir, "annif_model_parameters.json"), "wt", encoding="utf8") as file:
+            json.dump(annif_parameters, file)
+
+    def load(self, persist_dir: str):
+        """Load annif model from a directory."""
+        # set data dir
+        self.data_dir = os.path.join(persist_dir, "annif")
+
+        # load parameters
+        with open(os.path.join(persist_dir, "annif_model_parameters.json"), "rt", encoding="utf8") as file:
+            json_data = json.load(file)
+            self.lang_code = json_data["lang_code"]
+            self.model_type = json_data["model_type"]
+            self.max_document_length = int(json_data["max_document_length"])
+            self.n_unique_subjects = int(json_data["n_unique_subjects"])
+
+        # initialize Annif interface
+        subject_vocab, annif_subject_list = self._init_subject_vocab()
+        self._init_project(subject_vocab)
+        self._init_model(annif_subject_list)
+
     def __del__(self):
         """Delete temporary directory for Annif model if it was created before."""
         if self.temporary_directory is not None:
@@ -366,13 +418,20 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
 
-    dataset = get_static_mini_dataset()
-    model = AnnifModel("tfidf", "en")
+    with tempfile.TemporaryDirectory() as directory:
+        dataset = get_static_mini_dataset()
+        model = AnnifModel("omikuji", "en")
 
-    my_subject_order = unique_subject_order(dataset.subjects)
-    incidence_matrix = subject_incidence_matrix_from_targets(dataset.subjects, my_subject_order)
-    model.fit(dataset.documents, incidence_matrix)
+        my_subject_order = unique_subject_order(dataset.subjects)
+        incidence_matrix = subject_incidence_matrix_from_targets(dataset.subjects, my_subject_order)
+        model.fit(dataset.documents, incidence_matrix)
 
-    probabilties = model.predict_proba([Document(uri="test", title="boring document title")])
+        probabilties = model.predict_proba([Document(uri="test", title="boring document title")])
+        print(probabilties)
 
-    print(probabilties)
+        # save and reload model
+        model.save(directory)
+        model = AnnifModel("omikuji", "en")
+        model.load(directory)
+        probabilties = model.predict_proba([Document(uri="test", title="boring document title")])
+        print(probabilties)
