@@ -406,7 +406,7 @@ paths:
       operationId: schemas.subjects_find
       parameters:
         - $ref: "#/components/parameters/SchemaId"
-        - $ref: "#/components/parameters/SchemaHierarchyLevel"
+        - $ref: "#/components/parameters/SchemaRootOnly"
       responses:
         200:
           description: the list of subject URIs matching the query (default all root level subjects)
@@ -621,8 +621,8 @@ components:
       name: subject_uri
       in: path
       description: |
-        the uri of the classification schema subject
-      example: uri://subject_uri
+        the double URL encoded uri of the classification schema subject
+      example: https%3A%2F%2Frvk.uni-regensburg.de%2Fapi%2Fxml%2Fnode%2FSK%2520900
       schema:
         type: string
       required: true
@@ -665,31 +665,25 @@ components:
       schema:
         type: number
 
-    SchemaHierarchyLevel:
-      name: level
+    SchemaRootOnly:
+      name: root_only
       in: query
       description: |
-        the level at which subjects are located in the hierarchy; level=0 (default)
-        means root subjects; level=1 are all children of root subjects; level=-1
-        means all subjects independent of their level
+        whether only root subjects of the subject hierarchy are listed (default true); otherwise, all subjects of the
+        subject hierarchy are listed
       examples:
         _default:
           summary: root level subjects
           description: |
             subjects of at the root of the hierarchy (that do not have any parents)
-          value: 0
-        first:
-          summary: first level subjects
-          description: |
-            subjects that have one parent who is a root level subject
-          value: 1
-        any:
+          value: true
+        all:
           summary: all subjects
           description: |
-            all subjects independent of their level
-          value: -1
+            all subjects of the subject hierarchy
+          value: false
       schema:
-        type: number
+        type: boolean
 
   schemas:
 
@@ -836,7 +830,7 @@ components:
         - labels
         - parent_subject_uri
         - children_subject_uris
-        - breadcrumbs
+        - breadcrumb
       properties:
         labels:
           type: object
@@ -847,6 +841,7 @@ components:
             type: string
         parent_subject_uri:
           type: string
+          nullable: true
           description: |
             the subject uri of the parent subject for this subject
             (or null if root subject)
@@ -856,14 +851,14 @@ components:
             type: string
           description: |
             the list of URIs of children subjects
-        breadcrumbs:
-          type: object
+        breadcrumb:
+          type: array
           description: |
-            a list of strings of human readable labels for each ancestor
-            subject indexed by the ISO 639-1 language code
-          additionalProperties:
-            type: array
-            items:
+              a list of mappings from the ISO 639-1 language code to
+              human readable labels for each ancestor subject
+          items:
+            type: object
+            additionalProperties:
               type: string
       example: {
           "labels": {
@@ -874,10 +869,10 @@ components:
           "children_subject_uris": [
             "uri://children_subject1", "uri://children_subject2"
           ],
-          "breacrumbs": {
-            "en": ["Parent subject label", "Grandparent subject label"],
-            "de": ["Beschriftung des übergeordneten Thema", "Beschriftung des darüber übergeordneten Thema"]
-          }
+          "breadcrumb": [
+            {"en": "Parent subject label", "de": "Beschriftung des übergeordneten Thema"},
+            {"en": "Grandparent subject label", "de": "Beschriftung des darüber übergeordneten Thema"}
+          ]
         }
 
 

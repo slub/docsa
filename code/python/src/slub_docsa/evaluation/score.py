@@ -13,7 +13,7 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.score import ClusteringScoreFunction, IncidenceDecisionFunctionType
 from slub_docsa.common.similarity import IndexedDocumentDistanceFunction, IndexedDocumentDistanceGenerator
 from slub_docsa.common.subject import SubjectHierarchy, SubjectTargets
-from slub_docsa.data.preprocess.subject import children_map_from_subject_hierarchy, subject_ancestors_list
+from slub_docsa.data.preprocess.subject import subject_ancestors_list
 from slub_docsa.evaluation.incidence import extend_incidence_list_to_ancestors, is_crisp_cluster_membership
 from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments
 from slub_docsa.evaluation.incidence import threshold_incidence_decision, unique_subject_order
@@ -216,27 +216,24 @@ def cesa_bianchi_h_loss(
         # always return nan if there is no subject hierarchy provided
         return _nan_results
 
-    children_map = children_map_from_subject_hierarchy(subject_hierarchy)
-    number_of_root_nodes = sum(1 for v in subject_hierarchy.values() if v.parent_uri is None)
+    number_of_root_nodes = sum(1 for _ in subject_hierarchy.root_subjects())
 
-    def _find_ancestor_node_with_error(
+    def _find_ancestor_with_error(
             subject_uri: str,
             subject_hierarchy: SubjectHierarchy,
             incidence_list: Sequence[int],
     ) -> str:
         if subject_order is None:
             raise ValueError("can't find ancestor without subject order")
-        subject_node = subject_hierarchy[subject_uri]
-        ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
+        ancestors = subject_ancestors_list(subject_uri, subject_hierarchy)
         previous_ancestor = ancestors[-1]
         for ancestor in reversed(ancestors[:-1]):
-            if ancestor.uri in subject_order:
-                ancestor_id = subject_order.index(ancestor.uri)
+            if ancestor in subject_order:
+                ancestor_id = subject_order.index(ancestor)
                 if incidence_list[ancestor_id] == 1:
                     break
             previous_ancestor = ancestor
-
-        return previous_ancestor.uri
+        return previous_ancestor
 
     def _h_loss(true_array: np.ndarray, predicted_array: np.ndarray) -> float:
         subjects_with_errors = set()
@@ -251,7 +248,7 @@ def cesa_bianchi_h_loss(
             if value == 1 and ext_pred_list[i] == 0:
                 # there is an error here, lets find out at which level
                 subject_uri = subject_order[i]
-                subjects_with_errors.add(_find_ancestor_node_with_error(
+                subjects_with_errors.add(_find_ancestor_with_error(
                     subject_uri,
                     subject_hierarchy,
                     ext_pred_list
@@ -261,24 +258,23 @@ def cesa_bianchi_h_loss(
         for i, value in enumerate(pred_list):
             if value == 1 and ext_true_list[i] == 0:
                 subject_uri = subject_order[i]
-                subjects_with_errors.add(_find_ancestor_node_with_error(
+                subjects_with_errors.add(_find_ancestor_with_error(
                     subject_uri,
                     subject_hierarchy,
                     ext_true_list
                 ))
 
-        nonlocal children_map
         nonlocal number_of_root_nodes
         loss = 0.0
         for subject_uri in subjects_with_errors:
-            subject_node = subject_hierarchy[subject_uri]
-            ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
+            ancestors = subject_ancestors_list(subject_uri, subject_hierarchy)
             max_level_loss = 1.0
             for ancestor in ancestors:
-                if ancestor.parent_uri is None:
+                ancestor_parent = subject_hierarchy.subject_parent(ancestor)
+                if ancestor_parent is None:
                     max_level_loss *= 1.0 / number_of_root_nodes
                 else:
-                    number_of_siblings = len(children_map[ancestor.parent_uri])
+                    number_of_siblings = len(subject_hierarchy.subject_children(ancestor_parent))
                     max_level_loss *= 1.0 / number_of_siblings
             loss += max_level_loss
 

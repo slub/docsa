@@ -81,8 +81,8 @@ class PublishedSubjectInfo(NamedTuple):
     parent_subject_uri: Optional[str]
     """The URI of the parent subject"""
 
-    breadcrumbs: Mapping[str, Sequence[str]]
-    """A map of breadcrums indexed by the ISO 639-1 language code of the breadcrumb."""
+    breadcrumb: Sequence[Mapping[str, str]]
+    """A list of mappings from the ISO 639-1 language code to humand readable labels for each ancestor subject."""
 
     children_subject_uris: Sequence[str]
     """The list of URIs of children subjects."""
@@ -140,7 +140,7 @@ class SchemasRestService:
         """Return information about a specific schema."""
         raise NotImplementedError()
 
-    def find_subjects(self, schema_id: str, level: int = 0) -> Sequence[str]:
+    def find_subjects(self, schema_id: str, root_only: bool = True) -> Sequence[str]:
         """Return a list of available subjects for a specific schema."""
         raise NotImplementedError()
 

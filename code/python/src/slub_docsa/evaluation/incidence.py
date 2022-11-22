@@ -226,11 +226,10 @@ def extend_incidence_list_to_ancestors(
         if value == 1:
             # iterate over ancestors and set extended incidence to 1
             subject_uri = subject_order[i]
-            subject_node = subject_hierarchy[subject_uri]
-            ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
+            ancestors = subject_ancestors_list(subject_uri, subject_hierarchy)
             for ancestor in ancestors:
-                if ancestor.uri in subject_order:
-                    ancestor_id = subject_order.index(ancestor.uri)
+                if ancestor in subject_order:
+                    ancestor_id = subject_order.index(ancestor)
                     extended_incidence[ancestor_id] = 1
     return extended_incidence
 

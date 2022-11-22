@@ -15,8 +15,8 @@ def test_generate_hierarchical_subject_token_probabilities():
     subject_tp, subject_hierarchy = generate_hierarchical_subject_token_probabilities(n_subjects, token_probabilities)
 
     assert n_subjects == len(subject_tp)
-    assert n_subjects == len(subject_hierarchy)
-    assert set(subject_tp.keys()) == set(subject_hierarchy.keys())
+    assert n_subjects == sum(1 for _ in subject_hierarchy)
+    assert set(subject_tp.keys()) == set(subject_hierarchy)
 
 
 def test_generate_hierarchical_random_dataset():
@@ -29,5 +29,5 @@ def test_generate_hierarchical_random_dataset():
 
     assert len(dataset.documents) == n_documents
     assert len(dataset.subjects) == n_documents
-    assert len(subject_hierarchy) == n_subjects
+    assert sum(1 for _ in subject_hierarchy) == n_subjects
     assert min([s_uri in subject_hierarchy for s_uri in unique_subject_order(dataset.subjects)])

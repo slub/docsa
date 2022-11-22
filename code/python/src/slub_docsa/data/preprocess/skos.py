@@ -56,8 +56,8 @@ def subject_hierarchy_to_skos_graph(
         the subject hierarchy that is being converted to a SKOS rdflib graph
     lang_code: str
         a two-letter language code represeting the language of labels in the subject hierarchy
-    generate_custom_triples: Optional[Callable[[SubjectNode], List[Tuple[Any, Any, Any]]]] = None
-        an optional function that returns additional triples given a specific subject of the subject hierarchy
+    generate_custom_triples: Optional[Callable[[str, SubjectHierarchy], List[Tuple[Any, Any, Any]]]] = None
+        an optional function that returns additional triples given a specific subject URI and the subject hierarchy
     mandatory_subject_list: Sequence[str] = None
         an optional list of subjects; if provided, only these subjects and their ancestors are converted to SKOS,
         otherwise all subjects of the hierarchy are added
@@ -77,23 +77,22 @@ def subject_hierarchy_to_skos_graph(
         subject_set = set()
         for subject_uri in mandatory_subject_list:
             if subject_uri in subject_hierarchy:
-                subject_node = subject_hierarchy[subject_uri]
-                subject_set.update([n.uri for n in subject_ancestors_list(subject_node, subject_hierarchy)])
+                subject_set.update([n.uri for n in subject_ancestors_list(subject_uri, subject_hierarchy)])
             else:
                 logger.warning("subject %s is mandatory, but can not be found in subject hierarchy", subject_uri)
         subject_iterator = iter(subject_set)
 
     i = 0
     for subject_uri in subject_iterator:
-        subject_uri_ref = rdflib.URIRef(subject_hierarchy[subject_uri].uri)
-        label = subject_hierarchy[subject_uri].label
-        parent_uri = subject_hierarchy[subject_uri].parent_uri
+        subject_uri_ref = rdflib.URIRef(subject_uri)
+        label = subject_hierarchy.subject_labels(subject_uri).get(lang_code)
+        parent_uri = subject_hierarchy.subject_parent(subject_uri)
 
         graph.add((subject_uri_ref, RDF.type, SKOS.Concept))
         graph.add((subject_uri_ref, SKOS.prefLabel, rdflib.Literal(label, lang_code)))
 
         if generate_custom_triples is not None:
-            for custom_triple in generate_custom_triples(subject_hierarchy[subject_uri]):
+            for custom_triple in generate_custom_triples(subject_uri, subject_hierarchy):
                 graph.add(custom_triple)
 
         if parent_uri is not None:
@@ -109,12 +108,16 @@ def subject_hierarchy_to_skos_graph(
 
 if __name__ == "__main__":
     import os
-    from slub_docsa.data.load.rvk import get_rvk_subject_store
+    from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
     from slub_docsa.common.paths import get_cache_dir
 
     logging.basicConfig(level=logging.DEBUG)
 
-    rvk_subject_hierarchy = get_rvk_subject_store()
+    depth = 2  # pylint: disable=invalid-name
+    rvk_subject_hierarchy = load_rvk_subject_hierarchy_from_sqlite(depth=depth)
     rvk_skos_graph = subject_hierarchy_to_skos_graph(rvk_subject_hierarchy, "de", generate_rvk_custom_skos_triples)
 
-    rvk_skos_graph.serialize(destination=os.path.join(get_cache_dir(), "rvk/rvk_skos.ttl"), format="turtle")
+    rvk_skos_graph.serialize(
+        destination=os.path.join(get_cache_dir(), f"rvk/rvk_skos_depth={depth}.ttl"),
+        format="turtle"
+    )

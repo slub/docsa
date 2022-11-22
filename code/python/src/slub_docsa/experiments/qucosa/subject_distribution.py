@@ -7,24 +7,26 @@ import logging
 from typing import Callable, List, Mapping
 
 import plotly.express as px
-from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
-from slub_docsa.data.load.ddc import get_ddc_subject_store
-from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
+from slub_docsa.common.subject import SubjectHierarchy
+from slub_docsa.data.load.ddc import load_ddc_subject_hierarchy
+from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb_as_string
+from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
 
 from slub_docsa.data.load.qucosa import QucosaJsonDocument, read_qucosa_documents_from_directory
 from slub_docsa.data.load.qucosa import _get_rvk_subjects_from_qucosa_metadata, _get_ddc_subjects_from_qucosa_metadata
-from slub_docsa.data.load.rvk import get_rvk_subject_store
+
 
 logger = logging.getLogger(__name__)
 
 
 def _get_parent_uri_from_subject(
     subject_hierarchy: SubjectHierarchy,
-    subject: SubjectNode,
+    subject_uri: str,
 ):
     """Return parent notation of subject or empty string for sunburst chart."""
-    if subject.parent_uri is not None and subject.parent_uri in subject_hierarchy:
-        return subject.parent_uri
+    parent_uri = subject_hierarchy.subject_parent(subject_uri)
+    if parent_uri is not None and parent_uri in subject_hierarchy:
+        return parent_uri
     return ""
 
 
@@ -53,6 +55,7 @@ def qucosa_number_of_documents_by_subjects(
 
 def generate_qucosa_subject_sunburst(
     subject_hierarchy: SubjectHierarchy,
+    lang_code: str,
     get_subject_from_qucosa_doc: Callable[[QucosaJsonDocument], List[str]],
 ):
     """Generate a sunburst chart for qucosa visualizing the RVK class distribution."""
@@ -78,20 +81,19 @@ def generate_qucosa_subject_sunburst(
             })
             sunburst_by_subject_uri[subject_uri]["count"] += count
         elif subject_uri in subject_hierarchy:
-            subject_node = subject_hierarchy[subject_uri]
-            ancestors = subject_ancestors_list(subject_node, subject_hierarchy)
+            ancestors = subject_ancestors_list(subject_uri, subject_hierarchy)
 
             # iterate through ancestors, but not subject itself
             for ancestor in ancestors:
                 # create and add counts for ancestors
-                sunburst_by_subject_uri[ancestor.uri] = sunburst_by_subject_uri.get(ancestor.uri, {
-                    "uri": ancestor.uri,
-                    "label": ancestor.label,
+                sunburst_by_subject_uri[ancestor] = sunburst_by_subject_uri.get(ancestor, {
+                    "uri": ancestor,
+                    "label": subject_hierarchy.subject_labels(ancestor).get(lang_code, "not available"),
                     "parent": _get_parent_uri_from_subject(subject_hierarchy, ancestor),
                     "count": 0,
-                    "hover": subject_label_breadcrumb(ancestor, subject_hierarchy)
+                    "hover": " | ".join(subject_label_breadcrumb_as_string(ancestor, lang_code, subject_hierarchy))
                 })
-                sunburst_by_subject_uri[ancestor.uri]["count"] += count
+                sunburst_by_subject_uri[ancestor]["count"] += count
 
     sunburst_list = list(sunburst_by_subject_uri.values())
 
@@ -122,10 +124,11 @@ if __name__ == "__main__":
 
     # subject_schema = "ddc"
     subject_schema = "rvk"
+    language = "de"
 
-    subject_store = {
-        "rvk": get_rvk_subject_store(),
-        "ddc": get_ddc_subject_store(),
+    current_subject_hierarchy = {
+        "rvk": load_rvk_subject_hierarchy_from_sqlite(),
+        "ddc": load_ddc_subject_hierarchy(),
     }[subject_schema]
 
     qucosa_subject_getter = {
@@ -133,14 +136,15 @@ if __name__ == "__main__":
         "ddc": _get_ddc_subjects_from_qucosa_metadata,
     }[subject_schema]
 
-    generate_qucosa_subject_sunburst(subject_store, qucosa_subject_getter).write_html(
+    os.makedirs(os.path.join(get_figures_dir(), "qucosa"), exist_ok=True)
+    generate_qucosa_subject_sunburst(current_subject_hierarchy, language, qucosa_subject_getter).write_html(
         os.path.join(get_figures_dir(), f"qucosa/{subject_schema}_distribution.html"),
         include_plotlyjs="cdn",
     )
 
     logger.info("done plotting")
 
-    subjects = qucosa_number_of_documents_by_subjects(subject_store, qucosa_subject_getter)
+    subjects = qucosa_number_of_documents_by_subjects(current_subject_hierarchy, qucosa_subject_getter)
     qucosa_doc_count = sum(1 for x in read_qucosa_documents_from_directory())
 
     count_no_value = subjects["uri://no_value"]
@@ -149,7 +153,7 @@ if __name__ == "__main__":
     if subject_schema == "ddc":
         n_known_subjects = "unknown"
     elif subject_schema == "rvk":
-        n_known_subjects = len(subject_store)
+        n_known_subjects = sum(1 for _ in current_subject_hierarchy)
     else:
         n_known_subjects = None
 

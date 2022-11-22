@@ -8,10 +8,13 @@ import waitress
 
 from slub_docsa.cli.common import add_logging_arguments, setup_logging_from_args
 from slub_docsa.common.paths import get_serve_dir
+from slub_docsa.data.load.ddc import load_ddc_subject_hierarchy
+from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.serve.app import create_webapp
 from slub_docsa.serve.common import SimpleRestService
 from slub_docsa.serve.rest.service.languages import LangidLanguagesRestService
 from slub_docsa.serve.rest.service.models import AllStoredModelRestService, SingleStoredModelRestService
+from slub_docsa.serve.rest.service.schemas import SimpleSchemaRestService
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +76,13 @@ def _run_rest_service(args):
         if load_all_models else SingleStoredModelRestService(serve_directory)
 
     lang_rest_service = LangidLanguagesRestService()
-    rest_service = SimpleRestService(model_rest_service, None, lang_rest_service)
+
+    schema_rest_service = SimpleSchemaRestService({
+        "rvk": load_rvk_subject_hierarchy_from_sqlite(),
+        "ddc": load_ddc_subject_hierarchy()
+    })
+
+    rest_service = SimpleRestService(model_rest_service, schema_rest_service, lang_rest_service)
     app = create_webapp(rest_service, debug=debug_mode)
 
     if debug_mode:

@@ -1,11 +1,21 @@
 """REST handlers for schema inforamtion."""
 
+import urllib.parse
+
+from typing import Iterable
 from flask.wrappers import Response
 
+from slub_docsa.serve.app import rest_service
+from slub_docsa.serve.common import SchemasRestService
 
-def find():
+
+def _service() -> SchemasRestService:
+    return rest_service().get_schemas_service()
+
+
+def find() -> Iterable[str]:
     """List all available schemas."""
-    return Response("not implemented yet", status=200, mimetype="text/plain")
+    return _service().find_schemas()
 
 
 def get():
@@ -13,16 +23,18 @@ def get():
     return Response("not implemented yet", status=200, mimetype="text/plain")
 
 
-def subjects_find():
+def subjects_find(schema_id: str, root_only: bool = True):
     """List all available subjects for a schema."""
-    return Response("not implemented yet", status=200, mimetype="text/plain")
+    return _service().find_subjects(schema_id, root_only)
 
 
-def subjects_get():
+def subjects_get(schema_id: str, subject_uri: str):
     """Get information about a subject of a schema."""
-    return Response("not implemented yet", status=200, mimetype="text/plain")
-
-
-def subjects_children():
-    """List all children of a subject."""
-    return Response("not implemented yet", status=200, mimetype="text/plain")
+    decoded_subject_uri = urllib.parse.unquote(subject_uri)
+    subject_info = _service().subject_info(schema_id, decoded_subject_uri)
+    return {
+        "labels": subject_info.labels,
+        "breadcrumb": subject_info.breadcrumb,
+        "parent_subject_uri": subject_info.parent_subject_uri,
+        "children_subject_uris": subject_info.children_subject_uris,
+    }

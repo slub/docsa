@@ -19,9 +19,9 @@ from lxml import etree  # nosec
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri, get_ddc_subject_store, is_valid_ddc_uri
-from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors
-from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
+from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri, load_ddc_subject_hierarchy
+from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
+from slub_docsa.data.load.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 
 logger = logging.getLogger(__name__)
@@ -642,7 +642,7 @@ def get_qucosa_ddc_subject_store(
 
     with gzip.open(ddc_list_filepath, "rb") as file:
         subjects = pickle.load(file)  # nosec
-        return get_ddc_subject_store(subject_uris=subjects)
+        return load_ddc_subject_hierarchy(subject_uris=subjects)
 
 
 def qucosa_subject_hierarchy_by_subject_schema(
@@ -650,7 +650,7 @@ def qucosa_subject_hierarchy_by_subject_schema(
 ) -> SubjectHierarchy:
     """Return either rvk or ddc subject hierarchy depending on requested subject schema."""
     return {
-        "rvk": lambda: get_rvk_subject_store(),
+        "rvk": lambda: load_rvk_subject_hierarchy_from_sqlite(),
         "ddc": lambda: get_qucosa_ddc_subject_store(),
     }[subject_schema]()
 
@@ -697,7 +697,7 @@ def read_qucosa_samples(
     }
 
     _subject_store_func_map = {
-        "rvk": lambda: get_rvk_subject_store(),
+        "rvk": lambda: load_rvk_subject_hierarchy_from_sqlite(),
         "ddc": lambda: get_qucosa_ddc_subject_store(),
     }
 

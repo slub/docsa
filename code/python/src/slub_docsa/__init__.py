@@ -80,8 +80,7 @@ Python API. A list of sub-modules can be found below. The most relevant classes 
 
 - `slub_docsa.common.document.Document` - represents a document consisting of its title, abstract, fulltext
   and a list of authors
-- `slub_docsa.common.subject.SubjectNode` - models a hierarchical subject consisting of its URI and label and parent
-  subject
+- `slub_docsa.common.subject.SubjectHierarchy` - models a hierarchy of subjects including labels for each subject
 - `slub_docsa.common.dataset.Dataset` - combines documents and their subject annotations
 - `slub_docsa.common.model.ClassificationModel` - defines how classification models are implemented and can be used
   for training and prediction, various model implementations can be found in `slub_docsa.models.classification`

@@ -158,7 +158,8 @@ def _classify_qucosa_predict_action(args):
     # print each prediction as one line to stdout
     for probability, subject_uri in predictions:
         if subject_hierarchy is not None and subject_uri in subject_hierarchy:
-            label = subject_hierarchy[subject_uri].label.encode("ascii", errors="replace").decode("ascii")
+            label = subject_hierarchy.subject_labels(subject_uri) \
+                .get("de").encode("ascii", errors="replace").decode("ascii")
             print(probability, subject_uri, label)
         else:
             print(probability, subject_uri)

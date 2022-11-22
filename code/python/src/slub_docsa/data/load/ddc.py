@@ -12,13 +12,12 @@ import requests
 from sqlitedict import SqliteDict
 
 from slub_docsa.common.paths import get_cache_dir
-from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
+from slub_docsa.common.subject import SubjectHierarchy, print_subject_hierarchy
+from slub_docsa.data.preprocess.subject import children_map_from_subject_parent_map
 
 logger = logging.getLogger(__name__)
 
 COLIANA_DDC_API_URL = "https://coli-conc.gbv.de/coli-ana/app/analyze?notation="
-
-DdcSubjectNode = SubjectNode
 
 
 def ddc_key_to_uri(key: str):
@@ -154,6 +153,11 @@ def ddc_parent_from_uri(uri: str):
     return ddc_key_to_uri(key[:2] + "0")
 
 
+def ddc_root_subjects() -> Iterable[str]:
+    """Return URIs of the 10 root DDC subjects."""
+    return [ddc_key_to_uri(str(i) + "00") for i in range(10)]
+
+
 def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
     """Return an extended list of ddc subjects that also contains all ancestor subjects."""
     extended_set = set(subjects)
@@ -205,13 +209,13 @@ def ddc_notation_from_uri_via_coliana(
     return None
 
 
-class SimpleDdcHierarchy(SubjectHierarchy):
+class SimpleDdcSubjectHierarchy(SubjectHierarchy):
     """A simple subject hierarchy implementation that is not stored."""
 
     def __init__(
         self,
         subject_uris: Optional[Sequence[str]] = None,
-        subject_labels: Optional[Mapping[str, str]] = None,
+        subject_labels: Optional[Mapping[str, Mapping[str, str]]] = None,
     ):
         """Initialize unlabled ddc hierarchy.
 
@@ -223,74 +227,132 @@ class SimpleDdcHierarchy(SubjectHierarchy):
         subject_labels: Optional[Mapping[str, str]] = None
             an optional mapping of subject uris to labels
         """
-        self.subject_uris = subject_uris
-        self.subject_labels = subject_labels
+        self._subject_uris = subject_uris
+        self._subject_labels = subject_labels
 
-    def __len__(self):
-        """Return the size of the provided available ddc subjects or a static length of 1000."""
-        if self.subject_uris is not None:
-            return len(self.subject_uris)
-        raise ValueError("length not available if list of ddc subjects was not provided")
+        if subject_uris is not None:
+            parent_map = {subject_uri: ddc_parent_from_uri(subject_uri) for subject_uri in subject_uris}
+            self._subject_children = children_map_from_subject_parent_map(parent_map)
+            self._root_subjects = [subject_uri for subject_uri, parent_uri in parent_map.items() if parent_uri is None]
+        else:
+            self._subject_children = None
+            self._root_subjects = ddc_root_subjects()
 
-    def __getitem__(self, uri: str) -> SubjectNode:
-        """Return a subject hierarchy node for the given ddc uri.
+    def subject_labels(self, subject_uri: str) -> Mapping[str, str]:
+        """Return the labels mapping for a DDC subject.
+
+        If not labels are provided, the DDC key is returned as english label.
 
         Parameters
         ----------
-        uri: str
-            the ddc uri
+        subject_uri: str
+            the uri of the subject whose label mapping is requested
 
         Returns
         -------
-        SubjectNode
-            a subject node describing this ddc subject
+        Mapping[str, str]
+            the mapping from ISO 639-1 language codes to labels for this subject;
+            an empty mapping for valid subjects with unknown labels
+
+        Raises
+        ------
+        LookupError
+            if the subject with this uri is not available in this subject hierarchy
         """
-        if is_valid_ddc_uri(uri):
-            label = ddc_key_from_uri(uri)
-            if self.subject_labels is not None and self.subject_labels.get(uri, None) is not None:
-                label = self.subject_labels[uri]
-            return SubjectNode(
-                uri=uri,
-                label=label,
-                parent_uri=ddc_parent_from_uri(uri)
-            )
-        raise ValueError(f"uri {uri} is not a valid ddc uri")
+        if not is_valid_ddc_uri(subject_uri):
+            raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
+        if self._subject_labels is not None and self._subject_labels[subject_uri] is not None:
+            return self._subject_labels[subject_uri]
+        return {"en": ddc_key_from_uri(subject_uri)}
+
+    def subject_parent(self, subject_uri: str) -> Optional[str]:
+        """Return the parent of the subject or None if the subject does not have a parent.
+
+        Parameters
+        ----------
+        subject_uri: str
+            the uri of the subject whose parent is requested
+
+        Returns
+        -------
+        Optional[str]
+            the uri of the parent subject or None if the requested subject does not have a parent
+
+        Raises
+        ------
+        LookupError
+            if the subject with this uri is not available in this subject hierarchy
+        """
+        if not is_valid_ddc_uri(subject_uri):
+            raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
+        return ddc_parent_from_uri(subject_uri)
+
+    def subject_children(self, subject_uri: str) -> Iterable[str]:
+        """Return the children of the DDC subject.
+
+        If no list of subjects was provided, the children can not be calculated and a
+        RuntimeError is raised.
+
+        Parameters
+        ----------
+        subject_uri: str
+            the uri of the subject whose children is requested
+
+        Returns
+        -------
+        Iterable[str]
+            the list of URIs of children subjects or an empty list if the requested subject does not have any children
+
+        Raises
+        ------
+        LookupError
+            if the subject with this uri is not available in this subject hierarchy
+        RuntimeError
+            if the list of DDC subjects was not provided, such that children can not be calculated
+        """
+        if not is_valid_ddc_uri(subject_uri):
+            raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
+        if self._subject_children is None:
+            raise RuntimeError("children can not be calculated if list of ddc subjects is not provided")
+        return self._subject_children[subject_uri]
+
+    def root_subjects(self) -> Iterable[str]:
+        """Return a list of root DDC subjects.
+
+        Returns
+        -------
+        Iterable[str]
+            the list of URIs of DDC subjects that have no parent subject
+        """
+        return self._root_subjects
 
     def __iter__(self) -> Iterable[str]:
-        """Return an iterator over the major level ddc subjects."""
-        if self.subject_uris is not None:
-            return iter(self.subject_uris)
-        raise ValueError("iteration not available if list of ddc subjects was not provided")
+        """Return an iterator over all subject uris of this subject hierarchy.
 
-    def __contains__(self, k: str) -> bool:
-        """Check whether a ddc uri is contained in the provided subject uris, or check if it is a valid ddc uri."""
-        if self.subject_uris is not None:
-            return k in self.subject_uris
-        if is_valid_ddc_uri(k):
+        The order in which subjects are iterated is not guaranteed.
+        """
+        if self._subject_uris is not None:
+            return iter(self._subject_uris)
+        raise RuntimeError("iteration not available if list of ddc subjects was not provided")
+
+    def __contains__(self, subject_uri: str) -> bool:
+        """Check whether a DDC uri is contained in the provided subject uris, or check if it is a valid ddc uri.
+
+        Parameters
+        ----------
+        subject_uri: str
+            the uri of the subject to be checked
+
+        Returns
+        -------
+        bool
+            whether the subject_uri is contained in the list of provided DDC subjects or a valid DDC subject
+        """
+        if self._subject_uris is not None:
+            return subject_uri in self._subject_uris
+        if is_valid_ddc_uri(subject_uri):
             return True
         return False
-
-    def keys(self) -> Iterable[str]:
-        """Return a list over all major level ddc uris."""
-        return iter(self)  # type: ignore
-
-    def values(self) -> Iterable[SubjectNode]:
-        """Return a list over all major level ddc subjects nodes."""
-        return [self[k] for k in iter(self)]  # type: ignore
-
-    def get(self, key: str, default: Optional[SubjectNode] = None) -> Optional[SubjectNode]:
-        """Return a ddc subject node for a given ddc uri."""
-        if key in self:
-            return self[key]
-        return default
-
-    def __eq__(self, other):
-        """Check for instance equality."""
-        return self == other
-
-    def __ne__(self, other):
-        """Check for instance inequality."""
-        return self != other
 
 
 class CachedColianaDdcLabels(SqliteDict):
@@ -323,19 +385,29 @@ class CachedColianaDdcLabels(SqliteDict):
         self.time_between_requests = time_between_requests
         self.last_request = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, subject_uri) -> Mapping[str, str]:
         """Return a label for a ddc uri either from cache or by retrieving it from coli-ana."""
-        if not super().__contains__(key):
+        if not super().__contains__(subject_uri):
             time.sleep(max(self.time_between_requests - (time.time() - self.last_request), 0.0))
-            super().__setitem__(key, ddc_notation_from_uri_via_coliana(key))
+            super().__setitem__(subject_uri, ddc_notation_from_uri_via_coliana(subject_uri))
             self.last_request = time.time()
-        return super().__getitem__(key)
+
+        label = super().__getitem__(subject_uri)
+        if label is not None:
+            return {"de": label}
+        return {"en": ddc_key_from_uri(subject_uri)}
 
 
-def get_ddc_subject_store(
+def load_ddc_subject_hierarchy(
     subject_uris: Optional[Sequence[str]] = None,
     cache_filepath: Optional[str] = None,
 ) -> SubjectHierarchy:
     """Return an instance of the UnlabledDdcHierarchy."""
     subject_labels = CachedColianaDdcLabels(cache_filepath)
-    return SimpleDdcHierarchy(subject_uris=subject_uris, subject_labels=subject_labels)
+    return SimpleDdcSubjectHierarchy(subject_uris=subject_uris, subject_labels=subject_labels)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    ddc_subject_hierarchy = load_ddc_subject_hierarchy(ddc_root_subjects())
+    print_subject_hierarchy("de", ddc_subject_hierarchy)

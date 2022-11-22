@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 
 from slub_docsa.common.paths import get_figures_dir
-from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, subject_label_breadcrumb
+from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, subject_label_breadcrumb_as_string
 from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments, unique_subject_order
 from slub_docsa.evaluation.plotting import cluster_distribution_by_subject_plot, subject_distribution_by_cluster_plot
 from slub_docsa.evaluation.plotting import write_multiple_figure_formats
@@ -35,6 +35,7 @@ def qucosa_experiments_cluster_one(
 ):
     """Run clustering experiment evaluating single dataset."""
     _, dataset, subject_hierarchy = list(qucosa_named_datasets([dataset_name], check_qucosa_download))[0]
+    lang_code = "de"
 
     if max_documents is not None:
         sampled_idx = np.random.choice(range(len(dataset.documents)), size=max_documents, replace=False)
@@ -54,7 +55,7 @@ def qucosa_experiments_cluster_one(
 
     document_labels = [d.title for d in documents]
     subject_labels = {
-        s: subject_label_breadcrumb(subject_hierarchy[s], subject_hierarchy) for s in subject_order
+        s: " | ".join(subject_label_breadcrumb_as_string(s, lang_code, subject_hierarchy)) for s in subject_order
     }
 
     fig = subject_distribution_by_cluster_plot(

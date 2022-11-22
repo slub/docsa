@@ -212,7 +212,7 @@ class AnnifModel(PersistableClassificationModel):
                 annif_subject_list = [
                     AnnifSubject(
                         uri=uri,
-                        labels={self.lang_code: self.subject_hierarchy[uri].label},
+                        labels={self.lang_code: self.subject_hierarchy.subject_labels(uri).get(self.lang_code)},
                         notation=None
                     ) for uri in self.subject_order
                 ]

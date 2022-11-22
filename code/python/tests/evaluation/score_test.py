@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from slub_docsa.common.subject import SubjectHierarchy, SubjectNode
+from slub_docsa.common.subject import SubjectTuple
+from slub_docsa.data.preprocess.subject import build_subject_hierarchy_from_subject_tuples
 from slub_docsa.evaluation.score import cesa_bianchi_h_loss
 
 
@@ -26,14 +27,14 @@ def test_cesa_bianchi_h_loss():
         "uri://subject6",
     ]
 
-    subject_hierarchy: SubjectHierarchy = {
-        "uri://subject1": SubjectNode(uri="uri://subject1", label="subject 1", parent_uri=None),
-        "uri://subject2": SubjectNode(uri="uri://subject2", label="subject 2", parent_uri=None),
-        "uri://subject3": SubjectNode(uri="uri://subject3", label="subject 3", parent_uri="uri://subject2"),
-        "uri://subject4": SubjectNode(uri="uri://subject4", label="subject 4", parent_uri="uri://subject2"),
-        "uri://subject5": SubjectNode(uri="uri://subject5", label="subject 5", parent_uri="uri://subject3"),
-        "uri://subject6": SubjectNode(uri="uri://subject5", label="subject 6", parent_uri="uri://subject3"),
-    }
+    subject_hierarchy = build_subject_hierarchy_from_subject_tuples([
+        SubjectTuple("uri://subject1", {"en": "subject 1"}, None),
+        SubjectTuple("uri://subject2", {"en": "subject 2"}, None),
+        SubjectTuple("uri://subject3", {"en": "subject 3"}, "uri://subject2"),
+        SubjectTuple("uri://subject4", {"en": "subject 4"}, "uri://subject2"),
+        SubjectTuple("uri://subject5", {"en": "subject 5"}, "uri://subject3"),
+        SubjectTuple("uri://subject6", {"en": "subject 6"}, "uri://subject3"),
+    ])
 
     test_cases = [
         # score, true incidence, predicted incidence
@@ -47,7 +48,7 @@ def test_cesa_bianchi_h_loss():
         (0.25, [0, 0, 0, 1, 1, 0], [0, 0, 0, 1, 0, 0]),
         (0.00, [0, 0, 0, 1, 1, 0], [0, 0, 0, 1, 1, 0]),
         #
-        (0.125, [0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 0]),
+        (0.125, [0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 1]),
     ]
 
     h_loss = cesa_bianchi_h_loss(subject_hierarchy, subject_order)

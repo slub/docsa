@@ -23,11 +23,12 @@ import numpy as np
 
 from slub_docsa.common.dataset import Dataset, SimpleDataset
 from slub_docsa.common.document import Document
-from slub_docsa.common.subject import SubjectHierarchy, SubjectNode, print_subject_hierarchy
+from slub_docsa.common.subject import SubjectHierarchy, SubjectTuple, print_subject_hierarchy
 from slub_docsa.data.artificial.simple import generate_random_text
 from slub_docsa.data.artificial.tokens import TokenProbabilities, choose_tokens_by_probabilities
 from slub_docsa.data.artificial.tokens import generate_random_token_probabilties, combine_token_probabilities
 from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
+from slub_docsa.data.preprocess.subject import build_subject_hierarchy_from_subject_tuples
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ def generate_hierarchical_subject_token_probabilities(
         subject hierarchy (second element)
     """
     subject_token_probabilities = {}
-    subject_hierarchy = {}
+    subject_tuples = []
     parent_backlog: List[Tuple[Optional[str], int, TokenProbabilities]] = [
         (None, 0, root_token_probabilities)
     ]
@@ -91,11 +92,11 @@ def generate_hierarchical_subject_token_probabilities(
             else:
                 current_subject_label = "subject " + str(i)
             subject_token_probabilities[current_subject_uri] = current_token_probabilties
-            subject_hierarchy[current_subject_uri] = SubjectNode(
-                uri=current_subject_uri,
-                label=current_subject_label,
+            subject_tuples.append(SubjectTuple(
+                subject_uri=current_subject_uri,
+                labels={"en": current_subject_label},
                 parent_uri=parent_subject_uri
-            )
+            ))
 
         # create children
         n_children = np.random.default_rng().integers(
@@ -115,6 +116,7 @@ def generate_hierarchical_subject_token_probabilities(
 
         i += 1
 
+    subject_hierarchy = build_subject_hierarchy_from_subject_tuples(subject_tuples)
     return subject_token_probabilities, subject_hierarchy
 
 
