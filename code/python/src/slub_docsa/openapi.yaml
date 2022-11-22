@@ -40,12 +40,15 @@ paths:
             only models that are designed to classify documents of a certain
             set of languages are returned, e.g. "de", "de,en"
           examples:
-            none:
+            _default:
               summary: no language restriction
               value:
             german:
               summary: only models designed for german documents
               value: "de"
+            multi:
+              summary: models supporting multiple languages
+              value: "en,de,fr,es"
           in: query
           schema:
             type: string
@@ -53,6 +56,13 @@ paths:
           description: |
             if provided, lists only models that are capable to predict
             subjects of that classification schema
+          examples:
+            _default:
+              summary: no restriction
+              value:
+            rvk:
+              summary: models for RVK only
+              value: rvk
           in: query
           schema:
             type: string
@@ -61,7 +71,7 @@ paths:
             comma separated list of tags; if provided, only models that
             are labelled with these tags are returned, e.g. "k10plus"
           examples:
-            none:
+            _default:
               summary: no tags
               value:
             german:
@@ -82,7 +92,7 @@ paths:
                 items:
                   type: string
               examples:
-                results:
+                _default:
                   summary: 3 results
                   value: [
                     "60915cae-7b5d-4396-9bd7-177fe7bdffe6",
@@ -154,13 +164,13 @@ paths:
       summary: Classify multiple documents optimized for performance
       description: |
         Classifies a list of documents by applying the specified model.
-        The results are provided as a simple list of tuples of
-        <em>score</em> and <em>subject order id</em> for performance.
-        The actual subjects can be resolved by querying <code>
-        /models/{model_id}/subjects</code> and using the order number as
-        index in the list of subjects. Results can be filtered via a
-        minimum certainty <em>threshold</em> or by specifying a maximum
-        number of subjects (<em>limit</em>) that is returned.
+        The results are provided as a simple list of tuples
+        <code>[score, subject order id]</code>.
+        The actual subjects can be resolved by querying
+        <code>/models/{model_id}/subjects</code> and using the order
+        number as index in the list of subjects. Results can be filtered
+        via a minimum certainty <em>threshold</em> or by specifying a
+        maximum number of subjects (<em>limit</em>) that is returned.
       tags:
         - Model Discovery and Classification
       operationId: models.classify
@@ -176,16 +186,20 @@ paths:
             schema:
               $ref: "#/components/schemas/DocumentList"
             examples:
-              multiple:
+              _default:
                 $ref: "#/components/examples/MultipleDocumentsTitleOnly"
               full:
                 $ref: "#/components/examples/SingleDocumentAllInfo"
       responses:
         200:
           description: |
-            successful classification, returning the list of predicted subjects and
-            their scores for all documents in the same order as they were provided
-            in the request
+            successful classification, returning the list of tuples
+            <code>[score, subject order id]</code> of predicted subjects
+            (identified by their order id) and their scores for all documents in
+            the same order as they were provided in the request; the actual
+            subjects can be resolved by querying
+            <code>/models/{model_id}/subjects</code> and using the order number
+            as index in the list of subjects
           content:
             application/json:
               schema:
@@ -197,7 +211,7 @@ paths:
                     items:
                       type: number
               examples:
-                results:
+                _default:
                   summary: 3 documents, t=0.1, limit=3
                   value: [
                     [[0.7, 2], [0.5, 14], [0.4, 5]],
@@ -247,7 +261,7 @@ paths:
             schema:
               $ref: "#/components/schemas/DocumentList"
             examples:
-              multiple:
+              _default:
                 $ref: "#/components/examples/MultipleDocumentsTitleOnly"
               full:
                 $ref: "#/components/examples/SingleDocumentAllInfo"
@@ -264,7 +278,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/ClassificationResult"
               examples:
-                results:
+                _default:
                   summary: 3 documents, t=0.1, limit=3
                   value: [
                     {
@@ -334,9 +348,12 @@ paths:
                 items:
                   type: string
               examples:
-                results:
+                _default:
                   summary: 3 subjects
                   value: ["subject_uri1", "subject_uri2", "subject_uri3"]
+                no_subjects:
+                  summary: no matching subjects
+                  value: []
         400:
           $ref: "#/components/responses/BadRequestResponse"
         404:
@@ -389,15 +406,21 @@ paths:
       operationId: schemas.subjects_find
       parameters:
         - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/SchemaHierarchyLevel"
       responses:
         200:
-          description: success
+          description: the list of subject URIs matching the query (default all root level subjects)
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
+        404:
+          $ref: "#/components/responses/SchemaNotFoundResponse"
+        500:
+          $ref: "#/components/responses/UnexpectedErrorResponse"
+
 
   /schemas/{schema_id}/subjects/{subject_uri}:
     get:
@@ -407,6 +430,7 @@ paths:
       operationId: schemas.subjects_get
       parameters:
         - $ref: "#/components/parameters/SchemaId"
+        - $ref: "#/components/parameters/SubjectURI"
       responses:
         200:
           description: success
@@ -414,22 +438,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SubjectInfo"
-
-  /schemas/{schema_id}/subjects/{subject_uri}/children:
-    get:
-      summary: Get children subjects of a subject
-      tags:
-        - Classification Schemas and Subjects
-      operationId: schemas.subjects_children
-      parameters:
-        - $ref: "#/components/parameters/SchemaId"
-      responses:
-        200:
-          description: success
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/responses/DummyResponse"
+        404:
+          $ref: "#/components/responses/SchemaOrSubjectNotFoundResponse"
+        500:
+          $ref: "#/components/responses/UnexpectedErrorResponse"
 
   /languages:
     get:
@@ -466,7 +478,7 @@ paths:
             schema:
               $ref: "#/components/schemas/DocumentList"
             examples:
-              multiple:
+              _default:
                 $ref: "#/components/examples/MultipleDocumentsTitleOnly"
               full:
                 $ref: "#/components/examples/SingleDocumentAllInfo"
@@ -536,9 +548,48 @@ components:
           example: {
             "type": "ModelNotFoundException",
             "title": "model could not be found",
-            "detail": "model with with id \"some-id\" could not be found",
+            "detail": "model with id \"some-id\" could not be found",
             "status": 404
           }
+
+    SchemaNotFoundResponse:
+      description: |
+        the schema with the specified id could not be found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorInfo"
+          example: {
+            "type": "SchemaNotFoundException",
+            "title": "schema could not be found",
+            "detail": "schema with id \"some-id\" could not be found",
+            "status": 404
+          }
+
+    SchemaOrSubjectNotFoundResponse:
+      description: |
+        the schema or subject with the specified id or URI could not be found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorInfo"
+          examples:
+            _default:
+              summary: subject not found
+              value: {
+                "type": "SubjectNotFoundException",
+                "title": "subject could not be found",
+                "detail": "subject with with URI \"uri://some-uri\" could not be found",
+                "status": 404
+              }
+            schema:
+              summary: schema not found
+              value: {
+                "type": "SchemaNotFoundException",
+                "title": "schema could not be found",
+                "detail": "schema with with id \"some-id\" could not be found",
+                "status": 404
+              }
 
     UnexpectedErrorResponse:
       description: |
@@ -566,6 +617,16 @@ components:
         type: string
       required: true
 
+    SubjectURI:
+      name: subject_uri
+      in: path
+      description: |
+        the uri of the classification schema subject
+      example: uri://subject_uri
+      schema:
+        type: string
+      required: true
+
     ClassificationLimit:
       name: limit
       in: query
@@ -573,7 +634,7 @@ components:
         maximum number of classification results (subjects) to be returned
         for each document that is classified
       examples:
-        five:
+        _default:
           summary: limit = 5
           description: at most 5 subjects are returned
           value: 5
@@ -592,7 +653,7 @@ components:
         prediction (subject) to be considered a sufficient classification
         result
       examples:
-        none:
+        _default:
           summary: no threshold
           description: |
             classification results are not filtered by certainty <em>score</em>
@@ -601,6 +662,32 @@ components:
           summary: threshold = 0.5
           description: only subjects with at least 0.5 score are returned
           value: 0.5
+      schema:
+        type: number
+
+    SchemaHierarchyLevel:
+      name: level
+      in: query
+      description: |
+        the level at which subjects are located in the hierarchy; level=0 (default)
+        means root subjects; level=1 are all children of root subjects; level=-1
+        means all subjects independent of their level
+      examples:
+        _default:
+          summary: root level subjects
+          description: |
+            subjects of at the root of the hierarchy (that do not have any parents)
+          value: 0
+        first:
+          summary: first level subjects
+          description: |
+            subjects that have one parent who is a root level subject
+          value: 1
+        any:
+          summary: all subjects
+          description: |
+            all subjects independent of their level
+          value: -1
       schema:
         type: number
 
@@ -746,31 +833,53 @@ components:
       description: |
         information about this subject
       required:
-        - label
+        - labels
         - parent_subject_uri
-        - has_children
-        - breadcrumb
+        - children_subject_uris
+        - breadcrumbs
       properties:
-        label:
-          type: string
+        labels:
+          type: object
           description: |
-            a human readable label of this subject
+            human readable labels of this subject for various languages
+            indexed by the ISO 639-1 language code
+          additionalProperties:
+            type: string
         parent_subject_uri:
           type: string
           description: |
             the subject uri of the parent subject for this subject
             (or null if root subject)
-        has_children:
-          type: boolean
-          description: |
-            whether this subject has any children subjects
-        breadcrumb:
+        children_subject_uris:
           type: array
-          description: |
-            a list of strings of human readable labels for each ancestor
-            subject
           items:
             type: string
+          description: |
+            the list of URIs of children subjects
+        breadcrumbs:
+          type: object
+          description: |
+            a list of strings of human readable labels for each ancestor
+            subject indexed by the ISO 639-1 language code
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      example: {
+          "labels": {
+            "en": "Human readable subject label",
+            "de": "Lesbare Themenbeschriftung"
+          },
+          "parent_subject_uri": "uri://parent_subject",
+          "children_subject_uris": [
+            "uri://children_subject1", "uri://children_subject2"
+          ],
+          "breacrumbs": {
+            "en": ["Parent subject label", "Grandparent subject label"],
+            "de": ["Beschriftung des übergeordneten Thema", "Beschriftung des darüber übergeordneten Thema"]
+          }
+        }
+
 
     ErrorInfo:
       type: object
@@ -791,7 +900,9 @@ components:
           type: string
         status:
           type: number
+
   examples:
+
     MultipleDocumentsTitleOnly:
       summary: multiple documents, title only
       value: [
@@ -799,6 +910,7 @@ components:
         { "title": "Das ist ein Buchtitel" },
         { "title": "Title of the third document" },
       ]
+
     SingleDocumentAllInfo:
       summary: single document, all info
       value: [

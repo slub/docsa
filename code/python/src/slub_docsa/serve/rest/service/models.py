@@ -10,25 +10,12 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, ClassificationModelsRestService
 from slub_docsa.serve.common import PublishedClassificationModel, PublishedClassificationModelInfo
+from slub_docsa.serve.common import ModelNotFoundException
 from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
 from slub_docsa.serve.store.models import find_stored_classification_model_infos, load_published_classification_model
 
 
 logger = logging.getLogger(__name__)
-
-
-class ModelNotFoundException(RuntimeError):
-    """Exception stating that model with certain id could not be found."""
-
-    def __init__(self, model_id: str):
-        """Report custom error message.
-
-        Parameters
-        ----------
-        model_id : str
-            the id of the model that could not be found
-        """
-        super().__init__(f"model with id '{model_id}' could not be found")
 
 
 class PartialModelInfosRestService(ClassificationModelsRestService):

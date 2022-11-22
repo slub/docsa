@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from typing import Sequence, Optional, NamedTuple, Tuple
+from typing import Sequence, Optional, NamedTuple, Tuple, Mapping
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
@@ -72,6 +72,22 @@ class ClassificationResult(NamedTuple):
     """The list of individual classification predictions including a score for each predicted subject."""
 
 
+class PublishedSubjectInfo(NamedTuple):
+    """Information about a subject."""
+
+    labels: Mapping[str, str]
+    """A map of labels for this subject indexed by the ISO 639-1 language code of the label language."""
+
+    parent_subject_uri: Optional[str]
+    """The URI of the parent subject"""
+
+    breadcrumbs: Mapping[str, Sequence[str]]
+    """A map of breadcrums indexed by the ISO 639-1 language code of the breadcrumb."""
+
+    children_subject_uris: Sequence[str]
+    """The list of URIs of children subjects."""
+
+
 class ClassificationModelsRestService:
     """The interface of the rest service dealing with classification models."""
 
@@ -116,7 +132,7 @@ class ClassificationModelsRestService:
 class SchemasRestService:
     """The interface of the REST service dealing with schema queries."""
 
-    def find_schemas(self):
+    def find_schemas(self) -> Sequence[str]:
         """Return the list of avaialble schemas."""
         raise NotImplementedError()
 
@@ -124,16 +140,12 @@ class SchemasRestService:
         """Return information about a specific schema."""
         raise NotImplementedError()
 
-    def find_subjects(self, schema_id: str):
+    def find_subjects(self, schema_id: str, level: int = 0) -> Sequence[str]:
         """Return a list of available subjects for a specific schema."""
         raise NotImplementedError()
 
-    def subject_info(self, schema_id: str, subject_uri: str):
+    def subject_info(self, schema_id: str, subject_uri: str) -> PublishedSubjectInfo:
         """Return information about a subject of a schema."""
-        raise NotImplementedError()
-
-    def subject_children(self, schema_id: str, subject_uri: str):
-        """Return the list of children subjects for a subject of a schema."""
         raise NotImplementedError()
 
 
@@ -185,6 +197,50 @@ class SimpleRestService(RestService):
     def get_languages_service(self) -> LanguagesRestService:
         """Return language service implementation."""
         return self.languages_service
+
+
+class ModelNotFoundException(RuntimeError):
+    """Exception stating that model with certain id could not be found."""
+
+    def __init__(self, model_id: str):
+        """Report custom error message.
+
+        Parameters
+        ----------
+        model_id : str
+            the id of the model that could not be found
+        """
+        super().__init__(f"model with id '{model_id}' could not be found")
+
+
+class SchemaNotFoundException(RuntimeError):
+    """Exception stating that schema with certain id could not be found."""
+
+    def __init__(self, schema_id: str):
+        """Report custom error message.
+
+        Parameters
+        ----------
+        schema_id : str
+            the id of the schema that could not be found
+        """
+        super().__init__(f"schema with id '{schema_id}' could not be found")
+
+
+class SubjectNotFoundException(RuntimeError):
+    """Exception stating that subject with certain URI could not be found."""
+
+    def __init__(self, schema_id: str, subject_uri: str):
+        """Report custom error message.
+
+        Parameters
+        ----------
+        schema_id : str
+            the id of the schema that is checked for the subject
+        subject_uri : str
+            the uri of the subject that could not be found
+        """
+        super().__init__(f"subject with uri '{subject_uri}' could not be found in schema with id '{schema_id}'")
 
 
 def current_date_as_model_creation_date():

@@ -9,9 +9,9 @@ from connexion import FlaskApp
 from connexion.resolver import RelativeResolver
 
 from slub_docsa.serve.exceptions import generate_connexion_exception_handler
-from slub_docsa.serve.rest.service.models import ModelNotFoundException
 from slub_docsa.serve.routes import app as routes
 from slub_docsa.serve.common import RestService
+from slub_docsa.serve.common import ModelNotFoundException, SchemaNotFoundException, SubjectNotFoundException
 from slub_docsa.serve.validate import validate_max_request_body_length
 
 
@@ -48,6 +48,8 @@ def create_webapp(service: RestService, debug: bool = False):
     )
 
     app.add_error_handler(ModelNotFoundException, generate_connexion_exception_handler("model not found", 404))
+    app.add_error_handler(SchemaNotFoundException, generate_connexion_exception_handler("schema not found", 404))
+    app.add_error_handler(SubjectNotFoundException, generate_connexion_exception_handler("subject not found", 404))
     app.app.register_blueprint(routes)  # type: ignore
 
     return app
