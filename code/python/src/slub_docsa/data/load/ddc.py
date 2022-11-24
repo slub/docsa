@@ -5,8 +5,10 @@
 import logging
 import os
 import time
+import urllib.parse
+import re
 
-from typing import Iterable, Mapping, Optional, Sequence
+from typing import Callable, Iterable, Mapping, Optional, Sequence
 
 import requests
 from sqlitedict import SqliteDict
@@ -18,6 +20,7 @@ from slub_docsa.data.preprocess.subject import children_map_from_subject_parent_
 logger = logging.getLogger(__name__)
 
 COLIANA_DDC_API_URL = "https://coli-conc.gbv.de/coli-ana/app/analyze?notation="
+COLICONC_DDC_NARROWER_API_URL = "https://coli-conc.gbv.de/api/narrower"
 
 
 def ddc_key_to_uri(key: str):
@@ -36,24 +39,31 @@ def ddc_key_to_uri(key: str):
     return f"ddc:{key}"
 
 
-def ddc_correct_short_keys(key: str):
-    """Correct short ddc keys if they were not prefixed with zeros.
+def _ddc_key_check_major_part(major):
+    if len(major) > 3:
+        logger.debug("ddc major part '%s' has more than 3 digits", major)
+        return False
+    if not major.isnumeric():
+        logger.debug("ddc major part '%s' isn't numeric", major)
+        return False
+    return True
 
-    Parameters
-    ----------
-    key: str
-        a ddc key
 
-    Returns
-    -------
-    str
-        the corrected ddc key if correction was possible, otherwise the original input
-    """
-    if len(key) == 1:
-        return "00" + key
-    if len(key) == 2:
-        return "0" + key
-    return key
+def _ddc_key_check_minor_part(minor):
+    if not minor.isnumeric():
+        logger.debug("ddc minor part '%s' isn't numeric", minor)
+        return False
+    return True
+
+
+def _check_single_ddc_key(key):
+    if "." in key:
+        if len(key.split(".")) != 2:
+            logger.debug("ddc key '%s' contains multiple dots", key)
+            return False
+        major, minor = key.split(".")
+        return _ddc_key_check_major_part(major) and _ddc_key_check_minor_part(minor)
+    return _ddc_key_check_major_part(key)
 
 
 def is_valid_ddc_key(key: str) -> bool:
@@ -69,28 +79,13 @@ def is_valid_ddc_key(key: str) -> bool:
     bool
         true, if the key is correct
     """
-    if "." in key:
-        if len(key.split(".")) != 2:
-            logger.debug("ddc key '%s' contains multiple dots", key)
+    if "-" in key:
+        if len(key.split("-")) != 2:
+            logger.debug("ddc key '%s' has multiple minus symbols")
             return False
-        major, minor = key.split(".")
-        if len(major) != 3:
-            logger.debug("ddc key '%s' major part doesn't have exactly 3 digits", key)
-            return False
-        if not major.isnumeric():
-            logger.debug("ddc key '%s' major part isn't numeric", key)
-            return False
-        if not minor.isnumeric():
-            logger.debug("ddc key '%s' minor part isn't numeric", key)
-            return False
-        return True
-    if len(key) != 3:
-        logger.debug("ddc key '%s' doesn't have exactly 3 digits", key)
-        return False
-    if not key.isnumeric():
-        logger.debug("ddc key '%s' isn't numeric", key)
-        return False
-    return True
+        first, second = key.split("-")
+        return _check_single_ddc_key(first) and _check_single_ddc_key(second)
+    return _check_single_ddc_key(key)
 
 
 def is_valid_ddc_uri(uri: str) -> bool:
@@ -146,16 +141,14 @@ def ddc_parent_from_uri(uri: str):
         if len(minor) == 1:
             return ddc_key_to_uri(major)
         return ddc_key_to_uri(major + "." + minor[:-1])
-    if key[1:] == "00":
-        return None
-    if key[2] == "0":
-        return ddc_key_to_uri(key[0] + "00")
-    return ddc_key_to_uri(key[:2] + "0")
+    if len(key) > 1:
+        return ddc_key_to_uri(key[:-1])
+    return None
 
 
 def ddc_root_subjects() -> Iterable[str]:
     """Return URIs of the 10 root DDC subjects."""
-    return [ddc_key_to_uri(str(i) + "00") for i in range(10)]
+    return [ddc_key_to_uri(str(i)) for i in range(10)]
 
 
 def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
@@ -173,7 +166,7 @@ def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
     return list(extended_set)
 
 
-def ddc_notation_from_uri_via_coliana(
+def ddc_label_from_uri_via_coliana(
     uri: str,
 ) -> Optional[str]:
     """Return a ddc label a reported by the coli-ana web service.
@@ -192,6 +185,11 @@ def ddc_notation_from_uri_via_coliana(
     """
     key = ddc_key_from_uri(uri)
 
+    if len(key) == 1:
+        key = key + "00"
+    if len(key) == 2:
+        key = key + "0"
+
     logger.debug("do ddc label request to coli-ana for ddc uri: %s", uri)
     response = requests.get(COLIANA_DDC_API_URL + key, timeout=10)
 
@@ -209,6 +207,51 @@ def ddc_notation_from_uri_via_coliana(
     return None
 
 
+def ddc_children_from_uri_via_coliconc(uri: str) -> Iterable[str]:
+    """Return the list of children DDC subjects via the coli-conv API."""
+    # build request url
+    key = ddc_key_from_uri(uri)
+    dewey_info_uri = urllib.parse.quote("http://dewey.info/class/" + key + "/e23/")
+    request_url = COLICONC_DDC_NARROWER_API_URL + f"?limit=10000&uri={dewey_info_uri}&language=en,de"
+
+    # do request
+    response = requests.get(request_url, timeout=10)
+    json = response.json()
+
+    # extract notation from dewey info uri
+    uri_pattern = re.compile(r"http://dewey.info/class/([^/]+)/e23/")
+    children_uris = [ddc_key_to_uri(uri_pattern.match(entry["uri"]).group(1)) for entry in json]
+
+    # filter for invalid uris or the requested uri
+    return [child_uri for child_uri in filter(is_valid_ddc_uri, children_uris) if child_uri != uri]
+
+
+def cached_ddc_children_from_uri_via_coliconc(
+    cache_filepath: Optional[str] = None,
+    time_between_requests: float = 0.5,
+) -> Iterable[str]:
+    """Cache DDC children in an sqlite database to prevent excessive requests to coli-conv API."""
+    if cache_filepath is None:
+        cache_filepath = os.path.join(get_cache_dir(), "ddc/coliconv_children.sqlite")
+
+    os.makedirs(os.path.dirname(cache_filepath), exist_ok=True)
+    store = SqliteDict(filename=cache_filepath, tablename="ddc_children_by_uri", flag="c", autocommit=True)
+
+    last_request = 0
+
+    def retrieve_children(uri: str):
+        nonlocal last_request
+
+        if uri not in store:
+            time.sleep(max(time_between_requests - (time.time() - last_request), 0.0))
+            store[uri] = ddc_children_from_uri_via_coliconc(uri)
+            last_request = time.time()
+
+        return store[uri]
+
+    return retrieve_children
+
+
 class SimpleDdcSubjectHierarchy(SubjectHierarchy):
     """A simple subject hierarchy implementation that is not stored."""
 
@@ -216,6 +259,7 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
         self,
         subject_uris: Optional[Sequence[str]] = None,
         subject_labels: Optional[Mapping[str, Mapping[str, str]]] = None,
+        get_ddc_children: Optional[Callable[[str], Iterable[str]]] = None,
     ):
         """Initialize unlabled ddc hierarchy.
 
@@ -226,9 +270,13 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
             keys exist
         subject_labels: Optional[Mapping[str, str]] = None
             an optional mapping of subject uris to labels
+        get_ddc_children: Optional[Callable[[str], Iterable[str]]] = None
+            an optional method that is used to retrieve DDC children instead of the children that are calculated from
+            the `subject_uris` argument; if both are missing, the list of DDC children can not be provided
         """
         self._subject_uris = subject_uris
         self._subject_labels = subject_labels
+        self._get_ddc_children = get_ddc_children
 
         if subject_uris is not None:
             parent_map = {subject_uri: ddc_parent_from_uri(subject_uri) for subject_uri in subject_uris}
@@ -312,9 +360,11 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
         """
         if not is_valid_ddc_uri(subject_uri):
             raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
-        if self._subject_children is None:
-            raise RuntimeError("children can not be calculated if list of ddc subjects is not provided")
-        return self._subject_children[subject_uri]
+        if self._get_ddc_children is not None:
+            return self._get_ddc_children(subject_uri)
+        if self._subject_children is not None:
+            return self._subject_children[subject_uri]
+        raise RuntimeError("children can not be calculated if list of ddc subjects is not provided")
 
     def root_subjects(self) -> Iterable[str]:
         """Return a list of root DDC subjects.
@@ -389,7 +439,7 @@ class CachedColianaDdcLabels(SqliteDict):
         """Return a label for a ddc uri either from cache or by retrieving it from coli-ana."""
         if not super().__contains__(subject_uri):
             time.sleep(max(self.time_between_requests - (time.time() - self.last_request), 0.0))
-            super().__setitem__(subject_uri, ddc_notation_from_uri_via_coliana(subject_uri))
+            super().__setitem__(subject_uri, ddc_label_from_uri_via_coliana(subject_uri))
             self.last_request = time.time()
 
         label = super().__getitem__(subject_uri)
@@ -400,14 +450,18 @@ class CachedColianaDdcLabels(SqliteDict):
 
 def load_ddc_subject_hierarchy(
     subject_uris: Optional[Sequence[str]] = None,
-    cache_filepath: Optional[str] = None,
+    labels_cache_filepath: Optional[str] = None,
+    children_cache_filepath: Optional[str] = None,
 ) -> SubjectHierarchy:
     """Return an instance of the UnlabledDdcHierarchy."""
-    subject_labels = CachedColianaDdcLabels(cache_filepath)
-    return SimpleDdcSubjectHierarchy(subject_uris=subject_uris, subject_labels=subject_labels)
+    subject_labels = CachedColianaDdcLabels(labels_cache_filepath)
+    get_ddc_children = cached_ddc_children_from_uri_via_coliconc(children_cache_filepath)
+    return SimpleDdcSubjectHierarchy(subject_uris, subject_labels, get_ddc_children)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     ddc_subject_hierarchy = load_ddc_subject_hierarchy(ddc_root_subjects())
     print_subject_hierarchy("de", ddc_subject_hierarchy)
+
+    # print(ddc_children_from_uri_via_coliconc(ddc_key_to_uri("700")))

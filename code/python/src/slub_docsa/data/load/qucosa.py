@@ -19,7 +19,7 @@ from lxml import etree  # nosec
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri, load_ddc_subject_hierarchy
+from slub_docsa.data.load.ddc import ddc_key_to_uri, load_ddc_subject_hierarchy
 from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
 from slub_docsa.data.load.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
@@ -290,9 +290,9 @@ def _get_ddc_keys_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
     ddc_dict = list(filter(lambda d: d["type"] == "ddc", classification))[0]
     keys = ddc_dict["keys"]
     if isinstance(keys, str):
-        return list(map(lambda s: ddc_correct_short_keys(s.strip()), keys.split(",")))
+        return list(map(lambda s: s.strip(), keys.split(",")))
     if isinstance(keys, list):
-        return list(map(ddc_correct_short_keys, keys))
+        return keys
     return []
 
 
