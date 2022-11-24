@@ -345,7 +345,7 @@ Also, each document is assigned to one or multiple artificial subjects structure
 ```python
 from slub_docsa.common.subject import print_subject_hierarchy
 
-print_subject_hierarchy(subject_hierarchy)
+print_subject_hierarchy("en", subject_hierarchy)
 ```
 
 The output will be:

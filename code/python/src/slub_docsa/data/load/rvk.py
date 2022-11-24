@@ -1,6 +1,6 @@
 """Reads and processes RVK classes loaded from the official xml."""
 
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods,too-many-arguments
 
 import os
 import urllib.parse
@@ -210,8 +210,8 @@ def read_rvk_subjects(
 ) -> Iterable[RvkSubjectTuple]:
     """Download and read RVK subjects and their labels.
 
-    Subjects are directly read from the xml file, and not cached. Use `get_rvk_subject_store()` for random cached
-    access of RVK subjects.
+    Subjects are directly read from the xml file, and not cached. Use `load_rvk_subject_hierarchy_from_sqlite()` for
+    random cached access of RVK subjects.
 
     Parameters
     ----------
@@ -313,7 +313,7 @@ def convert_rvk_classes_to_annif_tsv(
     Parameters
     ----------
     rvk_subject_hierarchy: SubjectHierarchy
-        The RVK subject hierarchy as loaded via e.g. `get_rvk_subject_store`
+        The RVK subject hierarchy as loaded via e.g. `load_rvk_subject_hierarchy_from_sqlite`
     tsv_filepath: str = RVK_ANNIF_TSV_FILE_PATH,
         The path to a file where RVK subjects are stored in tab-separated format
 

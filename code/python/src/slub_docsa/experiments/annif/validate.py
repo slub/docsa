@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 from slub_docsa.common.paths import get_annif_dir
-from slub_docsa.data.load.rvk import get_rvk_subject_store
+from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     _, dataset, _ = next(iter(qucosa_named_datasets(["qucosa_de_titles_rvk"])))
 
     logger.info("load rvk subjects")
-    rvk_hierarchy = get_rvk_subject_store()
+    rvk_hierarchy = load_rvk_subject_hierarchy_from_sqlite()
 
     logger.info("do pruning on rvk subjects")
     dataset.subjects = prune_subject_targets_to_minimum_samples(MIN_SAMPLES, dataset.subjects, rvk_hierarchy)
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     logger.info("calculate relevant subject list from dataset")
     subject_order = unique_subject_order(dataset.subjects)
-    rvk_labels = {uri: rvk_hierarchy[uri].label for uri in subject_order}
+    rvk_labels = {uri: rvk_hierarchy.subject_labels(uri) for uri in subject_order}
 
     logger.info("create annif comparison_experiment directory")
     os.makedirs(os.path.join(get_annif_dir(), "comparison_experiment"), exist_ok=True)

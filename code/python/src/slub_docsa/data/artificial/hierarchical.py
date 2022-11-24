@@ -264,4 +264,4 @@ if __name__ == "__main__":
 
     test_token_probabilities = generate_random_token_probabilties(1000)
     subject_tp, subject_h = generate_hierarchical_subject_token_probabilities(10, test_token_probabilities)
-    print_subject_hierarchy(subject_h)
+    print_subject_hierarchy("en", subject_h)

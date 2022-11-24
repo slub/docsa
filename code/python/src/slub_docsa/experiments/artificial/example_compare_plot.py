@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     from slub_docsa.common.subject import print_subject_hierarchy
 
-    print_subject_hierarchy(subject_hierarchy)
+    print_subject_hierarchy("en", subject_hierarchy)
 
     # ------------
 
