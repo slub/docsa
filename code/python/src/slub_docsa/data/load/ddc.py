@@ -5,7 +5,6 @@
 import logging
 import os
 import time
-import urllib.parse
 import re
 
 from typing import Callable, Iterable, Mapping, Optional, Sequence
@@ -21,25 +20,26 @@ logger = logging.getLogger(__name__)
 
 COLIANA_DDC_API_URL = "https://coli-conc.gbv.de/coli-ana/app/analyze?notation="
 COLICONC_DDC_NARROWER_API_URL = "https://coli-conc.gbv.de/api/narrower"
+DDC_URI_NOTATION_PATTERN = re.compile(r"http://dewey.info/class/([^/]+)/e23/")
 
 
-def ddc_key_to_uri(key: str):
-    """Convert a ddc key to a uri.
+def ddc_notation_to_uri(notation: str):
+    """Convert a ddc notation to a uri.
 
     Parameters
     ----------
-    key: str
-        the ddc key, eg. `123.123`, `123` or `001`
+    notation: str
+        the ddc notation, eg. `123.123`, `123` or `001`
 
     Returns
     -------
     str
-        a URI build from the ddc key as string, e.g. `ddc:123.123`
+        a URI build from the ddc notation as string, e.g. `http://dewey.info/class/123.123/e23/`
     """
-    return f"ddc:{key}"
+    return f"http://dewey.info/class/{notation}/e23/"
 
 
-def _ddc_key_check_major_part(major):
+def _check_major_part_ddc_notation(major):
     if len(major) > 3:
         logger.debug("ddc major part '%s' has more than 3 digits", major)
         return False
@@ -49,43 +49,43 @@ def _ddc_key_check_major_part(major):
     return True
 
 
-def _ddc_key_check_minor_part(minor):
+def _check_minor_part_ddc_notation(minor):
     if not minor.isnumeric():
         logger.debug("ddc minor part '%s' isn't numeric", minor)
         return False
     return True
 
 
-def _check_single_ddc_key(key):
+def _check_single_ddc_notation(key):
     if "." in key:
         if len(key.split(".")) != 2:
             logger.debug("ddc key '%s' contains multiple dots", key)
             return False
         major, minor = key.split(".")
-        return _ddc_key_check_major_part(major) and _ddc_key_check_minor_part(minor)
-    return _ddc_key_check_major_part(key)
+        return _check_major_part_ddc_notation(major) and _check_minor_part_ddc_notation(minor)
+    return _check_major_part_ddc_notation(key)
 
 
-def is_valid_ddc_key(key: str) -> bool:
-    """Check whether a ddc key follows a valid format.
+def is_valid_ddc_notation(notation: str) -> bool:
+    """Check whether a ddc notation follows a valid format.
 
     Parameters
     ----------
-    key: str
-        the ddc key to check for validity
+    notation: str
+        the ddc notation to check for validity
 
     Returns
     -------
     bool
-        true, if the key is correct
+        true, if the notation is correct
     """
-    if "-" in key:
-        if len(key.split("-")) != 2:
+    if "-" in notation:
+        if len(notation.split("-")) != 2:
             logger.debug("ddc key '%s' has multiple minus symbols")
             return False
-        first, second = key.split("-")
-        return _check_single_ddc_key(first) and _check_single_ddc_key(second)
-    return _check_single_ddc_key(key)
+        first, second = notation.split("-")
+        return _check_single_ddc_notation(first) and _check_single_ddc_notation(second)
+    return _check_single_ddc_notation(notation)
 
 
 def is_valid_ddc_uri(uri: str) -> bool:
@@ -101,25 +101,28 @@ def is_valid_ddc_uri(uri: str) -> bool:
     bool
         true if the string is a correct ddc uri
     """
-    if not uri.startswith("ddc:"):
-        return False
-    return is_valid_ddc_key(uri[4:])
+    return is_valid_ddc_notation(ddc_notation_from_uri(uri))
 
 
-def ddc_key_from_uri(uri: str):
-    """Extract the ddc key from a ddc uri.
+def ddc_reduce_notation_to_short_notation(notation: str) -> str:
+    """Extract the abridged notation from a full notation."""
+    return notation.split("/")[0]
+
+
+def ddc_notation_from_uri(uri: str):
+    """Extract the ddc notation from a ddc uri.
 
     Parameters
     ----------
     uri: str
-        the uri to extract the key from
+        the uri to extract the notation from
 
     Returns
     -------
     str
-        the ddc key extracted from the ddc uri
+        the ddc notation extracted from the ddc uri
     """
-    return uri[4:]
+    return DDC_URI_NOTATION_PATTERN.match(uri).group(1)
 
 
 def ddc_parent_from_uri(uri: str):
@@ -135,20 +138,20 @@ def ddc_parent_from_uri(uri: str):
     str
         the parent ddc uri of the provided ddc uri
     """
-    key = ddc_key_from_uri(uri)
+    key = ddc_notation_from_uri(uri)
     if "." in key:
         major, minor = key.split(".")
         if len(minor) == 1:
-            return ddc_key_to_uri(major)
-        return ddc_key_to_uri(major + "." + minor[:-1])
+            return ddc_notation_to_uri(major)
+        return ddc_notation_to_uri(major + "." + minor[:-1])
     if len(key) > 1:
-        return ddc_key_to_uri(key[:-1])
+        return ddc_notation_to_uri(key[:-1])
     return None
 
 
 def ddc_root_subjects() -> Iterable[str]:
     """Return URIs of the 10 root DDC subjects."""
-    return [ddc_key_to_uri(str(i)) for i in range(10)]
+    return [ddc_notation_to_uri(str(i)) for i in range(10)]
 
 
 def extend_ddc_subject_list_with_ancestors(subjects: Sequence[str]):
@@ -183,15 +186,15 @@ def ddc_label_from_uri_via_coliana(
     str | None
         the label of the matching ddc subject or None if not available
     """
-    key = ddc_key_from_uri(uri)
+    notation = ddc_notation_from_uri(uri)
 
-    if len(key) == 1:
-        key = key + "00"
-    if len(key) == 2:
-        key = key + "0"
+    if len(notation) == 1:
+        notation = notation + "00"
+    if len(notation) == 2:
+        notation = notation + "0"
 
     logger.debug("do ddc label request to coli-ana for ddc uri: %s", uri)
-    response = requests.get(COLIANA_DDC_API_URL + key, timeout=10)
+    response = requests.get(COLIANA_DDC_API_URL + notation, timeout=10)
 
     if not response or not response.ok:
         logger.info("ddc request to coli-ana failed")
@@ -200,7 +203,7 @@ def ddc_label_from_uri_via_coliana(
     json = response.json()
     member_list = json[0]["memberList"]
     for member in member_list:
-        if member is not None and key in member["notation"]:
+        if member is not None and notation in member["notation"]:
             label = member["prefLabel"]["de"]
             logger.debug("ddc label for %s is %s", uri, label)
             return label
@@ -210,17 +213,14 @@ def ddc_label_from_uri_via_coliana(
 def ddc_children_from_uri_via_coliconc(uri: str) -> Iterable[str]:
     """Return the list of children DDC subjects via the coli-conv API."""
     # build request url
-    key = ddc_key_from_uri(uri)
-    dewey_info_uri = urllib.parse.quote("http://dewey.info/class/" + key + "/e23/")
-    request_url = COLICONC_DDC_NARROWER_API_URL + f"?limit=10000&uri={dewey_info_uri}&language=en,de"
+    request_url = COLICONC_DDC_NARROWER_API_URL + f"?limit=10000&uri={uri}&language=en,de"
 
     # do request
     response = requests.get(request_url, timeout=10)
     json = response.json()
 
-    # extract notation from dewey info uri
-    uri_pattern = re.compile(r"http://dewey.info/class/([^/]+)/e23/")
-    children_uris = [ddc_key_to_uri(uri_pattern.match(entry["uri"]).group(1)) for entry in json]
+    # extract uris from response
+    children_uris = [entry["uri"] for entry in json]
 
     # filter for invalid uris or the requested uri
     return [child_uri for child_uri in filter(is_valid_ddc_uri, children_uris) if child_uri != uri]
@@ -311,7 +311,7 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
             raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
         if self._subject_labels is not None and self._subject_labels[subject_uri] is not None:
             return self._subject_labels[subject_uri]
-        return {"en": ddc_key_from_uri(subject_uri)}
+        return {"en": ddc_notation_from_uri(subject_uri)}
 
     def subject_parent(self, subject_uri: str) -> Optional[str]:
         """Return the parent of the subject or None if the subject does not have a parent.
@@ -408,7 +408,7 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
 class CachedColianaDdcLabels(SqliteDict):
     """Cache storing DDC labels retrieved from coli-ana.
 
-    See `ddc_notation_from_uri_via_coliana` on how to retrieve labels from coli-ana.
+    See `ddc_label_from_uri_via_coliana` on how to retrieve labels from coli-ana.
     """
 
     def __init__(
@@ -445,7 +445,7 @@ class CachedColianaDdcLabels(SqliteDict):
         label = super().__getitem__(subject_uri)
         if label is not None:
             return {"de": label}
-        return {"en": ddc_key_from_uri(subject_uri)}
+        return {"en": ddc_notation_from_uri(subject_uri)}
 
 
 def load_ddc_subject_hierarchy(
@@ -464,4 +464,4 @@ if __name__ == "__main__":
     ddc_subject_hierarchy = load_ddc_subject_hierarchy(ddc_root_subjects())
     print_subject_hierarchy("de", ddc_subject_hierarchy)
 
-    # print(ddc_children_from_uri_via_coliconc(ddc_key_to_uri("700")))
+    # print(ddc_children_from_uri_via_coliconc(ddc_notation_to_uri("700")))
