@@ -1,15 +1,85 @@
 """Language related pre-processing methods."""
 
 import logging
-from typing import Iterator
+import os
+
+from typing import Iterator, Optional, Any, cast
 
 import langid
+import fasttext
 
+from slub_docsa.common.paths import get_resources_dir
 from slub_docsa.common.sample import Sample
+
+from slub_docsa.data.load.common import download_file
 from slub_docsa.data.preprocess.dataset import filter_samples_by_condition
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 
+
+FASTTEXT_LANGUAGE_MODEL_URL = "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
+
 logger = logging.getLogger(__name__)
+
+
+def download_fasttext_language_model(
+    url: str = FASTTEXT_LANGUAGE_MODEL_URL,
+    filepath: str = None,
+):
+    """Download fasttext language model."""
+    if filepath is None:
+        filepath = os.path.join(get_resources_dir(), "fasttext/lid.176.bin")
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+    if not os.path.exists(filepath):
+        logger.info("download fasttext language model to '%s'", filepath)
+        download_file(url, filepath)
+
+
+def load_fasttext_language_detector(
+    min_probability: float = 0.5,
+    model_url: str = FASTTEXT_LANGUAGE_MODEL_URL,
+    model_filepath: str = None,
+    download: bool = True
+):
+    """Load method that detects language code for text using fasttext.
+
+    Parameters
+    ----------
+    min_probability : float, optional
+        the minimum score to consider a language a correct detection, by default 0.5
+    model_url : str, optional
+        the URL that is used to download the required fasttext language model
+    model_filepath : str, optional
+        the filepath to the downloaded fasttext language model; if None, the filepath
+        `$SLUB_DOCSA_RESOURCES_DIR/fasttext/lid.176.bin` is used
+    download : bool, optional
+        whether to do the download if the mode file is missing, by default True
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    if model_filepath is None:
+        model_filepath = os.path.join(get_resources_dir(), "fasttext/lid.176.bin")
+
+    if download:
+        download_fasttext_language_model(model_url, model_filepath)
+
+    # disable fasttext log messages
+    fasttext.FastText.eprint = lambda *args, **kwargs: None
+    model = fasttext.load_model(model_filepath)
+
+    def detect(text: str) -> Optional[str]:
+        text = text.replace("\n", " ")
+        result = cast(Any, model.predict([text], k=1))
+        language = result[0][0][0].split("__label__")[1]
+        probability = result[1][0][0]
+        if probability >= min_probability:
+            return language
+        return None
+
+    return detect
 
 
 def detect_language_from_text_via_langid(text: str) -> str:
