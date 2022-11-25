@@ -45,4 +45,4 @@ def check_model_persistence_equal_predictions(model_generator: Callable[[], Pers
         model.load(directory)
         after_probabilities = model.predict_proba(mini_dataset_validation_documents())
 
-        assert np.array_equal(before_probabilities, after_probabilities)  # nosec B101
+        assert np.allclose(before_probabilities, after_probabilities, )  # nosec B101
