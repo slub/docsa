@@ -21,7 +21,7 @@ from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.data.load.qucosa import read_qucosa_metadata_from_elasticsearch, _make_title_and_abstract_doc
 from slub_docsa.data.load.qucosa import _make_title_only_doc, _make_title_and_fulltext_doc
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
 logger = logging.getLogger(__name__)
 

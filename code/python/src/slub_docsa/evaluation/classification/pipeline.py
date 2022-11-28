@@ -12,10 +12,10 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel, ClusteringModel
 from slub_docsa.common.score import ClusteringScoreFunction, MultiClassScoreFunctionType, BinaryClassScoreFunctionType
 from slub_docsa.common.subject import SubjectTargets
-from slub_docsa.evaluation.condition import check_dataset_subject_distribution
-from slub_docsa.evaluation.condition import check_dataset_subjects_have_minimum_samples
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
-from slub_docsa.evaluation.split import DatasetSplitFunction
+from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
+from slub_docsa.evaluation.dataset.condition import check_dataset_subjects_have_minimum_samples
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.split import DatasetSplitFunction
 from slub_docsa.models.classification.dummy import OracleModel
 
 logger = logging.getLogger(__name__)

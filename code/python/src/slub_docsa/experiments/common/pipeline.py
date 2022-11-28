@@ -11,11 +11,11 @@ from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.store.predictions import persisted_fit_classification_model_and_predict
-from slub_docsa.evaluation.incidence import unique_subject_order
-from slub_docsa.evaluation.split import DatasetSplitFunction, scikit_kfold_splitter
-from slub_docsa.evaluation.split import skmultilearn_iterative_stratification_splitter
-from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
-from slub_docsa.evaluation.pipeline import score_clustering_models_for_documents
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.split import DatasetSplitFunction, scikit_kfold_splitter
+from slub_docsa.evaluation.classification.split import skmultilearn_iterative_stratification_splitter
+from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset
+from slub_docsa.evaluation.classification.pipeline import score_clustering_models_for_documents
 from slub_docsa.experiments.common.models import NamedClassificationModels, NamedClusteringModels
 from slub_docsa.experiments.common.plots import DefaultScoreMatrixDatasetResult, DefaultScoreMatrixResult
 from slub_docsa.experiments.common.scores import NamedScoreLists, default_named_binary_class_score_list

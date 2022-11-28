@@ -10,9 +10,11 @@ import numpy as np
 
 from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, subject_label_breadcrumb_as_string
-from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments, unique_subject_order
-from slub_docsa.evaluation.plotting import cluster_distribution_by_subject_plot, subject_distribution_by_cluster_plot
-from slub_docsa.evaluation.plotting import write_multiple_figure_formats
+from slub_docsa.evaluation.classification.incidence import membership_matrix_to_crisp_cluster_assignments
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.plotting import cluster_distribution_by_subject_plot
+from slub_docsa.evaluation.classification.plotting import subject_distribution_by_cluster_plot
+from slub_docsa.evaluation.classification.plotting import write_multiple_figure_formats
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 

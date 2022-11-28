@@ -44,8 +44,8 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
-    from slub_docsa.evaluation.incidence import unique_subject_order
+    from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+    from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
     subject_order = unique_subject_order(dataset.subjects)
     incidence_matrix = subject_incidence_matrix_from_targets(
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import top_k_incidence_decision
+    from slub_docsa.evaluation.classification.incidence import top_k_incidence_decision
 
     incidence_decision_function = top_k_incidence_decision(k=2)
     predicted_incidence = incidence_decision_function(predicted_probabilities)
@@ -80,14 +80,14 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
+    from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
 
     predicted_subjects = subject_targets_from_incidence_matrix(predicted_incidence, subject_order)
     print(predicted_subjects)
 
     # ------------
 
-    from slub_docsa.evaluation.score import scikit_incidence_metric
+    from slub_docsa.evaluation.classification.score import scikit_incidence_metric
     from sklearn.metrics import f1_score
 
     true_subjects = [

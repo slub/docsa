@@ -12,11 +12,14 @@ from scipy.spatial.distance import cosine
 
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
-from slub_docsa.evaluation.incidence import threshold_incidence_decision, positive_top_k_incidence_decision
-from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
-from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
-from slub_docsa.evaluation.score import clustering_membership_score_function, scikit_clustering_label_score_function
-from slub_docsa.evaluation.similarity import indexed_document_distance_generator_from_vectorizer, intra_cluster_distance
+from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision
+from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
+from slub_docsa.evaluation.classification.score import cesa_bianchi_h_loss, scikit_incidence_metric
+from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.clustering.score import clustering_membership_score_function
+from slub_docsa.evaluation.clustering.score import scikit_clustering_label_score_function
+from slub_docsa.evaluation.clustering.similarity import indexed_document_distance_generator_from_vectorizer
+from slub_docsa.evaluation.clustering.similarity import intra_cluster_distance
 
 ScoreTupleList = List[Tuple[str, Tuple[Optional[float], Optional[float]], Any]]
 

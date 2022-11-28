@@ -32,7 +32,7 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph
-from slub_docsa.evaluation.incidence import subject_idx_from_incidence_matrix
+from slub_docsa.evaluation.classification.incidence import subject_idx_from_incidence_matrix
 from slub_docsa.data.load.nltk import download_nltk
 
 logger = logging.getLogger(__name__)
@@ -414,7 +414,8 @@ class AnnifModel(PersistableClassificationModel):
 if __name__ == "__main__":
 
     from slub_docsa.data.artificial.simple import get_static_mini_dataset
-    from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+    from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+    from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
     logging.basicConfig(level=logging.DEBUG)
 

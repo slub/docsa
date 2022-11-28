@@ -10,7 +10,7 @@ from sklearn.model_selection._split import _BaseKFold
 from skmultilearn.model_selection import IterativeStratification
 
 from slub_docsa.common.dataset import SimpleDataset, Dataset
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
 logger = logging.getLogger(__name__)
 

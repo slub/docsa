@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import unique_subject_order
+    from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
     subject_order = unique_subject_order(dataset.subjects)
     print(len(subject_order))
@@ -68,9 +68,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
-    from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
-    from slub_docsa.evaluation.incidence import positive_top_k_incidence_decision
+    from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
+    from slub_docsa.evaluation.classification.score import cesa_bianchi_h_loss, scikit_incidence_metric
+    from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
 
     scores = [
         # f1 score for best threshold
@@ -97,8 +97,8 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
-    from slub_docsa.evaluation.split import scikit_kfold_splitter
+    from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset
+    from slub_docsa.evaluation.classification.split import scikit_kfold_splitter
 
     n_splits = 10
     split_function = scikit_kfold_splitter(n_splits)
@@ -115,8 +115,8 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.plotting import score_matrix_box_plot
-    from slub_docsa.evaluation.plotting import write_multiple_figure_formats
+    from slub_docsa.evaluation.classification.plotting import score_matrix_box_plot
+    from slub_docsa.evaluation.classification.plotting import write_multiple_figure_formats
 
     figure = score_matrix_box_plot(
         score_matrix,

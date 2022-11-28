@@ -21,7 +21,7 @@ from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
+from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
 
 logger = logging.getLogger(__name__)
 

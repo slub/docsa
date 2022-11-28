@@ -7,12 +7,12 @@ import os
 
 from sklearn.metrics import f1_score
 from slub_docsa.common.paths import get_cache_dir, get_figures_dir
-from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
-from slub_docsa.evaluation.incidence import unique_subject_order, subject_incidence_matrix_from_targets
-from slub_docsa.evaluation.split import scikit_kfold_train_test_split
+from slub_docsa.evaluation.classification.incidence import unique_subject_order, subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
 
 

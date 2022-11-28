@@ -3,11 +3,12 @@
 import numpy as np
 import pytest
 
-from slub_docsa.evaluation.incidence import crips_cluster_assignments_to_membership_matrix, is_crisp_cluster_membership
-from slub_docsa.evaluation.incidence import membership_matrix_to_crisp_cluster_assignments
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
-from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
-from slub_docsa.evaluation.incidence import threshold_incidence_decision, top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import crips_cluster_assignments_to_membership_matrix
+from slub_docsa.evaluation.classification.incidence import is_crisp_cluster_membership
+from slub_docsa.evaluation.classification.incidence import membership_matrix_to_crisp_cluster_assignments
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
+from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision, top_k_incidence_decision
 
 example_subject_order = [
     "uri://subject1",

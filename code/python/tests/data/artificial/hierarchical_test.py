@@ -3,7 +3,7 @@
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_subject_token_probabilities
 from slub_docsa.data.artificial.hierarchical import generate_hierarchical_random_dataset
 from slub_docsa.data.artificial.tokens import generate_random_token_probabilties
-from slub_docsa.evaluation.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 
 def test_generate_hierarchical_subject_token_probabilities():

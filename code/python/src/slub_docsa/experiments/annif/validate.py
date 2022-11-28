@@ -14,10 +14,11 @@ from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_lab
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
-from slub_docsa.evaluation.incidence import unique_subject_order
-from slub_docsa.evaluation.score import absolute_confusion_from_incidence
-from slub_docsa.evaluation.split import scikit_kfold_train_test_split
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.score import absolute_confusion_from_incidence
+from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 

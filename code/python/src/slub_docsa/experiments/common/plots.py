@@ -5,10 +5,10 @@ from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
 
-from slub_docsa.evaluation.plotting import score_matrices_box_plot, write_multiple_figure_formats
-from slub_docsa.evaluation.plotting import per_subject_precision_recall_vs_samples_plot
-from slub_docsa.evaluation.plotting import precision_recall_plot, score_matrix_box_plot
-from slub_docsa.evaluation.plotting import per_subject_score_histograms_plot
+from slub_docsa.evaluation.classification.plotting import score_matrices_box_plot, write_multiple_figure_formats
+from slub_docsa.evaluation.classification.plotting import per_subject_precision_recall_vs_samples_plot
+from slub_docsa.evaluation.classification.plotting import precision_recall_plot, score_matrix_box_plot
+from slub_docsa.evaluation.classification.plotting import per_subject_score_histograms_plot
 from slub_docsa.experiments.common.scores import NamedScoreLists
 
 

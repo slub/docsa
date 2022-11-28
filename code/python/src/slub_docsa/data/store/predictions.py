@@ -14,7 +14,7 @@ import numpy as np
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.evaluation.pipeline import FitClassificationModelAndPredictCallable
+from slub_docsa.evaluation.classification.pipeline import FitClassificationModelAndPredictCallable
 
 logger = logging.getLogger(__name__)
 

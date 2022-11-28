@@ -18,7 +18,7 @@ from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient
 from slub_docsa.data.preprocess.language import filter_samples_by_detected_language_via_langid
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, prune_subject_targets_to_minimum_samples
 from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sample_iterator
-from slub_docsa.evaluation.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
 

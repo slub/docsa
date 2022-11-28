@@ -9,7 +9,7 @@ from slub_docsa.data.artificial.simple import generate_easy_random_dataset
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_token_probabilities
 from slub_docsa.data.artificial.simple import generate_easy_random_dataset_from_dbpedia
 from slub_docsa.data.artificial.tokens import TokenProbabilities
-from slub_docsa.evaluation.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 
 def _check_dataset_documents_do_not_share_tokens(dataset):

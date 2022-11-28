@@ -12,7 +12,7 @@ import plotly.express as px
 
 from plotly.subplots import make_subplots
 from slub_docsa.data.preprocess.subject import count_number_of_samples_by_subjects
-from slub_docsa.evaluation.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 
 def _get_marker_color(i, colorlist=px.colors.qualitative.Plotly):

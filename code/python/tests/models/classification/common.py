@@ -9,7 +9,7 @@ import numpy as np
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel, PersistableClassificationModel
 from slub_docsa.data.artificial.simple import get_static_mini_dataset
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, unique_subject_order
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 
 
 def fit_model_with_mini_dataset(model: ClassificationModel):

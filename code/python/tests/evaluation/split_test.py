@@ -3,9 +3,10 @@
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.data.artificial.simple import generate_random_dataset
 
-from slub_docsa.evaluation.condition import check_dataset_subject_distribution
-from slub_docsa.evaluation.condition import check_subject_targets_have_minimum_samples
-from slub_docsa.evaluation.split import scikit_kfold_splitter, skmultilearn_iterative_stratification_splitter
+from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
+from slub_docsa.evaluation.dataset.condition import check_subject_targets_have_minimum_samples
+from slub_docsa.evaluation.classification.split import scikit_kfold_splitter
+from slub_docsa.evaluation.classification.split import skmultilearn_iterative_stratification_splitter
 
 
 def _generate_random_dataset(n_folds, n_tokens, n_docs, n_subjects) -> Dataset:
