@@ -21,7 +21,9 @@ NAMESPACE = {"marc": "http://www.loc.gov/MARC21/slim"}
 UNKNOWN_LANGUAGE_CODES = [
     "qry", "qmo", "scr", "qmw", "qoj", "qev", "qqa", "qnv",
     "fer", "qte", "qkj", "qce", "qlm", "scc", "qkc", "qqg",
-    "qnn", "snh", "qju", "abs", "tag", "jap"
+    "qnn", "snh", "qju", "abs", "tag", "jap", "iri", "law",
+    "frz", "ned", "fra", "gae", "neg", "deu", "gag", "enk",
+    "max", "xxx", "aar", "hi0", "---", "esp", "bes", "lan",
 ]
 
 IGNORED_LANGUAGE_CODES = [
@@ -225,9 +227,9 @@ def parse_k10plus_marc_xml_to_json(
         if detected_language in language_code_table.by_l2:
             detected_language = language_code_table.by_l2[detected_language].l3
         if detected_language is not None and detected_language not in language_code_table.by_l3:
-            logger.debug("language %s unkown", detected_language)
+            logger.debug("detected language %s unkown", detected_language)
 
-    result = {
+    return {
         "ppn": ppn,
         "title": title,
         "subtitle": subtitle,
@@ -242,4 +244,3 @@ def parse_k10plus_marc_xml_to_json(
             "ddc": ddc_subjects,
         },
     }
-    return result

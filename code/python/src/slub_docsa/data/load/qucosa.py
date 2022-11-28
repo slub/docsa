@@ -499,6 +499,7 @@ def _read_qucosa_generic_samples(
     read_subjects_from_doc: Callable[[QucosaJsonDocument], List[str]],
     subject_hierarchy: SubjectHierarchy,
     lang_code: Optional[str] = None,
+    require_subjects: bool = True,
 ) -> Iterator[Sample]:
     """Read qucosa data and extract documents and subjects."""
     logger.debug("read qucosa meta data json")
@@ -506,7 +507,7 @@ def _read_qucosa_generic_samples(
         subjects = read_subjects_from_doc(doc)
         subjects = list(filter(lambda s_uri: s_uri in subject_hierarchy, subjects))
 
-        if len(subjects) < 1:
+        if require_subjects and len(subjects) < 1:
             logger.debug("qucosa document with no known subjects: %s", _get_document_id_from_qucosa_metadate(doc))
             continue
 
@@ -660,6 +661,7 @@ def read_qucosa_samples(
     metadata_variant: str = "titles",
     subject_schema: Union[Literal["rvk"], Literal["ddc"]] = "rvk",
     lang_code: Optional[str] = "de",
+    require_subjects: bool = True,
 ) -> Iterator[Sample]:
     """Read qucosa documents and use only document titles as training data.
 
@@ -707,6 +709,7 @@ def read_qucosa_samples(
         _subject_getter_map[subject_schema],
         _subject_store_func_map[subject_schema](),
         lang_code,
+        require_subjects,
     )
 
 

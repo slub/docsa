@@ -14,7 +14,7 @@ from slub_docsa.data.load.common import read_gzip_text_lines
 from slub_docsa.data.load.languages import load_language_codes
 from slub_docsa.data.preprocess.language import load_fasttext_language_detector
 from slub_docsa.data.load.k10plus.download import download_k10plus_marc21_files, k10plus_marc21_xml_files
-from slub_docsa.data.load.k10plus.parse import parse_single_k10plus_marc21_xml_file, parse_k10plus_marc_xml_to_json
+from slub_docsa.data.load.k10plus.marc21 import parse_single_k10plus_marc21_xml_file, parse_k10plus_marc_xml_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +128,9 @@ def k10plus_read_from_json_cache(
     line_batch_size : int
         the number of lines that are read in one batch to improve performance, by default 1000
     """
+    if json_directory is None:
+        json_directory = os.path.join(get_cache_dir(), "k10plus/json/")
+
     xml_filepaths = list(k10plus_marc21_xml_files(xml_directory))
     json_filepaths = [k10plus_json_cache_filepath_from_xml_filepath(fp, json_directory) for fp in xml_filepaths]
 
@@ -152,4 +155,4 @@ def k10plus_read_from_json_cache(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    k10plus_build_json_cache(workers=4)
+    k10plus_build_json_cache(workers=8)

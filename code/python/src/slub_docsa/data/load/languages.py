@@ -99,6 +99,15 @@ def load_language_codes(
     )
 
 
+def convert_language_code_to_l3(code, language_code_table: LanguageCodeTable):
+    """Convert potential 2-letter language code to 3-letter code."""
+    if code in language_code_table.by_l2:
+        return language_code_table.by_l2[code].l3
+    if code in language_code_table.by_l3:
+        return code
+    raise ValueError(f"language code '{code}' is not a valid ISO 639 language code")
+
+
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
