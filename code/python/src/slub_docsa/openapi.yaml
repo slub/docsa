@@ -422,7 +422,7 @@ paths:
           $ref: "#/components/responses/UnexpectedErrorResponse"
 
 
-  /schemas/{schema_id}/subjects/{subject_uri}:
+  /schemas/{schema_id}/subjects/info:
     get:
       summary: Get information about a subject
       tags:
@@ -619,10 +619,10 @@ components:
 
     SubjectURI:
       name: subject_uri
-      in: path
+      in: query
       description: |
-        the double URL encoded uri of the classification schema subject
-      example: https%3A%2F%2Frvk.uni-regensburg.de%2Fapi%2Fxml%2Fnode%2FSK%2520900
+        the URL encoded uri of the classification schema subject
+      example: https://rvk.uni-regensburg.de/api/xml/node/SK%2520900
       schema:
         type: string
       required: true
