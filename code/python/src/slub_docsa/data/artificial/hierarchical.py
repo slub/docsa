@@ -95,7 +95,8 @@ def generate_hierarchical_subject_token_probabilities(
             subject_tuples.append(SubjectTuple(
                 subject_uri=current_subject_uri,
                 labels={"en": current_subject_label},
-                parent_uri=parent_subject_uri
+                parent_uri=parent_subject_uri,
+                notation=None
             ))
 
         # create children

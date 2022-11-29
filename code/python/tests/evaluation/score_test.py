@@ -28,12 +28,12 @@ def test_cesa_bianchi_h_loss():
     ]
 
     subject_hierarchy = build_subject_hierarchy_from_subject_tuples([
-        SubjectTuple("uri://subject1", {"en": "subject 1"}, None),
-        SubjectTuple("uri://subject2", {"en": "subject 2"}, None),
-        SubjectTuple("uri://subject3", {"en": "subject 3"}, "uri://subject2"),
-        SubjectTuple("uri://subject4", {"en": "subject 4"}, "uri://subject2"),
-        SubjectTuple("uri://subject5", {"en": "subject 5"}, "uri://subject3"),
-        SubjectTuple("uri://subject6", {"en": "subject 6"}, "uri://subject3"),
+        SubjectTuple("uri://subject1", {"en": "subject 1"}, None, None),
+        SubjectTuple("uri://subject2", {"en": "subject 2"}, None, None),
+        SubjectTuple("uri://subject3", {"en": "subject 3"}, "uri://subject2", None),
+        SubjectTuple("uri://subject4", {"en": "subject 4"}, "uri://subject2", None),
+        SubjectTuple("uri://subject5", {"en": "subject 5"}, "uri://subject3", None),
+        SubjectTuple("uri://subject6", {"en": "subject 6"}, "uri://subject3", None),
     ])
 
     test_cases = [

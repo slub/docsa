@@ -11,12 +11,12 @@ from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, s
 def get_example_subject_hierarchy():
     """Generate example subject hierarchy."""
     return build_subject_hierarchy_from_subject_tuples([
-        SubjectTuple("uri://subject1", {"en": "subject1"}, None),
-        SubjectTuple("uri://subject2", {"en": "subject2"}, None),
-        SubjectTuple("uri://subject3", {"en": "subject3"}, "uri://subject1"),
-        SubjectTuple("uri://subject4", {"en": "subject4"}, "uri://subject1"),
-        SubjectTuple("uri://subject5", {"en": "subject5"}, "uri://subject3"),
-        SubjectTuple("uri://subject6", {"en": "subject6"}, "uri://subject3"),
+        SubjectTuple("uri://subject1", {"en": "subject1"}, None, None),
+        SubjectTuple("uri://subject2", {"en": "subject2"}, None, None),
+        SubjectTuple("uri://subject3", {"en": "subject3"}, "uri://subject1", None),
+        SubjectTuple("uri://subject4", {"en": "subject4"}, "uri://subject1", None),
+        SubjectTuple("uri://subject5", {"en": "subject5"}, "uri://subject3", None),
+        SubjectTuple("uri://subject6", {"en": "subject6"}, "uri://subject3", None),
     ])
 
 
