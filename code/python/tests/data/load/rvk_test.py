@@ -1,6 +1,6 @@
 """Tests RVK data source."""
 
-from slub_docsa.data.load.rvk import read_rvk_subjects
+from slub_docsa.data.load.subjects.rvk import read_rvk_subjects
 
 
 def test_rvk_first_level_classes():

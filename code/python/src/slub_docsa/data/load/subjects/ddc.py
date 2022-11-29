@@ -139,6 +139,10 @@ def ddc_parent_from_uri(uri: str):
         the parent ddc uri of the provided ddc uri
     """
     key = ddc_notation_from_uri(uri)
+    if "-" in key:
+        splitted = re.split("([^-])-[^-]", key)
+        if len(splitted) == 3:
+            key = splitted[0] + splitted[1]
     if "." in key:
         major, minor = key.split(".")
         if len(minor) == 1:

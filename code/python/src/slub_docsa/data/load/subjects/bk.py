@@ -12,6 +12,6 @@ def bk_notation_to_uri(notation):
     Returns
     -------
     string
-        the URI of the base classification subject, e.g. "https://gbv.de/basisklassifikation/01.24"
+        the URI of the base classification subject, e.g. "http://uri.gbv.de/terminology/bk/01.24"
     """
-    return f"https://gbv.de/basisklassifikation/{notation}"
+    return f"http://uri.gbv.de/terminology/bk/{notation}"

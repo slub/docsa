@@ -5,8 +5,8 @@
 import os
 import logging
 
-from slub_docsa.data.load.ddc import load_ddc_subject_hierarchy
-from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
+from slub_docsa.data.load.subjects.ddc import load_ddc_subject_hierarchy
+from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sqlite
 
 from slub_docsa.data.load.qucosa import read_qucosa_documents_from_directory, read_qucosa_samples
 from slub_docsa.evaluation.dataset.subject_distribution import generate_subject_sunburst

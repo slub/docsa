@@ -7,24 +7,26 @@ import xml.etree.ElementTree as ET  # nosec
 
 from itertools import islice
 from typing import Any, Callable, Mapping, Optional, Sequence
-from slub_docsa.data.load.bk import bk_notation_to_uri
-from slub_docsa.data.load.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
+from slub_docsa.data.load.subjects.bk import bk_notation_to_uri
+from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
+from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri
+from slub_docsa.data.load.subjects.gnd import gnd_notation_to_uri
 from slub_docsa.data.load.languages import LanguageCodeTable
-
-from slub_docsa.data.load.rvk import rvk_notation_to_uri
 from slub_docsa.data.load.common import read_gzip_text_lines
 
 logger = logging.getLogger(__name__)
 
 NAMESPACE = {"marc": "http://www.loc.gov/MARC21/slim"}
 
-UNKNOWN_LANGUAGE_CODES = [
+UNKNOWN_LANGUAGE_CODES = set([
     "qry", "qmo", "scr", "qmw", "qoj", "qev", "qqa", "qnv",
     "fer", "qte", "qkj", "qce", "qlm", "scc", "qkc", "qqg",
     "qnn", "snh", "qju", "abs", "tag", "jap", "iri", "law",
     "frz", "ned", "fra", "gae", "neg", "deu", "gag", "enk",
     "max", "xxx", "aar", "hi0", "---", "esp", "bes", "lan",
-]
+    "tar", "sra", "miq", "gal", "pio", "sro", "tpc", "smu",
+    "lko", "toc", "lar", "enh", "mzt"
+])
 
 IGNORED_LANGUAGE_CODES = [
     "zxx",  # no linguistic content
@@ -56,7 +58,7 @@ def _extract_gnd_subjects(root_xml: ET.Element) -> Sequence[str]:
                 if code.text is not None and code.text.startswith("(DE-588)"):
                     gnd_code = code.text.replace("(DE-588)", "")
                     if gnd_code:
-                        labels.append(f"https://d-nb.info/gnd/{gnd_code}")
+                        labels.append(gnd_notation_to_uri(gnd_code))
 
     return labels
 

@@ -7,7 +7,7 @@ import rdflib
 from rdflib.namespace import SKOS, RDF
 
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.load.rvk import generate_rvk_custom_skos_triples
+from slub_docsa.data.load.subjects.rvk import generate_rvk_custom_skos_triples
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ def subject_hierarchy_to_skos_graph(
 
 if __name__ == "__main__":
     import os
-    from slub_docsa.data.load.rvk import load_rvk_subject_hierarchy_from_sqlite
+    from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sqlite
     from slub_docsa.common.paths import get_cache_dir
 
     logging.basicConfig(level=logging.DEBUG)

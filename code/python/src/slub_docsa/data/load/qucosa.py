@@ -19,9 +19,9 @@ from lxml import etree  # nosec
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.load.ddc import ddc_notation_to_uri, load_ddc_subject_hierarchy
-from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
-from slub_docsa.data.load.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
+from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, load_ddc_subject_hierarchy
+from slub_docsa.data.load.subjects.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
+from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 
 logger = logging.getLogger(__name__)

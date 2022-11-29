@@ -105,7 +105,7 @@ def k10plus_slub_samples_generator(
     line_batch_size: int = 1000,
     workers: Optional[int] = None,
     require_abstract: bool = False,
-    require_toc: bool = False,
+    require_toc: bool = True,
 ):
     """Read k10plus documents and combine them with fulltext information from SLUB data."""
     doc_count = 0

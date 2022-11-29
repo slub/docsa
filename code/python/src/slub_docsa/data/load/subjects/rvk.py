@@ -10,15 +10,14 @@ import zipfile
 import io
 import logging
 
-from typing import Iterable, Any, List, NamedTuple, Optional, Tuple, Mapping
+from typing import Iterable, Any, List, Optional, Tuple, Mapping
 
 import rdflib
 from lxml import etree  # nosec
 from rdflib.namespace import SKOS
-from sqlitedict import SqliteDict
 
 from slub_docsa.common.paths import get_resources_dir, get_cache_dir
-from slub_docsa.common.subject import SimpleSubjectHierarchy, SubjectHierarchy
+from slub_docsa.common.subject import SimpleSubjectHierarchy, SubjectHierarchy, SubjectTuple
 from slub_docsa.data.store.subject import SqliteSubjectHierarchy
 from slub_docsa.data.preprocess.subject import children_map_from_subject_parent_map, subject_label_breadcrumb_as_string
 from slub_docsa.data.preprocess.subject import root_subjects_from_subject_parent_map
@@ -44,78 +43,6 @@ def _get_rvk_subject_store_path(depth: Optional[int] = None):
 def _get_annif_tsv_filepath():
     """Return filepath where RVK subjects are exported to as TSV file."""
     return os.path.join(get_cache_dir(), "rvk/rvk_annif.tsv")
-
-
-class RvkSubjectHierarchy(SubjectHierarchy):
-    """Extends the base subject with an RVK notation string."""
-
-    def subject_notation(self, subject_uri: str) -> str:
-        """Return RVK notation for a subject."""
-        raise NotImplementedError()
-
-
-class SimpleRvkSubjectHierarchy(SimpleSubjectHierarchy):
-    """Naive implementation of a RVK subject hierarchy."""
-
-    def __init__(
-        self,
-        root_subjects: Iterable[str],
-        subject_labels: Mapping[str, Mapping[str, str]],
-        subject_parent: Mapping[str, str],
-        subject_children: Mapping[str, Iterable[str]],
-        subject_notation: Mapping[str, str]
-    ):
-        """Initialize with all required information about RVK subjects."""
-        super().__init__(root_subjects, subject_labels, subject_parent, subject_children)
-        self._subject_notation = subject_notation
-
-    def subject_notation(self, subject_uri: str) -> Optional[str]:
-        """Return RVK notation for a subject."""
-        return self._subject_notation[subject_uri]
-
-
-class SqliteRvkSubjectHierarchy(SqliteSubjectHierarchy, RvkSubjectHierarchy):
-    """Sqlite store for the RVK subject hierarchy."""
-
-    TABLE_FOR_SUBJECT_NOTATION = "subject_notation"
-
-    def __init__(self, filepath: str):
-        """Initialie new RVK subject hierarchy from stored sqlite file."""
-        super().__init__(filepath)
-        self.notation_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_NOTATION, flag="r")
-
-    def subject_notation(self, subject_uri: str) -> str:
-        """Return RVK notation for a subject."""
-        return self.notation_store[subject_uri]
-
-    @staticmethod
-    def save(rvk_subject_hierarchy: RvkSubjectHierarchy, filepath: str):  # pylint: disable=arguments-renamed
-        """Save RVK subject hierarchy to sqlite file."""
-        SqliteSubjectHierarchy.save(rvk_subject_hierarchy, filepath)
-
-        # save rvk notation to new sqlite table
-        cls = SqliteRvkSubjectHierarchy
-        store = SqliteDict(filepath, tablename=cls.TABLE_FOR_SUBJECT_NOTATION, flag="w", autocommit=False)
-        for subject_uri in rvk_subject_hierarchy:
-            store[subject_uri] = rvk_subject_hierarchy.subject_notation(subject_uri)
-        store.commit()
-        store.close()
-
-
-class RvkSubjectTuple(NamedTuple):
-    """Tuple containing information parse from RVK xml file."""
-
-    subject_uri: str
-    """The uri of the subject."""
-
-    labels: Mapping[str, str]
-    """The mapping from ISO 639-1 language codes to labels for the subject."""
-
-    parent_uri: Optional[str]
-    """The uri of the parent subject or None if the subject does not have a parent."""
-
-    notation: str
-    """The notation for an RVK subject."""
 
 
 def _download_rvk_xml(
@@ -162,7 +89,7 @@ def rvk_notation_to_uri(notation: str) -> str:
 def read_rvk_subjects_from_file(
     filepath: str,
     depth: Optional[int] = None
-) -> Iterable[RvkSubjectTuple]:
+) -> Iterable[SubjectTuple]:
     """Read classes and their labels from the official RVK xml zip archive file.
 
     Parameters
@@ -199,7 +126,7 @@ def read_rvk_subjects_from_file(
                         parent_notation = _get_parent_notation(node)
                         parent_uri = None if parent_notation is None else rvk_notation_to_uri(parent_notation)
 
-                        yield RvkSubjectTuple(uri, labels, parent_uri, notation)
+                        yield SubjectTuple(uri, labels, parent_uri, notation)
                     level -= 1
 
 
@@ -207,7 +134,7 @@ def read_rvk_subjects(
     depth: Optional[int] = None,
     download_url: str = RVK_XML_URL,
     xml_filepath: Optional[str] = None,
-) -> Iterable[RvkSubjectTuple]:
+) -> Iterable[SubjectTuple]:
     """Download and read RVK subjects and their labels.
 
     Subjects are directly read from the xml file, and not cached. Use `load_rvk_subject_hierarchy_from_sqlite()` for
@@ -266,7 +193,7 @@ def build_rvk_subject_hierarchy(
     root_subjects = root_subjects_from_subject_parent_map(subject_parent)
     subject_children = children_map_from_subject_parent_map(subject_parent)
 
-    return SimpleRvkSubjectHierarchy(root_subjects, subject_labels, subject_parent, subject_children, subject_notation)
+    return SimpleSubjectHierarchy(root_subjects, subject_labels, subject_parent, subject_children, subject_notation)
 
 
 def load_rvk_subject_hierarchy_from_sqlite(
@@ -274,7 +201,8 @@ def load_rvk_subject_hierarchy_from_sqlite(
     depth: Optional[int] = None,
     download_url: str = RVK_XML_URL,
     xml_filepath: Optional[str] = None,
-) -> RvkSubjectHierarchy:
+    preload_contains: bool = False,
+) -> SubjectHierarchy:
     """Load RVK subject hierarchy from sqlite file and generate it if it does not exist yet.
 
     Parameters
@@ -287,6 +215,10 @@ def load_rvk_subject_hierarchy_from_sqlite(
         The url that is used to download the RVK xml file
     xml_filepath: str = RVK_XML_FILE_PATH
         The filepath that is used to store the downloaded RVK xml file
+    preload_contains: bool = False
+        Wether to preload all available subjects into memory such that
+        checking whether a subject exists in the subject hierarchy is
+        very fast
 
     Returns
     -------
@@ -299,9 +231,9 @@ def load_rvk_subject_hierarchy_from_sqlite(
         xml_filepath = _get_rvk_xml_filepath()
     if not os.path.exists(store_filepath):
         logger.debug("create and fill RVK subject store (may take some time)")
-        SqliteRvkSubjectHierarchy.save(build_rvk_subject_hierarchy(depth, download_url, xml_filepath), store_filepath)
+        SqliteSubjectHierarchy.save(build_rvk_subject_hierarchy(depth, download_url, xml_filepath), store_filepath)
 
-    return SqliteRvkSubjectHierarchy(store_filepath)
+    return SqliteSubjectHierarchy(store_filepath, preload_contains)
 
 
 def convert_rvk_classes_to_annif_tsv(
@@ -335,7 +267,7 @@ def convert_rvk_classes_to_annif_tsv(
 
 def generate_rvk_custom_skos_triples(
     subject_uri: str,
-    rvk_subject_hierarchy: RvkSubjectHierarchy
+    rvk_subject_hierarchy: SubjectHierarchy
 ) -> List[Tuple[Any, Any, Any]]:
     """Return additional skos triples that should be added to an SKOS graph for each subject node.
 
