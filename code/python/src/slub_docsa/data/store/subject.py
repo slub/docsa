@@ -32,13 +32,16 @@ class SqliteSubjectHierarchy(SubjectHierarchy):
     TABLE_FOR_SUBJECT_LABELS = "subject_labels"
     TABLE_FOR_SUBJECT_PARENT = "subject_parent"
     TABLE_FOR_SUBJECT_CHILDREN = "subject_children"
+    TABLE_FOR_SUBJECT_NOTATION = "subject_notation"
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, preload_contains: bool = False):
         """Init sqlite subject hierarchy."""
         self.root_subjects_store = SqliteDict(filepath, tablename=self.TABLE_FOR_ROOT_SUBJECTS, flag="r")
         self.labels_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_LABELS, flag="r")
         self.parent_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_PARENT, flag="r")
         self.children_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_CHILDREN, flag="r")
+        self.notation_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_NOTATION, flag="r")
+        self.contains = set(self) if preload_contains else self.labels_store
 
     def root_subjects(self) -> Iterable[str]:
         """Return a list of root subjects."""
@@ -56,9 +59,13 @@ class SqliteSubjectHierarchy(SubjectHierarchy):
         """Return the children of the subject."""
         return self.children_store[subject_uri]
 
+    def subject_notation(self, subject_uri: str) -> Optional[str]:
+        """Return RVK notation for a subject."""
+        return self.notation_store[subject_uri]
+
     def __contains__(self, subject_uri: str) -> bool:
         """Return true if the subject_uri is a valid subject in this subject hierarchy."""
-        return subject_uri in self.labels_store
+        return subject_uri in self.contains
 
     def __iter__(self) -> Iterator[str]:
         """Return an iterator over all subject uris of this hierarchy."""
@@ -79,6 +86,7 @@ class SqliteSubjectHierarchy(SubjectHierarchy):
             (cls.TABLE_FOR_SUBJECT_LABELS, subject_hierarchy.subject_labels),
             (cls.TABLE_FOR_SUBJECT_PARENT, subject_hierarchy.subject_parent),
             (cls.TABLE_FOR_SUBJECT_CHILDREN, subject_hierarchy.subject_children),
+            (cls.TABLE_FOR_SUBJECT_NOTATION, subject_hierarchy.subject_notation),
         ]
 
         for tablename, apply_func in tasks:
