@@ -295,15 +295,17 @@ def build_subject_hierarchy_from_subject_tuples(
     """Build a subject hierarchy from a list of subject tuples."""
     subject_parent: Mapping[str, str] = {}
     subject_labels: Mapping[str, Mapping[str, str]] = {}
+    subject_notation: Mapping[str, str] = {}
 
     for subject_tuple in subject_tuples:
         subject_parent[subject_tuple.subject_uri] = subject_tuple.parent_uri
         subject_labels[subject_tuple.subject_uri] = subject_tuple.labels
+        subject_notation[subject_tuple.subject_uri] = subject_tuple.notation
 
     root_subjects = root_subjects_from_subject_parent_map(subject_parent)
     subject_children = children_map_from_subject_parent_map(subject_parent)
 
-    return SimpleSubjectHierarchy(root_subjects, subject_labels, subject_parent, subject_children)
+    return SimpleSubjectHierarchy(root_subjects, subject_labels, subject_parent, subject_children, subject_notation)
 
 
 def prune_subject_uris_to_parent(

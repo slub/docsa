@@ -29,7 +29,7 @@ def number_of_documents_by_subjects(
     samples: Iterator[Sample],
 ) -> Mapping[str, float]:
     """Count the number of documents for each subject."""
-    logger.debug("count subject occurances in qucosa")
+    logger.debug("count subject occurances")
     counts: Mapping[str, float] = {
         "uri://no_value": 0.0,
         "uri://not_found": 0.0,
