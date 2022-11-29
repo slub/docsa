@@ -380,6 +380,12 @@ class SimpleDdcSubjectHierarchy(SubjectHierarchy):
         """
         return self._root_subjects
 
+    def subject_notation(self, subject_uri: str) -> Optional[str]:
+        """Return notation for a subject."""
+        if not is_valid_ddc_uri(subject_uri):
+            raise LookupError(f"uri {subject_uri} is not a valid ddc uri")
+        return ddc_notation_from_uri(subject_uri)
+
     def __iter__(self) -> Iterable[str]:
         """Return an iterator over all subject uris of this subject hierarchy.
 

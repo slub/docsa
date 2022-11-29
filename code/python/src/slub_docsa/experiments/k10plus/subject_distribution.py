@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # subject_schema = "ddc"
     subject_schema = "bk"
-    doc_lang_code = "de"
+    doc_lang_code = "en"
     label_lang_code = "de"
 
     current_subject_hierarchy = {

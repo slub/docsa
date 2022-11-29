@@ -1,5 +1,7 @@
 """Download and load subject hierarchies from jskos json files."""
 
+# pylint: disable=too-many-arguments
+
 import logging
 import os
 import gzip
@@ -84,12 +86,46 @@ def _repair_ddc_subject_hierarchy_from_coliconc(subject_parent: Mapping[str, str
             parent_uri = ddc_parent_from_uri(parent_uri)
 
 
+def _repair_jskos_subject_hierarchy(subject_parent, subject_labels, subject_notation):
+    # make sure that referenced subjects are available
+    # such that there will not be any broken links
+    all_subjects = set(subject_parent.keys()) \
+        .union(subject_parent.values()) \
+        .union(subject_labels.keys()) \
+        .union(subject_notation.keys()) \
+        .difference([None])
+    for missing_uri in all_subjects:
+        if missing_uri not in subject_parent:
+            logger.debug("add missing parent for subject uri '%s'", missing_uri)
+            subject_parent[missing_uri] = None
+        if missing_uri not in subject_labels:
+            logger.debug("add missing labels for subject uri '%s'", missing_uri)
+            subject_labels[missing_uri] = {}
+        if missing_uri not in subject_notation:
+            logger.debug("add missing notation for subject uri '%s'", missing_uri)
+            subject_notation[missing_uri] = None
+
+
+def _parse_subject_from_jskos_object(subject_data, subject_parent, subject_labels, subject_notation):
+    subject_uri = subject_data["uri"]
+    subject_labels[subject_uri] = subject_data.get("prefLabel", {})
+    if not subject_labels[subject_uri]:
+        subject_labels[subject_uri] = subject_data.get("http://www.w3.org/2004/02/skos/core#prefLabel", {})
+    subject_notation[subject_uri] = subject_data["notation"]
+    if "broader" in subject_data and len(subject_data["broader"]) > 0:
+        parent_uri = subject_data["broader"][0]["uri"]
+        subject_parent[subject_uri] = parent_uri
+    else:
+        subject_parent[subject_uri] = None
+
+
 def build_jskos_subject_hierarchy(
     schema: str,
     download_url: Optional[str] = None,
     json_filepath: Optional[str] = None,
     download: bool = True,
 ):
+    """Build a subject hierarchy by parsing a JSKOS file optionally downloaded from a URL."""
     if json_filepath is None:
         json_filepath = default_jskos_schema_json_filepath(schema)
 
@@ -123,42 +159,18 @@ def build_jskos_subject_hierarchy(
             subject_data_generator = _parse_file_line_by_line(json_file)
         else:
             subject_data_generator = _parse_full_file(json_file)
-        for subject_data in subject_data_generator:
-            subject_uri = subject_data["uri"]
-            subject_labels[subject_uri] = subject_data.get("prefLabel", {})
-            if not subject_labels[subject_uri]:
-                subject_labels[subject_uri] = subject_data.get("http://www.w3.org/2004/02/skos/core#prefLabel", {})
-            subject_notation[subject_uri] = subject_data["notation"]
-            if "broader" in subject_data and len(subject_data["broader"]) > 0:
-                parent_uri = subject_data["broader"][0]["uri"]
-                subject_parent[subject_uri] = parent_uri
-            else:
-                subject_parent[subject_uri] = None
 
+        # iterate over all subject objects in a JSKOS file and collect information
+        for subject_data in subject_data_generator:
+            _parse_subject_from_jskos_object(subject_data, subject_parent, subject_labels, subject_notation)
+
+    # repair subject hierarchies
     if schema == "ddc":
         _repair_ddc_subject_hierarchy_from_coliconc(subject_parent)
-
-    # make sure that referenced subjects are available
-    # such that there will not be any broken links
-    all_subjects = set(subject_parent.keys()) \
-        .union(subject_parent.values()) \
-        .union(subject_labels.keys()) \
-        .union(subject_notation.keys()) \
-        .difference([None])
-    for missing_uri in all_subjects:
-        if missing_uri not in subject_parent:
-            logger.debug("add missing parent for subject uri '%s'", missing_uri)
-            subject_parent[missing_uri] = None
-        if missing_uri not in subject_labels:
-            logger.debug("add missing labels for subject uri '%s'", missing_uri)
-            subject_labels[missing_uri] = {}
-        if missing_uri not in subject_notation:
-            logger.debug("add missing notation for subject uri '%s'", missing_uri)
-            subject_notation[missing_uri] = None
+    _repair_jskos_subject_hierarchy(subject_parent, subject_labels, subject_notation)
 
     root_subjects = root_subjects_from_subject_parent_map(subject_parent)
     subject_children = children_map_from_subject_parent_map(subject_parent)
-
     return SimpleSubjectHierarchy(root_subjects, subject_labels, subject_parent, subject_children, subject_notation)
 
 

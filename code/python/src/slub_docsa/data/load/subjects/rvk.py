@@ -277,7 +277,7 @@ def generate_rvk_custom_skos_triples(
     ----------
     subject_uri: str
         The uri of the RVK subject that is being transformed to a SKOS format
-    subject_hierarchy: RvkSubjectHierarchy
+    subject_hierarchy: SubjectHierarchy
         The RVK subject hierarchy that is queries for additional information about the subject
 
     Returns
