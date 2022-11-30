@@ -41,11 +41,13 @@ def get(model_id):
     return {
         "model_id": model_info.model_id,
         "model_type": model_info.model_type,
+        "model_version": model_info.model_version,
         "schema_id": model_info.schema_id,
         "creation_date": model_info.creation_date,
         "description": model_info.description,
         "supported_languages": model_info.supported_languages,
         "tags": model_info.tags,
+        "slub_docsa_version": model_info.slub_docsa_version
     }
 
 

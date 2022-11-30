@@ -133,17 +133,15 @@ paths:
                 schema:
                   $ref: "#/components/schemas/ModelInfo"
                 example: {
+                  "model_id": "some-id-string",
+                  "model_type": "some-type-string",
+                  "model_version": "v1",
+                  "schema_id": "rvk",
+                  "supported_languages": ["de"],
                   "creation_date": "2022-11-02 13:14:00",
                   "description": "the model description",
-                  "supported_languages": ["de"],
-                  "schema_id": "rvk",
-                  "statistics": {
-                    "number_of_samples": 10000,
-                    "number_of_subjects": 100,
-                    "scores": {
-                      "f1_t=0.5": 0.85,
-                    }
-                  }
+                  "tags": ["some-tag", "anoter-tag"],
+                  "slub_docsa_version": "0.1.0.dev1-464e025"
                 }
           404:
             $ref: "#/components/responses/ModelNotFoundResponse"
@@ -762,11 +760,13 @@ components:
       required:
         - model_id
         - model_type
+        - model_version
         - schema_id
         - creation_date
         - description
         - supported_languages
         - tags
+        - slub_docsa_version
       properties:
         model_id:
           type: string
@@ -776,6 +776,10 @@ components:
           type: string
           description: |
             the type of the model
+        model_version:
+          type: string
+          description: |
+            the release version of the model
         creation_date:
           type: string
           description: |
@@ -801,6 +805,11 @@ components:
             a list of arbitrary tags
           items:
             type: string
+        slub_docsa_version:
+          type: string
+          description: |
+            the release version of the <code>slub_docsa</code> python library
+            that was used to generate the model
         statistics:
           type: object
           description: |
