@@ -8,6 +8,19 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
 
 
+class PublishedClassificationModelStatistics(NamedTuple):
+    """Statistics about a published classification model."""
+
+    number_of_training_samples: int
+    """The number of samples this model was trained on."""
+
+    number_of_test_samples: int
+    """The number of samples this model was evaluated on."""
+
+    scores: Mapping[str, float]
+    """Evaluation scores for this model."""
+
+
 class PublishedClassificationModelInfo(NamedTuple):
     """Information about a published classification model."""
 
@@ -37,6 +50,9 @@ class PublishedClassificationModelInfo(NamedTuple):
 
     slub_docsa_version: Optional[str]
     """The version of the slub docsa python package that was used to create this model."""
+
+    statistics: PublishedClassificationModelStatistics
+    """Statistics about this model."""
 
 
 class PublishedClassificationModel(NamedTuple):

@@ -47,7 +47,12 @@ def get(model_id):
         "description": model_info.description,
         "supported_languages": model_info.supported_languages,
         "tags": model_info.tags,
-        "slub_docsa_version": model_info.slub_docsa_version
+        "slub_docsa_version": model_info.slub_docsa_version,
+        "statistics": {
+            "number_of_training_examples": model_info.statistics.number_of_training_samples,
+            "number_of_test_examples": model_info.statistics.number_of_test_samples,
+            "scores": model_info.statistics.scores
+        }
     }
 
 

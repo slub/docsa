@@ -9,6 +9,7 @@ from typing import Callable, Mapping, Sequence, NamedTuple
 
 from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.serve.common import PublishedClassificationModelInfo, PublishedClassificationModel
+from slub_docsa.serve.common import PublishedClassificationModelStatistics
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,12 @@ def save_published_classification_model_info(
             "description": model_info.description,
             "tags": model_info.tags,
             "slub_docsa_version": model_info.slub_docsa_version,
-        }, file)
+            "statistics": {
+                "number_of_training_samples": model_info.statistics.number_of_training_samples,
+                "number_of_test_samples": model_info.statistics.number_of_test_samples,
+                "scores": model_info.statistics.scores,
+            }
+        }, file, indent=4)
 
 
 def load_published_classification_model_info(
@@ -58,7 +64,12 @@ def load_published_classification_model_info(
             supported_languages=data.get("supported_languages", []),
             description=data.get("description"),
             tags=data.get("tags", []),
-            slub_docsa_version=data.get("slub_docsa_version")
+            slub_docsa_version=data.get("slub_docsa_version"),
+            statistics=PublishedClassificationModelStatistics(
+                number_of_training_samples=data.get("statistics", {}).get("number_of_training_samples", -1),
+                number_of_test_samples=data.get("statistics", {}).get("number_of_test_samples", -1),
+                scores=data.get("statistics", {}).get("scores")
+            )
         )
 
 
