@@ -65,7 +65,7 @@ def k10plus_json_document_as_sample(
     return Sample(document, subjects)
 
 
-def k10plus_samples_generator(
+def k10plus_public_samples_generator(
     xml_directory: str = None,
     json_directory: str = None,
     languages: Optional[Iterable[str]] = None,
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     # print(sum(1 for _ in k10plus_samples_generator(languages=["de"])))
 
     count_by_language: Mapping[str, int] = {}
-    for d, s in k10plus_samples_generator(schemas=["gnd"]):
+    for d, s in k10plus_public_samples_generator(schemas=["gnd"]):
         count_by_language[d.language] = count_by_language.setdefault(d.language, 0) + 1
 
     print("by language", count_by_language)

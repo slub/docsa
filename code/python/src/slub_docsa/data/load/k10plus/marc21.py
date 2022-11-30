@@ -11,7 +11,7 @@ from slub_docsa.data.load.subjects.bk import bk_notation_to_uri
 from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
 from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri
 from slub_docsa.data.load.subjects.gnd import gnd_notation_to_uri
-from slub_docsa.data.load.languages import LanguageCodeTable
+from slub_docsa.data.load.languages import LanguageCodeTable, convert_language_code_to_l3
 from slub_docsa.data.load.common import read_gzip_text_lines
 
 logger = logging.getLogger(__name__)
@@ -225,11 +225,11 @@ def parse_k10plus_marc_xml_to_json(
 
     detected_language = None
     if language_detection_text is not None and provided_language is None:
-        detected_language = language_detector(language_detection_text)
-        if detected_language in language_code_table.by_l2:
-            detected_language = language_code_table.by_l2[detected_language].l3
-        if detected_language is not None and detected_language not in language_code_table.by_l3:
-            logger.debug("detected language %s unkown", detected_language)
+        detected_language = convert_language_code_to_l3(
+            language_detector(language_detection_text),
+            language_code_table,
+            raise_invalid=False
+        )
 
     return {
         "ppn": ppn,

@@ -5,11 +5,10 @@
 import os
 import logging
 
-# from slub_docsa.data.load.ddc import load_ddc_subject_hierarchy
 from slub_docsa.data.load.subjects.jskos import load_jskos_subject_hierarchy_from_sqlite
 from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sqlite
-from slub_docsa.data.load.k10plus.samples import k10plus_samples_generator
-# from slub_docsa.data.load.k10plus.slub import k10plus_slub_samples_generator
+# from slub_docsa.data.load.k10plus.samples import k10plus_samples_generator
+from slub_docsa.data.load.k10plus.slub import k10plus_slub_merged_with_public_samples_generator
 
 from slub_docsa.evaluation.dataset.subject_distribution import generate_subject_sunburst
 
@@ -22,7 +21,7 @@ if __name__ == "__main__":
     from slub_docsa.common.paths import get_figures_dir
 
     # subject_schema = "ddc"
-    subject_schema = "bk"
+    subject_schema = "ddc"
     doc_lang_code = "en"
     label_lang_code = "de"
 
@@ -34,10 +33,10 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(get_figures_dir(), "k10plus"), exist_ok=True)
     languages = None if doc_lang_code == "any" else [doc_lang_code]
-    samples = k10plus_samples_generator(schemas=[subject_schema], languages=languages, limit=None)
-    # samples = k10plus_slub_samples_generator(
-    #     schemas=[subject_schema], languages=languages, limit=500000
-    # )
+    # samples = k10plus_samples_generator(schemas=[subject_schema], languages=languages, limit=None)
+    samples = k10plus_slub_merged_with_public_samples_generator(
+        schemas=[subject_schema], languages=languages, limit=500000
+    )
 
     generate_subject_sunburst(
         current_subject_hierarchy,
@@ -48,7 +47,7 @@ if __name__ == "__main__":
     ).write_html(
         os.path.join(
             get_figures_dir(),
-            f"k10plus/k10plus_{subject_schema}_{doc_lang_code}_distribution.html"
+            f"k10plus/k10plus_slub_with_toc_{subject_schema}_{doc_lang_code}_distribution.html"
         ),
         include_plotlyjs="cdn",
     )

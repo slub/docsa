@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Mapping, NamedTuple
+from typing import Mapping, NamedTuple, Optional
 
 from slub_docsa.common.paths import get_resources_dir
 from slub_docsa.data.load.common import download_file
@@ -99,13 +99,19 @@ def load_language_codes(
     )
 
 
-def convert_language_code_to_l3(code, language_code_table: LanguageCodeTable):
+def convert_language_code_to_l3(
+    code,
+    language_code_table: LanguageCodeTable,
+    raise_invalid: bool = True
+) -> Optional[str]:
     """Convert potential 2-letter language code to 3-letter code."""
     if code in language_code_table.by_l2:
         return language_code_table.by_l2[code].l3
     if code in language_code_table.by_l3:
         return code
-    raise ValueError(f"language code '{code}' is not a valid ISO 639 language code")
+    if raise_invalid:
+        raise ValueError(f"language code '{code}' is not a valid ISO 639 language code")
+    return None
 
 
 if __name__ == "__main__":
