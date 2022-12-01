@@ -1,5 +1,7 @@
 """Setup classification models for REST service."""
 
+# pylint: disable=too-many-arguments
+
 import logging
 
 from typing import Sequence, Optional, Mapping, Tuple
