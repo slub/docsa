@@ -223,7 +223,12 @@ class AbstractTorchModel(PersistableClassificationModel):
         # initialize the torch model
         logger.info("initialize torch model on device '%s'", self.device)
         self.model_shape = (int(train_features_shape[1]), int(train_targets.shape[1]))
+        logger.debug("model shape will be %s", str(self.model_shape))
         self.model = self.get_model(*self.model_shape)
+
+        number_of_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        logger.debug("torch model has %d parameters", number_of_parameters)
+
         self.model.to(self.device)
         self.model.train()
 

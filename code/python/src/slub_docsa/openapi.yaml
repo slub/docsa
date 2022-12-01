@@ -251,6 +251,7 @@ paths:
         - $ref: "#/components/parameters/ModelId"
         - $ref: "#/components/parameters/ClassificationLimit"
         - $ref: "#/components/parameters/ClassificationThreshold"
+        - $ref: "#/components/parameters/IncludeSubjectInfo"
       requestBody:
         description: |
           a list of documents that are supposed to be classified
@@ -282,23 +283,86 @@ paths:
                     {
                       document_uri: "uri://document_1",
                       predictions: [
-                        { "subject_uri": "subject_1", "score": 0.7 },
-                        { "subject_uri": "subject_2", "score": 0.5 },
-                        { "subject_uri": "subject_3", "score": 0.4 },
+                        {
+                          "subject_uri": "subject_1",
+                          "score": 0.7,
+                          "subject_info": {
+                            "labels": {"en": "some label"},
+                            "breadcrumb": [{"en": "label of parent subject"}, {"en": "label of grandparent subject"}],
+                            "ancestors": ["uri-of-parent-subject", "uri-of-grandparent-subject"],
+                            "children": ["uri-of-first-child-subject", "uri-of-second-child-subject"]
+                          }
+                        },
+                        {
+                          "subject_uri": "subject_2",
+                          "score": 0.5,
+                          "subject_info": {
+                            "labels": {"en": "another label"},
+                            "breadcrumb": [{"en": "label of the parent subject"}],
+                            "ancestors": ["uri-of-the-parent-subject"],
+                            "children": []
+                          }
+                        },
+                        {
+                          "subject_uri": "subject_3",
+                          "score": 0.4,
+                          "subject_info": {
+                            "labels": {"en": "third label"},
+                            "breadcrumb": [{"en": "label of the parent subject"}],
+                            "ancestors": ["uri-of-the-parent-subject"],
+                            "children": []
+                          }
+                        },
                       ],
                     },
                     {
                       document_uri: "uri://document_2",
                       predictions: [
-                        { "subject_uri": "subject_2", "score": 0.9 },
-                        { "subject_uri": "subject_4", "score": 0.1 },
+                        {
+                          "subject_uri": "subject_2",
+                          "score": 0.9,
+                          "subject_info": {
+                            "labels": {"en": "second subject label"},
+                            "breadcrumb": [{"en": "label of the parent subject"}],
+                            "ancestors": ["uri-of-the-parent-subject"],
+                            "children": []
+                          }
+                        },
+                        {
+                          "subject_uri": "subject_4",
+                          "score": 0.1,
+                          "subject_info": {
+                            "labels": {"en": "fourth label"},
+                            "breadcrumb": [],
+                            "ancestors": [],
+                            "children": []
+                          }
+                        },
                       ],
                     },
                     {
                       document_uri: "uri://document_3",
                       predictions: [
-                        { "subject_uri": "subject_1", "score": 0.2 },
-                        { "subject_uri": "subject_5", "score": 0.1 },
+                        {
+                          "subject_uri": "subject_1",
+                          "score": 0.2,
+                          "subject_info": {
+                            "labels": {"en": "some label"},
+                            "breadcrumb": [{"en": "label of parent subject"}, {"en": "label of grandparent subject"}],
+                            "ancestors": ["uri-of-parent-subject", "uri-of-grandparent-subject"],
+                            "children": ["uri-of-first-child-subject", "uri-of-second-child-subject"]
+                          }
+                        },
+                        {
+                          "subject_uri": "subject_5",
+                          "score": 0.1,
+                          "subject_info": {
+                            "labels": {"en": "fiveth label"},
+                            "breadcrumb": [],
+                            "ancestors": [],
+                            "children": []
+                          }
+                        }
                       ]
                     }
                   ]
@@ -630,7 +694,8 @@ components:
       in: query
       description: |
         maximum number of classification results (subjects) to be returned
-        for each document that is classified
+        for each document that is classified; default depends on server
+        configuration
       examples:
         _default:
           summary: limit = 5
@@ -652,7 +717,7 @@ components:
         result
       examples:
         _default:
-          summary: no threshold
+          summary: no threshold (default)
           description: |
             classification results are not filtered by certainty <em>score</em>
           value:
@@ -662,6 +727,25 @@ components:
           value: 0.5
       schema:
         type: number
+
+    IncludeSubjectInfo:
+      name: subject_info
+      in: query
+      description: |
+        whether to include detail information about a subject for each classifcation prediction
+      examples:
+        _default:
+          summary: include info (default)
+          description: |
+            subjects information are included in each classification prediction
+          value: true
+        all:
+          summary: no info
+          description: |
+            subjects information is omitted
+          value: false
+      schema:
+        type: boolean
 
     SchemaRootOnly:
       name: root_only
@@ -739,6 +823,8 @@ components:
           description: |
             a score describing the certainty of the classification, usually
             between 0 (unlikely) and 1 (most likely)
+        subject_info:
+          $ref: "#/components/schemas/SubjectInfo"
 
     ClassificationResult:
       type: object

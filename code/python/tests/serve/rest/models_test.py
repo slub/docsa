@@ -152,15 +152,15 @@ def test_classify_and_describe_optimistic_model(rest_client: FlaskClient):
         ClassificationResult(
             document_uri="document1",
             predictions=[
-                ClassificationPrediction(score=1.0, subject_uri="yes"),
-                ClassificationPrediction(score=1.0, subject_uri="no")
+                ClassificationPrediction(score=1.0, subject_uri="yes", subject_info=None),
+                ClassificationPrediction(score=1.0, subject_uri="no", subject_info=None)
             ]
         ),
         ClassificationResult(
             document_uri="document2",
             predictions=[
-                ClassificationPrediction(score=1.0, subject_uri="yes"),
-                ClassificationPrediction(score=1.0, subject_uri="no")
+                ClassificationPrediction(score=1.0, subject_uri="yes", subject_info=None),
+                ClassificationPrediction(score=1.0, subject_uri="no", subject_info=None)
             ]
         )
     ]

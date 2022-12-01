@@ -14,7 +14,7 @@ from slub_docsa.experiments.common.scores import default_named_clustering_score_
 
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def qucosa_experiments_cluster_many(
         )
 
     def _score_generator():
-        vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
+        vectorizer = get_cached_tfidf_stemming_vectorizer(max_features=10000, fit_only_once=True)
         return initialize_named_score_tuple_list(
             default_named_clustering_score_list(vectorizer)
         )

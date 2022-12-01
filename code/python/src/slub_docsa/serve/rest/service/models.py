@@ -10,12 +10,71 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, ClassificationModelsRestService
 from slub_docsa.serve.common import PublishedClassificationModel, PublishedClassificationModelInfo
-from slub_docsa.serve.common import ModelNotFoundException
+from slub_docsa.serve.common import ModelNotFoundException, SchemasRestService
 from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
 from slub_docsa.serve.store.models import find_stored_classification_model_infos, load_published_classification_model
 
 
 logger = logging.getLogger(__name__)
+
+
+class PartialModelClassificationRestService(ClassificationModelsRestService):
+    """A partial implementation providing implementations for the `classify` and `classify_and_describe` methods."""
+
+    def _get_schemas_service(self) -> SchemasRestService:
+        """Return schema service such that labels and breadcrums can be added to classification results."""
+        raise NotImplementedError()
+
+    def _get_model(self, model_id) -> PublishedClassificationModel:
+        """Load model such that it can be used for classifying documents."""
+        raise NotImplementedError()
+
+    def subjects(self, model_id: str) -> Sequence[str]:
+        """Return subjects supported by a model."""
+        return self._get_model(model_id).subject_order
+
+    def classify(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: int = 10,
+        threshold: float = 0.0
+    ) -> Sequence[Sequence[ClassificationResult]]:
+        """Perform classification for a list of documents."""
+        return classify_with_limit_and_threshold(
+            self._get_model(model_id).model,
+            documents,
+            limit,
+            threshold
+        )
+
+    def classify_and_describe(
+        self,
+        model_id: str,
+        documents: Sequence[Document],
+        limit: int = 10,
+        threshold: float = 0.0,
+        subject_info: bool = True
+    ) -> Sequence[ClassificationResult]:
+        """Perform classification for a list of documents and provide detailed classification results."""
+        predictions = self.classify(model_id, documents, limit, threshold)
+        pulished_model = self._get_model(model_id)
+        schema_id = pulished_model.info.schema_id
+        schemas_service = self._get_schemas_service()
+
+        def _transform_prediction(score, subject_idx):
+            subject_uri = pulished_model.subject_order[subject_idx]
+            return ClassificationPrediction(
+                score=score,
+                subject_uri=subject_uri,
+                subject_info=None if not subject_info else schemas_service.subject_info(schema_id, subject_uri)
+            )
+
+        return [
+            ClassificationResult(document_uri=document.uri, predictions=[
+                _transform_prediction(s, i) for s, i in prediction
+            ]) for document, prediction in zip(documents, predictions)
+        ]
 
 
 class PartialModelInfosRestService(ClassificationModelsRestService):
@@ -63,84 +122,25 @@ class PartialModelInfosRestService(ClassificationModelsRestService):
         return self._get_model_infos_dict()[model_id]
 
 
-class PartialAllModelsRestService(ClassificationModelsRestService):
-    """An abstract implementation of a REST service that serves already loaded classification models."""
-
-    def _get_models_dict(self) -> Mapping[str, PublishedClassificationModel]:
-        """Return a mapping from model_id to already loaded classification models.
-
-        Returns
-        -------
-        Mapping[str, ClassificationModel]
-            the map from model_id to already loaded classification models
-
-        Raises
-        ------
-        NotImplementedError
-            Overwrite abstract method in subclass
-        """
-        raise NotImplementedError()
-
-    def classify(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[Sequence[ClassificationResult]]:
-        """Perform classification for a list of documents."""
-        if model_id not in self._get_models_dict():
-            raise ModelNotFoundException(model_id)
-
-        pulished_model = self._get_models_dict()[model_id]
-
-        return classify_with_limit_and_threshold(
-            pulished_model.model,
-            documents,
-            limit,
-            threshold
-        )
-
-    def classify_and_describe(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[ClassificationResult]:
-        """Perform classification for a list of documents and provide detailed classification results."""
-        predictions = self.classify(model_id, documents, limit, threshold)
-        pulished_model = self._get_models_dict()[model_id]
-
-        return [
-            ClassificationResult(document_uri=document.uri, predictions=[
-                ClassificationPrediction(score=s, subject_uri=pulished_model.subject_order[i])
-                for s, i in prediction
-            ]) for document, prediction in zip(documents, predictions)
-        ]
-
-    def subjects(self, model_id: str) -> Sequence[str]:
-        """Return subjects supported by a model."""
-        if model_id not in self._get_models_dict():
-            raise ModelNotFoundException(model_id)
-        return self._get_models_dict()[model_id].subject_order
-
-
-class SingleStoredModelRestService(PartialModelInfosRestService):
+class SingleStoredModelRestService(PartialModelInfosRestService, PartialModelClassificationRestService):
     """REST implementation that only loads a single model at a time for classification."""
 
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, schemas_service: SchemasRestService):
         """Init."""
         logger.info("load one model at a time")
+        self.schemas_service = schemas_service
         self.model_types = get_classic_classification_models_map()
         self.model_infos = find_stored_classification_model_infos(directory)
         self.loaded_model: Optional[PublishedClassificationModel] = None
         logger.info("discovered %d models %s", len(self.model_infos), str(list(self.model_infos.keys())))
 
+    def _get_schemas_service(self) -> SchemasRestService:
+        return self.schemas_service
+
     def _get_model_infos_dict(self) -> Mapping[str, PublishedClassificationModelInfo]:
         return {model_id: info.info for model_id, info in self.model_infos.items()}
 
-    def _load_model(self, model_id):
+    def _get_model(self, model_id) -> PublishedClassificationModel:
         if model_id not in self.model_infos:
             raise ModelNotFoundException(model_id)
 
@@ -148,53 +148,16 @@ class SingleStoredModelRestService(PartialModelInfosRestService):
             self.loaded_model = load_published_classification_model(
                 self.model_infos[model_id].directory, self.model_types
             )
-
-    def classify(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[Sequence[Tuple[float, int]]]:
-        """Perform classification for a list of documents and return tuples of score and subject order id."""
-        self._load_model(model_id)
-
-        return classify_with_limit_and_threshold(
-            self.loaded_model.model,
-            documents,
-            limit,
-            threshold
-        )
-
-    def classify_and_describe(
-        self,
-        model_id: str,
-        documents: Sequence[Document],
-        limit: int = 10,
-        threshold: float = 0.0
-    ) -> Sequence[ClassificationResult]:
-        """Perform classification for a list of documents and provide detailed classification results."""
-        predictions = self.classify(model_id, documents, limit, threshold)
-
-        return [
-            ClassificationResult(document_uri=document.uri, predictions=[
-                ClassificationPrediction(score=s, subject_uri=self.loaded_model.subject_order[i])
-                for s, i in prediction
-            ]) for document, prediction in zip(documents, predictions)
-        ]
-
-    def subjects(self, model_id: str) -> Sequence[str]:
-        """Return subjects supported by a model."""
-        self._load_model(model_id)
-        return self.loaded_model.subject_order
+        return self.loaded_model
 
 
-class AllStoredModelRestService(PartialAllModelsRestService, PartialModelInfosRestService):
+class AllStoredModelRestService(PartialModelInfosRestService, PartialModelClassificationRestService):
     """A service implementation that pre-loads all stored models and serves them from memory."""
 
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, schemas_service: SchemasRestService):
         """Init."""
         logger.info("load all stored models into memory")
+        self.schemas_service = schemas_service
         self.model_types = get_classic_classification_models_map()
         self.model_infos = find_stored_classification_model_infos(directory)
         self.models = {
@@ -203,11 +166,16 @@ class AllStoredModelRestService(PartialAllModelsRestService, PartialModelInfosRe
         }
         logger.info("discovered %d models %s", len(self.model_infos), str(list(self.model_infos.keys())))
 
+    def _get_schemas_service(self) -> SchemasRestService:
+        return self.schemas_service
+
     def _get_model_infos_dict(self) -> Mapping[str, PublishedClassificationModelInfo]:
         return {model_id: info.info for model_id, info in self.model_infos.items()}
 
-    def _get_models_dict(self) -> Mapping[str, PublishedClassificationModel]:
-        return self.models
+    def _get_model(self, model_id) -> PublishedClassificationModel:
+        if model_id not in self.models:
+            raise ModelNotFoundException(model_id)
+        return self.models[model_id]
 
 
 def classify_with_limit_and_threshold(

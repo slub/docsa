@@ -1,6 +1,6 @@
 """Publish a model trained on artifical data."""
 
-# pylint: disable=invalid-name, too-many-local-variables
+# pylint: disable=invalid-name,too-many-locals
 
 import logging
 import os

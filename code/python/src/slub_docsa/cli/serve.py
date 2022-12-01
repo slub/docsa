@@ -72,16 +72,16 @@ def _run_rest_service(args):
     port = args.port
     threads = args.threads
 
-    model_rest_service = AllStoredModelRestService(serve_directory) \
-        if load_all_models else SingleStoredModelRestService(serve_directory)
-
-    lang_rest_service = LangidLanguagesRestService()
-
     schema_rest_service = SimpleSchemaRestService({
         "rvk": load_rvk_subject_hierarchy_from_sqlite(),
         "ddc": load_jskos_subject_hierarchy_from_sqlite("ddc"),
         "bk": load_jskos_subject_hierarchy_from_sqlite("bk")
     })
+
+    model_rest_service = AllStoredModelRestService(serve_directory, schema_rest_service) \
+        if load_all_models else SingleStoredModelRestService(serve_directory, schema_rest_service)
+
+    lang_rest_service = LangidLanguagesRestService()
 
     rest_service = SimpleRestService(model_rest_service, schema_rest_service, lang_rest_service)
     app = create_webapp(rest_service, debug=debug_mode)

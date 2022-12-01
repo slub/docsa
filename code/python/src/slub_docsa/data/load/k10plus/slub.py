@@ -8,6 +8,7 @@ import os
 import tarfile
 import codecs
 import re
+import time
 
 from typing import Iterable, Mapping, NamedTuple, Iterator, Optional
 
@@ -244,8 +245,14 @@ def k10plus_slub_samples_generator(
 ):
     """Read k10plus documents and combine them with fulltext information from SLUB data."""
     doc_count = 0
+    last_log_time = time.time()
     slub_store = load_cached_k10plus_slub_data(json_filepath, cache_filepath)
+
+    languages = set(languages) if languages is not None else set()
     schemas = set(schemas) if schemas is not None else set()
+
+    language_code_table = load_language_codes()
+    languages = {convert_language_code_to_l3(code, language_code_table) for code in languages}
     for ppn in slub_store:
         if limit is not None and doc_count >= limit:
             logger.debug("stop because of limit=%d", limit)
@@ -287,6 +294,11 @@ def k10plus_slub_samples_generator(
         # skip documents that have not classification annotations for requested schemas
         if schemas and not subjects:
             continue
+
+        now_time = time.time()
+        if now_time - last_log_time > 5:
+            logger.info("read %d k10plus slub samples so far", doc_count)
+            last_log_time = now_time
 
         doc_count += 1
         yield Sample(document, subjects)

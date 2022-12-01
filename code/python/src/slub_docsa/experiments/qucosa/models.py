@@ -18,8 +18,8 @@ from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseRelu
 from slub_docsa.models.classification.ann_torch import TorchBertSequenceClassificationHeadModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer, get_qucosa_tfidf_vectorizer
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_dbmdz_bert_vectorizer
+from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer, get_cached_tfidf_vectorizer
+from slub_docsa.experiments.common.vectorizer import get_cached_dbmdz_bert_vectorizer
 from slub_docsa.experiments.common.models import NamedClassificationModelTupleList, NamedClusteringModelTupleList
 from slub_docsa.models.clustering.scikit import ScikitClusteringModel
 from slub_docsa.models.clustering.dummy import RandomClusteringModel
@@ -30,27 +30,27 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
     models = [
         ("tfidf_2k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=2000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=2000),
         )),
         ("tfidf_10k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_no_stem_10k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_tfidf_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_vectorizer(max_features=10000),
         )),
         ("tfidf_40k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=40000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=40000),
         )),
         ("dbmdz_bert_sts1_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(1),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts8_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(8),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
         )),
         ("random_vectorizer_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
@@ -58,65 +58,65 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         )),
         ("tfidf_10k_knn_k=3", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=3),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_10k_dtree", lambda: ScikitClassifier(
             predictor=DecisionTreeClassifier(max_leaf_nodes=1000),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_10k_rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("dbmdz_bert_sts1_rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(1),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("tfidf_10k_scikit_mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_2k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=2000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=2000),
         )),
         ("tfidf_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_no_stem_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
-            vectorizer=get_qucosa_tfidf_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_vectorizer(max_features=10000),
         )),
         ("tfidf_40k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
             epochs=50,
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=40000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=40000),
         )),
         ("dbmdz_bert_sts1_scikit_mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(1),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts1_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
             epochs=50,
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(1),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts8_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
             epochs=50,
-            vectorizer=get_qucosa_dbmdz_bert_vectorizer(8),
+            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
         )),
         ("tfidf_10k_log_reg", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=LogisticRegression()),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_10k_nbayes", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=GaussianNB()),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_10k_svc", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(
                 estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
             ),
-            vectorizer=get_qucosa_tfidf_stemming_vectorizer(max_features=10000),
+            vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
     ]
 
@@ -127,8 +127,8 @@ def default_qucosa_named_clustering_models_tuple_list(
     n_subjects: int,
 ) -> NamedClusteringModelTupleList:
     """Return default qucosa clustering models."""
-    tfidf_vectorizer_10k = get_qucosa_tfidf_stemming_vectorizer(max_features=10000)
-    dbmdz_bert_vectorizer_sts_1 = get_qucosa_dbmdz_bert_vectorizer(1)
+    tfidf_vectorizer_10k = get_cached_tfidf_stemming_vectorizer(max_features=10000)
+    dbmdz_bert_vectorizer_sts_1 = get_cached_dbmdz_bert_vectorizer(subtext_samples=1)
 
     models = [
         ("random_c=20", lambda: RandomClusteringModel(n_clusters=20)),

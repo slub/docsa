@@ -68,26 +68,6 @@ class PublishedClassificationModel(NamedTuple):
     """the subject order"""
 
 
-class ClassificationPrediction(NamedTuple):
-    """A classification prediction consisting of a score and the predicted subject."""
-
-    score: float
-    """A certainty score for the prediction."""
-
-    subject_uri: str
-    """The URI of the predicted subject."""
-
-
-class ClassificationResult(NamedTuple):
-    """A classification result for a specific document."""
-
-    document_uri: str
-    """The uri of the document that was classified."""
-
-    predictions: Sequence[ClassificationPrediction]
-    """The list of individual classification predictions including a score for each predicted subject."""
-
-
 class PublishedSubjectInfo(NamedTuple):
     """Information about a subject."""
 
@@ -102,6 +82,29 @@ class PublishedSubjectInfo(NamedTuple):
 
     children_subject_uris: Sequence[str]
     """The list of URIs of children subjects."""
+
+
+class ClassificationPrediction(NamedTuple):
+    """A classification prediction consisting of a score and the predicted subject."""
+
+    score: float
+    """A certainty score for the prediction."""
+
+    subject_uri: str
+    """The URI of the predicted subject."""
+
+    subject_info: Optional[PublishedSubjectInfo]
+    """The information about a subject."""
+
+
+class ClassificationResult(NamedTuple):
+    """A classification result for a specific document."""
+
+    document_uri: str
+    """The uri of the document that was classified."""
+
+    predictions: Sequence[ClassificationPrediction]
+    """The list of individual classification predictions including a score for each predicted subject."""
 
 
 class ClassificationModelsRestService:
@@ -135,7 +138,8 @@ class ClassificationModelsRestService:
         model_id: str,
         documents: Sequence[Document],
         limit: Optional[int] = None,
-        threshold: Optional[float] = None
+        threshold: Optional[float] = None,
+        subject_info: bool = True
     ) -> Sequence[ClassificationResult]:
         """Perform classification for a list of documents and provide detailed classification results."""
         raise NotImplementedError()

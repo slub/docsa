@@ -10,7 +10,7 @@ from slub_docsa.common.paths import get_cache_dir, get_figures_dir
 from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 from slub_docsa.evaluation.classification.incidence import unique_subject_order, subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     test_incidence = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
     # vectorizer = get_qucosa_dbmdz_bert_vectorizer(subtext_samples=1, hidden_states=1)
-    vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000)
+    vectorizer = get_cached_tfidf_stemming_vectorizer(max_features=10000)
 
     # model = AnnifModel(model_type="tfidf", lang_code="de")
     # model = TorchSingleLayerDenseTanhModel(

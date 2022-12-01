@@ -8,8 +8,8 @@ from typing import Dict, Sequence, Optional
 
 from flask.wrappers import Response
 from slub_docsa.serve.app import rest_service
-from slub_docsa.serve.common import ClassificationModelsRestService
-from slub_docsa.serve.rest.endpoints.common import parse_documents_from_request_body
+from slub_docsa.serve.common import ClassificationModelsRestService, ClassificationPrediction
+from slub_docsa.serve.rest.endpoints.common import encode_subject_info, parse_documents_from_request_body
 
 
 logger = logging.getLogger(__name__)
@@ -77,21 +77,34 @@ def classify(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshol
     )
 
 
-def classify_and_describe(model_id, body: Sequence[Dict[str, str]], limit: int = 10, threshold: float = 0.0):
+def classify_and_describe(
+    model_id, body: Sequence[Dict[str, str]],
+    limit: int = 10,
+    threshold: float = 0.0,
+    subject_info: bool = True,
+):
     """Classify a document using a model and provide detailed results."""
     # read documents from request body
     documents = parse_documents_from_request_body(body)
 
     # do classification
-    results = _service().classify_and_describe(model_id, documents, limit, threshold)
+    results = _service().classify_and_describe(model_id, documents, limit, threshold, subject_info)
+
+    def _transform_prediction(prediction: ClassificationPrediction):
+        data = {
+            "score": prediction.score,
+            "subject_uri": prediction.subject_uri,
+            "subject_info": encode_subject_info(prediction.subject_info),
+        }
+        if not subject_info:
+            del data["subject_info"]
+        return data
 
     # convert results to json response format
     response = [
         {
             "document_uri": result.document_uri,
-            "predictions": [
-                {"score": r.score, "subject_uri": r.subject_uri} for r in result.predictions
-            ]
+            "predictions": [_transform_prediction(r) for r in result.predictions]
         } for result in results
     ]
     return response
