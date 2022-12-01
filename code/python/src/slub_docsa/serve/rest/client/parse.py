@@ -12,8 +12,8 @@ def parse_subject_info_from_json(data):
     return PublishedSubjectInfo(
         labels=data["labels"],
         breadcrumb=data["breadcrumb"],
-        parent_subject_uri=data["parent_subject_uri"],
-        children_subject_uris=data["children_subject_uris"]
+        ancestors=data["ancestors"],
+        children=data["children"]
     )
 
 

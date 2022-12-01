@@ -2,7 +2,7 @@
 
 from typing import Sequence, Mapping
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.preprocess.subject import subject_label_breadcrumb
+from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
 from slub_docsa.serve.common import PublishedSubjectInfo, SchemaNotFoundException, SchemasRestService
 from slub_docsa.serve.common import SubjectNotFoundException
 
@@ -40,6 +40,6 @@ class SimpleSchemaRestService(SchemasRestService):
         return PublishedSubjectInfo(
             labels=subject_hierarchy.subject_labels(subject_uri),
             breadcrumb=subject_label_breadcrumb(subject_uri, subject_hierarchy)[:-1],
-            parent_subject_uri=subject_hierarchy.subject_parent(subject_uri),
-            children_subject_uris=list(subject_hierarchy.subject_children(subject_uri))
+            ancestors=subject_ancestors_list(subject_uri, subject_hierarchy)[:-1],
+            children=list(subject_hierarchy.subject_children(subject_uri))
         )

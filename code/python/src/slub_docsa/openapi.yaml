@@ -923,8 +923,8 @@ components:
         information about this subject
       required:
         - labels
-        - parent_subject_uri
-        - children_subject_uris
+        - ancestors
+        - children
         - breadcrumb
       properties:
         labels:
@@ -934,13 +934,14 @@ components:
             indexed by the ISO 639-1 language code
           additionalProperties:
             type: string
-        parent_subject_uri:
-          type: string
-          nullable: true
+        ancestors:
+          type: array
+          items:
+            type: string
           description: |
-            the subject uri of the parent subject for this subject
-            (or null if root subject)
-        children_subject_uris:
+            a list of subject URIs referencing the ancestors of the subject
+            (e.g., an empty list if the subject is a root subject)
+        children:
           type: array
           items:
             type: string
@@ -960,8 +961,8 @@ components:
             "en": "Human readable subject label",
             "de": "Lesbare Themenbeschriftung"
           },
-          "parent_subject_uri": "uri://parent_subject",
-          "children_subject_uris": [
+          "ancestors": ["uri://parent_subject"],
+          "children": [
             "uri://children_subject1", "uri://children_subject2"
           ],
           "breadcrumb": [

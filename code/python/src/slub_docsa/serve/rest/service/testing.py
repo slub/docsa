@@ -35,9 +35,9 @@ class MockupSchemasRestService(SchemasRestService):
             raise ValueError(f"subject_uri '{subject_uri}' not found in schema '{schema_id}'")
         return PublishedSubjectInfo(
             labels={"en": subject_uri},
-            parent_subject_uri=None,
+            ancestors=[],
             breadcrumb=[],
-            children_subject_uris=[]
+            children=[]
         )
 
 

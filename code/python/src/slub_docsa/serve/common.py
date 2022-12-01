@@ -74,13 +74,13 @@ class PublishedSubjectInfo(NamedTuple):
     labels: Mapping[str, str]
     """A map of labels for this subject indexed by the ISO 639-1 language code of the label language."""
 
-    parent_subject_uri: Optional[str]
-    """The URI of the parent subject"""
+    ancestors: Sequence[str]
+    """The list URIs of the ancestors of this subject"""
 
     breadcrumb: Sequence[Mapping[str, str]]
     """A list of mappings from the ISO 639-1 language code to humand readable labels for each ancestor subject."""
 
-    children_subject_uris: Sequence[str]
+    children: Sequence[str]
     """The list of URIs of children subjects."""
 
 

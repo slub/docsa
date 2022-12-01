@@ -25,6 +25,6 @@ def encode_subject_info(subject_info: Optional[PublishedSubjectInfo]) -> Optiona
     return {
         "labels": subject_info.labels,
         "breadcrumb": subject_info.breadcrumb,
-        "parent_subject_uri": subject_info.parent_subject_uri,
-        "children_subject_uris": subject_info.children_subject_uris,
+        "ancestors": subject_info.ancestors,
+        "children": subject_info.children,
     }
