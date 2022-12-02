@@ -7,7 +7,7 @@ import os
 
 from sklearn.metrics import f1_score
 from slub_docsa.common.paths import get_cache_dir, get_figures_dir
-from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer

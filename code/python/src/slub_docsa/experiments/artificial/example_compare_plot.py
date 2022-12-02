@@ -68,8 +68,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
-    from slub_docsa.evaluation.classification.score import cesa_bianchi_h_loss, scikit_incidence_metric
+    from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
+    from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
+    from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
     from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
 
     scores = [

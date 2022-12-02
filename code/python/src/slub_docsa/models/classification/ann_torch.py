@@ -25,8 +25,8 @@ from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
-from slub_docsa.evaluation.classification.score import scikit_incidence_metric
-from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
+from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
 from slub_docsa.evaluation.classification.plotting import ann_training_history_plot, write_multiple_figure_formats
 

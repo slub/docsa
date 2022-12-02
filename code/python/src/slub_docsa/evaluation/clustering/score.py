@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional, Sequence
 import numpy as np
 from slub_docsa.common.document import Document
 
-from slub_docsa.common.score import ClusteringScoreFunction
+from slub_docsa.common.score import ClusteringScore
 from slub_docsa.common.similarity import IndexedDocumentDistanceFunction, IndexedDocumentDistanceGenerator
 from slub_docsa.common.subject import SubjectTargets
 from slub_docsa.evaluation.classification.incidence import is_crisp_cluster_membership
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def scikit_clustering_label_score_function(
     scikit_score: Any,
     **kwargs: Any,
-) -> ClusteringScoreFunction:
+) -> ClusteringScore:
     """Return function that scores a clustering by comparing it to the true subject targets using scikit.
 
     Possible scikit scores are:
@@ -71,7 +71,7 @@ def scikit_clustering_label_score_function(
 def clustering_membership_score_function(
     indexed_distance_generator: IndexedDocumentDistanceGenerator,
     membership_score_function: Callable[[IndexedDocumentDistanceFunction, np.ndarray], float],
-) -> ClusteringScoreFunction:
+) -> ClusteringScore:
     """Return a function that can be used to score clusterings based on membership degrees and document distances.
 
     Parameters

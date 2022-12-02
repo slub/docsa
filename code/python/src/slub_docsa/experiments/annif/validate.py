@@ -17,7 +17,7 @@ from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
-from slub_docsa.evaluation.classification.score import absolute_confusion_from_incidence
+from slub_docsa.evaluation.classification.score.common import absolute_confusion_from_incidence
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets

@@ -4,7 +4,7 @@ import logging
 from typing import List, Sequence, cast
 
 import numpy as np
-from slub_docsa.common.score import IncidenceDecisionFunctionType
+from slub_docsa.common.score import IncidenceDecisionFunction
 
 from slub_docsa.common.subject import SubjectHierarchy, SubjectTargets, SubjectUriList
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
@@ -121,7 +121,7 @@ def subject_idx_from_incidence_matrix(
     return list(map(lambda l: list(np.where(l == 1)[0]), incidence_array))
 
 
-def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFunctionType:
+def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFunction:
     """Select subjects based on a threshold over probabilities.
 
     Parameters
@@ -141,7 +141,7 @@ def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFun
     return _decision
 
 
-def top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionType:
+def top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunction:
     """Select exactly k subjects with highest probabilities.
 
     Chooses random subjects if less than k subjects have positive probability.
@@ -168,7 +168,7 @@ def top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionType:
     return _decision
 
 
-def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunctionType:
+def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunction:
     """Select at most k subjects with highest positive probabilities.
 
     Does not choose subjects with zero probability, and thus, may even not choose any subjects at all.

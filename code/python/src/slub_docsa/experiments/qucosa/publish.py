@@ -11,7 +11,7 @@ import slub_docsa
 
 from slub_docsa.common.paths import get_serve_dir
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets, unique_subject_order
-from slub_docsa.evaluation.classification.score import scikit_metric_for_best_threshold_based_on_f1score
+from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
 from slub_docsa.serve.common import PublishedClassificationModelStatistics, current_date_as_model_creation_date

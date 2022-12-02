@@ -10,7 +10,8 @@ import numpy as np
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel, ClusteringModel
-from slub_docsa.common.score import ClusteringScoreFunction, MultiClassScoreFunctionType, BinaryClassScoreFunctionType
+from slub_docsa.common.score import ClusteringScore, MultiClassProbabilitiesScore
+from slub_docsa.common.score import BinaryClassProbabilitiesScore
 from slub_docsa.common.subject import SubjectTargets
 from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
 from slub_docsa.evaluation.dataset.condition import check_dataset_subjects_have_minimum_samples
@@ -82,8 +83,8 @@ def score_classification_models_for_dataset(
     subject_order: Sequence[str],
     models: Sequence[ClassificationModel],
     split_function: DatasetSplitFunction,
-    overall_score_functions: Sequence[MultiClassScoreFunctionType],
-    per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
+    overall_score_functions: Sequence[MultiClassProbabilitiesScore],
+    per_class_score_functions: Sequence[BinaryClassProbabilitiesScore],
     fit_and_predict: FitClassificationModelAndPredictCallable = fit_classification_model_and_predict_test_documents,
     stop_after_evaluating_split: Optional[int] = None,
     use_test_data_as_validation_data: bool = False,
@@ -204,7 +205,7 @@ def score_clustering_models_for_documents(
     documents: Sequence[Document],
     subject_targets: Optional[SubjectTargets],
     models: Sequence[ClusteringModel],
-    scores: Sequence[ClusteringScoreFunction],
+    scores: Sequence[ClusteringScore],
     repeats: int = 10,
     max_documents: Optional[int] = None,
 ) -> np.ndarray:

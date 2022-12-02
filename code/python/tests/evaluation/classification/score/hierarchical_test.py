@@ -4,7 +4,7 @@ import numpy as np
 
 from slub_docsa.common.subject import SubjectTuple
 from slub_docsa.data.preprocess.subject import build_subject_hierarchy_from_subject_tuples
-from slub_docsa.evaluation.classification.score import cesa_bianchi_h_loss
+from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
 
 
 def test_cesa_bianchi_h_loss():

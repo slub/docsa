@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.score import scikit_incidence_metric
+    from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
     from sklearn.metrics import f1_score
 
     true_subjects = [
