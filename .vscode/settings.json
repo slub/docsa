@@ -6,6 +6,7 @@
     "python.autoComplete.extraPaths": [
         "/home/slub/workspace/code/python/src",
     ],
+    "python.analysis.exclude": ["/home/slub/workspace/code/python/build"],
     "python.analysis.autoImportCompletions": true,
     "python.analysis.autoSearchPaths": true,
     "python.linting.pylintEnabled": true,
