@@ -34,7 +34,7 @@ def score_matrix_box_plot(
     Parameters
     ----------
     score_matrix: numpy.ndarray
-        the score matrix of shape `(len(models), len(scores), n_splits)`
+        the score matrix of shape `(n_splits, len(models), len(scores))`
     model_names: List[str]
         the labels for each model
     score_names: List[str]
@@ -49,7 +49,7 @@ def score_matrix_box_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
-    _, n_scores, _ = score_matrix.shape
+    _, _, n_scores = score_matrix.shape
 
     fig = cast(Any, make_subplots(
         rows=math.ceil(n_scores / columns),
@@ -60,7 +60,7 @@ def score_matrix_box_plot(
         for j, model_name in enumerate(model_names):
             box = cast(Any, go.Box)(
                 name=model_name,
-                y=score_matrix[j, i, :],
+                y=score_matrix[:, j, i],
                 showlegend=i <= 0,
                 legendgroup=j,
                 marker_color=_get_marker_color(j)
@@ -91,7 +91,7 @@ def score_matrices_box_plot(
     Parameters
     ----------
     score_matrices: List[np.ndarray]
-        list of score matrices of shape `(len(models), len(scores), n_splits)` for each dataset
+        list of score matrices of shape `(n_splits, len(models), len(scores))` for each dataset
     dataset_names: List[str]
         the labels for each dataset
     model_names: List[str]
@@ -108,7 +108,7 @@ def score_matrices_box_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
-    n_models, n_scores, n_splits = score_matrices[0].shape
+    n_splits, n_models, n_scores = score_matrices[0].shape
 
     fig = cast(Any, make_subplots(
         rows=math.ceil(n_scores / columns),
@@ -121,7 +121,7 @@ def score_matrices_box_plot(
     for i in range(n_scores):
         for k, dataset_name in enumerate(dataset_names):
             x_values = np.repeat(model_names, n_splits)
-            y_values = np.hstack([score_matrices[k][j, i, :] for j in range(n_models)])
+            y_values = np.hstack([score_matrices[k][:, j, i] for j in range(n_models)])
             box = cast(Any, go.Box)(
                 name=dataset_name,
                 x=x_values,
@@ -172,7 +172,7 @@ def precision_recall_plot(
     ----------
     score_matrix: numpy.ndarray
         the score matrix that contains both precision (first index) and recall (second index) in a matrix of shape
-        `(len(models), 2, n_splits)`
+        `(n_splits, len(models), 2)`
     model_names: List[str]
         the list of model labels
 
@@ -181,15 +181,15 @@ def precision_recall_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
-    n_models, _, _ = score_matrix.shape
+    _, n_models, _ = score_matrix.shape
 
     fig = cast(Any, go.Figure)()
 
     for i in range(n_models):
         fig.add_trace(
             cast(Any, go.Scatter)(
-                x=score_matrix[i, 0, :],
-                y=score_matrix[i, 1, :],
+                x=score_matrix[:, i, 0],
+                y=score_matrix[:, i, 1],
                 name=model_names[i],
                 mode="markers"
             )

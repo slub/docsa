@@ -7,22 +7,22 @@ import hashlib
 import dbm
 import io
 
-from typing import Optional, Sequence, cast
+from typing import Optional, Sequence, Tuple, cast
 
 import numpy as np
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.evaluation.classification.pipeline import FitClassificationModelAndPredictCallable
+from slub_docsa.evaluation.classification.pipeline import TrainModelFunction, EvaluateAndScoreModelFunction
 
 logger = logging.getLogger(__name__)
 
 
-def persisted_fit_classification_model_and_predict(
+def persisted_training_and_evaluation(
     filepath: str,
     load_cached_predictions: bool = False
-) -> FitClassificationModelAndPredictCallable:
+) -> Tuple[TrainModelFunction, EvaluateAndScoreModelFunction]:
     """Load model predictions from a dbm database if they have been stored previously.
 
     Stored predictions are only used if the exact same training and test data is used for the same model.

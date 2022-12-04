@@ -646,16 +646,6 @@ def get_qucosa_ddc_subject_store(
         return load_ddc_subject_hierarchy(subject_uris=subjects)
 
 
-def qucosa_subject_hierarchy_by_subject_schema(
-    subject_schema: Union[Literal["rvk"], Literal["ddc"]],
-) -> SubjectHierarchy:
-    """Return either rvk or ddc subject hierarchy depending on requested subject schema."""
-    return {
-        "rvk": lambda: load_rvk_subject_hierarchy_from_sqlite(),
-        "ddc": lambda: get_qucosa_ddc_subject_store(),
-    }[subject_schema]()
-
-
 def read_qucosa_samples(
     qucosa_iterator: Optional[Iterable[QucosaJsonDocument]] = None,
     metadata_variant: str = "titles",

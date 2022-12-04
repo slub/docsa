@@ -136,7 +136,8 @@ def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFun
         same shape representing which subjects are chosen for which documents.
     """
     def _decision(probabilities: np.ndarray) -> np.ndarray:
-        return np.array(np.where(probabilities >= threshold, 1, 0))
+        # slower: return np.array(np.where(probabilities >= threshold, 1, 0))
+        return (probabilities >= threshold).astype(np.uint8)
 
     return _decision
 

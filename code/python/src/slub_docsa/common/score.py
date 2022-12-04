@@ -96,24 +96,44 @@ class BatchedMultiClassIncidenceScore:
         raise NotImplementedError()
 
 
-class BinaryClassProbabilitiesScore:
-    """Score function comparing true subject incidences and predicted subject probabilities for a single class."""
+class PerClassProbabilitiesScore:
+    """Score function comparing true and predicted subject probabilities for a single class."""
 
-    def __call__(self, true_incidence: np.ndarray, predicted_probabilities: np.ndarray) -> float:
+    def __call__(self, true_probabilities: np.ndarray, predicted_probabilities: np.ndarray) -> Sequence[float]:
         """Return score comparing true subject incidence and and predicted subject probabilities for a single class.
 
         Parameters
         ----------
-        true_incidence: np.ndarray
-            the array containing the true subject incidences for a single class in shape (documents,).
-        predicted_probabilities: np.ndarray
-            the array containing predicted subject probabilities for a single class in shape (documents,).
+        true_incidences: np.ndarray
+            the matrix containing the true subject incidences in shape (documents, subjects).
+        predicted_incidences: np.ndarray
+            the matrix containing predicted subject incidences in shape (documents, subjects).
 
         Returns
         -------
         float
-            the score
+            the list of scores for each subject
         """
+        raise NotImplementedError()
+
+
+class BatchedPerClassProbabilityScore:
+    """Batched score function comparing true and predicted subject probabilites for a single class."""
+
+    def add_batch(self, true_probabilities: np.ndarray, predicted_probabilities: np.ndarray):
+        """Add multi-class subject probabilities matrix for a batch of documents to be processed for scoring.
+
+        Parameters
+        ----------
+        true_probabilities: np.ndarray
+            the matrix containing the true subject probabilities in shape (document_batch, subjects).
+        predicted_probabilities: np.ndarray
+            the matrix containing predicted subject incidences in shape (document_batch, subjects).
+        """
+        raise NotImplementedError()
+
+    def __call__(self) -> Sequence[float]:
+        """Return the current list of scores for each subject."""
         raise NotImplementedError()
 
 

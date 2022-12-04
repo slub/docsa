@@ -1,36 +1,36 @@
-"""Evaluates and compares multiple models and multiple variants of the Qucosa dataset."""
+"""Evaluates and compares multiple models for the k10plus dataset."""
 
 # pylint: disable=invalid-name, too-many-arguments
 
 import logging
 import os
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Tuple, Union
 from typing_extensions import Literal
+from slub_docsa.common.dataset import Dataset
 
-from slub_docsa.common.paths import get_figures_dir
+from slub_docsa.common.paths import get_figures_dir, get_resources_dir
+from slub_docsa.common.subject import SubjectHierarchy
+from slub_docsa.data.load.subjects.common import subject_hierarchy_by_subject_schema
+from slub_docsa.data.load.tsv import load_dataset_from_gzipped_annif_tsv
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
-from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
 
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
 from slub_docsa.experiments.common.pipeline import get_split_function_by_name
 from slub_docsa.experiments.common.plots import write_default_classification_plots
 from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
 
 logger = logging.getLogger(__name__)
 
 
-def qucosa_experiments_classify_many(
-    dataset_subset: List[str],
+def k10plus_experiments_classify_many(
     model_subset: List[str],
     n_splits: int = 10,
     # load_cached_predictions: bool = False,
     random_state: Optional[int] = None,
     split_function_name: Union[Literal["random"], Literal["stratified"]] = "random",
     stop_after_evaluating_split: Optional[int] = None,
-    check_qucosa_download: bool = False,
 ):
     """Perform qucosa experiments comparing many classification models for many dataset variants."""
     filename_suffix = f"split={split_function_name}"
@@ -41,9 +41,13 @@ def qucosa_experiments_classify_many(
             + default_annif_named_model_list("de", subject_order, subject_hierarchy)
         return initialize_classification_models_from_tuple_list(model_list, model_subset)
 
-    named_datasets = filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), dataset_subset
+    k10plus_resources_dir = os.path.join(get_resources_dir(), "k10plus")
+    dataset = load_dataset_from_gzipped_annif_tsv(
+        os.path.join(k10plus_resources_dir, "k10plus_1mio_rvk_min100.train.tsv.gz")
     )
+    rvk = subject_hierarchy_by_subject_schema("rvk")
+
+    named_datasets: Iterable[Tuple[str, Dataset, SubjectHierarchy]] = [("k10plus", dataset, rvk)]
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
         named_datasets=named_datasets,
@@ -54,31 +58,20 @@ def qucosa_experiments_classify_many(
         stop_after_evaluating_split=stop_after_evaluating_split,
     )
 
-    write_default_classification_plots(evaluation_result, os.path.join(get_figures_dir(), "qucosa"), filename_suffix)
+    write_default_classification_plots(evaluation_result, os.path.join(get_figures_dir(), "k10plus"), filename_suffix)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     logging.getLogger("slub_docsa.data.load.qucosa").setLevel(logging.DEBUG)
 
-    qucosa_experiments_classify_many(
-        dataset_subset=[
-            # "qucosa_de_titles_langid_rvk",
-            # "qucosa_de_abstracts_langid_rvk",
-            # "qucosa_de_fulltexts_langid_rvk",
-            # "qucosa_de_titles_langid_ddc",
-            # "qucosa_de_abstracts_langid_ddc",
-            # "qucosa_de_fulltexts_langid_ddc",
-            "qucosa_de_complete_but_only_titles_rvk",
-            "qucosa_de_complete_but_only_abstracts_rvk",
-            # "qucosa_de_complete_but_only_fulltexts_rvk",
-        ],
+    k10plus_experiments_classify_many(
         model_subset=[
             # ### "random", ####
             "oracle",
             "nihilistic",
             # "tfidf_2k_knn_k=1",
-            "tfidf_10k_knn_k=1",
+            # "tfidf_10k_knn_k=1",
             # "tfidf_40k_knn_k=1",
             # "dbmdz_bert_sts1_knn_k=1",
             # "dbmdz_bert_sts8_knn_k=1",
@@ -104,5 +97,5 @@ if __name__ == "__main__":
         # load_cached_predictions=True,
         random_state=123,
         split_function_name="random",
-        stop_after_evaluating_split=1
+        stop_after_evaluating_split=0
     )

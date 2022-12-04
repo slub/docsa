@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from sklearn.metrics import f1_score
 
-from slub_docsa.common.score import BinaryClassProbabilitiesScore
+from slub_docsa.common.score import PerClassProbabilitiesScore
 from slub_docsa.common.score import IncidenceDecisionFunction
 from slub_docsa.common.score import MultiClassProbabilitiesScore, MultiClassIncidenceScore
 from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision
@@ -19,7 +19,7 @@ def scikit_incidence_metric(
     incidence_decision_function: IncidenceDecisionFunction,
     metric_function: MultiClassIncidenceScore,
     **kwargs
-) -> BinaryClassProbabilitiesScore:
+) -> PerClassProbabilitiesScore:
     """Return a function that can be used to score a subject probability matrix against a target incidence matrix.
 
     This score function is based on a scikit-learn metric passes as argument `metric_function`. In order to apply this

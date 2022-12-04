@@ -12,7 +12,7 @@ class NamedClassificationModels(NamedTuple):
     """Stores names and classes for classification models."""
 
     names: List[str]
-    classes: List[ClassificationModel]
+    generators: List[Callable[[], ClassificationModel]]
 
 
 class NamedClusteringModels(NamedTuple):
@@ -31,8 +31,8 @@ def initialize_classification_models_from_tuple_list(
         model_list = list(filter(lambda i: i[0] in name_subset, model_list))
 
     model_names = [i[0] for i in model_list]
-    model_classes = [i[1]() for i in model_list]
-    return NamedClassificationModels(model_names, model_classes)
+    model_generators = [i[1] for i in model_list]
+    return NamedClassificationModels(model_names, model_generators)
 
 
 def initialize_clustering_models_from_tuple_list(

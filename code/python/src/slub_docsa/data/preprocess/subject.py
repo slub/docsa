@@ -152,6 +152,19 @@ def subject_label_breadcrumb_as_string(
     return list(subject_label_as_string(subject_uri, lang_code, subject_hierarchy) for subject_uri in subject_path)
 
 
+def subject_ancestors_for_subject_list(
+    subject_list: Iterable[str],
+    subject_hierarchy: SubjectHierarchy,
+) -> Iterable[str]:
+    """Return the set of all ancestors of a list of subjects from a subject hierarchy.
+
+    Can be used to reduce a large subject hierarchy to a smaller set of relevant subjects.
+    """
+    return set(
+        a_uri for s_uri in subject_list for a_uri in subject_ancestors_list(s_uri, subject_hierarchy)
+    )
+
+
 def prune_subject_uri_to_level(
     level: int,
     subject_uri: str,
@@ -399,11 +412,18 @@ def prune_subject_targets_to_minimum_samples(
         the same subject target list as `subject_targets`,  where some subjects are replaced with their parent subject
         in case they do not have a sufficient number of samples
     """
+    def _relevant_subject_children(relevant_subjects, subject_hierarchy):
+        subject_children = {
+            s_uri: [c_uri for c_uri in subject_hierarchy.subject_children(s_uri) if c_uri in relevant_subjects]
+            for s_uri in relevant_subjects
+        }
+        return {s_uri: children for s_uri, children in subject_children.items() if children}
+
     pruned_subject_targets = subject_targets
     subject_counts = count_number_of_samples_by_subjects(subject_targets)
-    subject_children = {s_uri: subject_hierarchy.subject_children(s_uri) for s_uri in subject_hierarchy}
-    subject_children = {s_uri: children for s_uri, children in subject_children if children}
-    subjects_to_be_checked = set(iter(subject_hierarchy))
+    relevant_subjects = subject_ancestors_for_subject_list(list(subject_counts.keys()), subject_hierarchy)
+    subject_children = _relevant_subject_children(relevant_subjects, subject_hierarchy)
+    subjects_to_be_checked = set(iter(relevant_subjects))
 
     i = 0
     while len(subjects_to_be_checked) > 0:
