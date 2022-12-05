@@ -55,6 +55,7 @@ def k10plus_named_datasets_tuple_list(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("sqlitedict").setLevel(logging.WARNING)
 
     # loads all data sets and generates persistent storage for them
     dataset_list = k10plus_named_datasets_tuple_list()

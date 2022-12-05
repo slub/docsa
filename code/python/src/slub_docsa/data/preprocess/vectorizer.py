@@ -6,18 +6,21 @@ import logging
 import os
 import pickle  # nosec
 import gzip
+import re
 
 from typing import Iterator, Optional, Any, cast
 from itertools import islice
 
 import torch
 import numpy as np
+import tokenizers
 
 from sqlitedict import SqliteDict
 from sklearn.feature_extraction.text import TfidfVectorizer as ScikitTfidfVectorizer
 from torch.nn.modules.module import Module
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
+from transformers import PreTrainedTokenizerFast
 
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
@@ -58,6 +61,9 @@ class AbstractVectorizer:
         Iterator[np.ndarray]
             an iterator over the vectorized texts as numpy array
         """
+        raise NotImplementedError()
+
+    def shape(self):
         raise NotImplementedError()
 
 
@@ -102,6 +108,7 @@ class TfidfVectorizer(PersistableVectorizer):
         """
         self.max_features = max_features
         self.fitted_once = False
+        self.size = None
         self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
 
     def fit(self, texts: Iterator[str]):
@@ -116,10 +123,15 @@ class TfidfVectorizer(PersistableVectorizer):
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
         for row in cast(Any, self.vectorizer.transform(list(texts))).toarray():
+            if self.size is None:
+                self.size = row.shape[0]
             if not np.any(row):
                 # add random value if row is all zero, so cosine distance is well defined
                 row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
             yield row
+
+    def shape(self):
+        return self.size
 
     def save(self, persist_dir: str):
         """Save tfidf vectorizer to disc using pickle."""
@@ -224,6 +236,9 @@ class RandomVectorizer(AbstractVectorizer):
         for row in np.random.random((len(list(texts)), self.size)):
             yield row
 
+    def shape(self):
+        return self.size
+
     def __str__(self):
         """Return representative string of vectorizer."""
         return "<RandomVectorizer>"
@@ -281,6 +296,9 @@ class CachedVectorizer(PersistableVectorizer):
 
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+
+    def shape(self):
+        return self.vectorizer.shape()
 
     def save(self, persist_dir):
         """Relay save call to vectorizer."""
@@ -350,6 +368,9 @@ class PersistedCachedVectorizer(PersistableVectorizer):
 
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+
+    def shape(self):
+        return self.vectorizer.shape()
 
     def save(self, persist_dir: str):
         """Relay save call to parent vectorizer."""
@@ -518,6 +539,9 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             total_so_far += len(texts_chunk)
             i += 1
 
+    def shape(self):
+        raise NotImplementedError()
+
     def save(self, persist_dir: str):
         """Bert vectorizer is not stateful and needs no saving."""
         return
@@ -530,3 +554,74 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         """Return representative string of vectorizer."""
         return f"<HFaceBertVectorizer model=\"{self.model_identifier}\" batch_size={self.batch_size} " \
             + f"subtext_samples={self.subtext_samples} hidden_states={self.hidden_states}>"
+
+
+class WordpieceVectorizer(PersistableVectorizer):
+
+    FILENAME = "wordpiece_tokenizer.json.gz"
+
+    def __init__(
+        self,
+        language: str,
+        vocabulary_size: int,
+        max_length: int,
+        uncased: bool = True,
+        use_wikipedia_texts: bool = True
+    ):
+        self.language = language
+        self.vocabulary_size = vocabulary_size
+        self.max_length = max_length
+        self.uncased = uncased
+        self.use_wikipedia_texts = use_wikipedia_texts
+        self.tokenizer = None
+        self.encoder = None
+
+    def fit(self, texts: Iterator[str]):
+        unk_token = "[UNK]"
+        spl_tokens = ["[UNK]", "[SEP]", "[MASK]", "[CLS]", "[PAD]"]
+        character_filter = re.compile(r"[\U0000024f-\U0010ffff]")
+
+        self.tokenizer = tokenizers.Tokenizer(tokenizers.models.WordPiece(unk_token=unk_token))
+        self.tokenizer.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+
+        trainer = tokenizers.trainers.WordPieceTrainer(
+            vocab_size=self.vocabulary_size,
+            min_frequency=2,
+            special_tokens=spl_tokens,
+        )
+
+        if self.uncased:
+            text_generator = (character_filter.sub("", text.lower()) for text in texts)
+        else:
+            text_generator = (character_filter.sub("", text) for text in texts)
+
+        self.tokenizer.train_from_iterator(text_generator, trainer=trainer)
+        self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
+
+    def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
+        if self.tokenizer is None or self.encoder is None:
+            raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
+        for text in texts:
+            processed_text = text.lower() if self.uncased else text
+            features = self.encoder.encode_plus(
+                processed_text, padding="max_length", max_length=self.max_length, truncation=True, return_tensors="np"
+            )
+            features["input_ids"] = features["input_ids"][0]
+            features["attention_mask"] = features["attention_mask"][0]
+            features["token_type_ids"] = features["token_type_ids"][0]
+            yield features
+
+    def shape(self):
+        return self.vocabulary_size
+
+    def save(self, persist_dir: str):
+        if self.tokenizer is None:
+            raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
+        os.makedirs(persist_dir, exist_ok=True)
+        with gzip.open(os.path.join(persist_dir, self.FILENAME), "wt") as file:
+            file.write(self.tokenizer.to_str(pretty=True))
+
+    def load(self, persist_dir: str):
+        with gzip.open(os.path.join(persist_dir, self.FILENAME), "rt") as file:
+            self.tokenizer = tokenizers.Tokenizer.from_str(file.read())
+        self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec

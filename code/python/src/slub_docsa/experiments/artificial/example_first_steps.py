@@ -72,9 +72,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.incidence import top_k_incidence_decision
+    from slub_docsa.evaluation.classification.incidence import TopkIncidenceDecision
 
-    incidence_decision_function = top_k_incidence_decision(k=2)
+    incidence_decision_function = TopkIncidenceDecision(k=2)
     predicted_incidence = incidence_decision_function(predicted_probabilities)
     print(predicted_incidence)
 

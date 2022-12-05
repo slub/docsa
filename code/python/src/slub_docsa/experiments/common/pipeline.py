@@ -12,6 +12,7 @@ import numpy as np
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.subject import SubjectHierarchy
+from slub_docsa.data.store.predictions import persisted_training_and_evaluation
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
 from slub_docsa.evaluation.classification.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.classification.split import skmultilearn_iterative_stratification_splitter
@@ -45,20 +46,20 @@ def do_default_score_matrix_classification_evaluation(
     n_splits: int = 10,
     score_name_subset: Optional[Iterable[str]] = None,
     per_class_score_name_subset: Optional[Iterable[str]] = None,
-    # load_cached_predictions: bool = False,
+    load_cached_scores: bool = False,
     stop_after_evaluating_split: Optional[int] = None,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     results: DefaultScoreMatrixResult = []
-    predictions_cache_dir = os.path.join(get_cache_dir(), "predictions")
+    persisted_scores_cache_dir = os.path.join(get_cache_dir(), "scores")
 
     for dataset_name, dataset, subject_hierarchy_generator in named_datasets:
-        # load predictions cache
-        os.makedirs(predictions_cache_dir, exist_ok=True)
-        # fit_and_predict = persisted_fit_classification_model_and_predict(
-        #     os.path.join(predictions_cache_dir, dataset_name + ".dbm"),
-        #     load_cached_predictions,
-        # )
+        # load scores from cache
+        os.makedirs(persisted_scores_cache_dir, exist_ok=True)
+        train_and_evaluate = persisted_training_and_evaluation(
+            os.path.join(persisted_scores_cache_dir, dataset_name + ".sqlite"),
+            load_cached_scores,
+        )
 
         # define subject ordering
         subject_order = list(sorted(unique_subject_order(dataset.subjects)))
@@ -84,7 +85,7 @@ def do_default_score_matrix_classification_evaluation(
             model_generators=model_lists.generators,
             score_generators=score_lists.generators,
             per_class_score_generators=per_class_score_lists.generators,
-            # fit_and_predict=fit_and_predict,
+            train_and_evaluate=train_and_evaluate,
             stop_after_evaluating_split=stop_after_evaluating_split,
         )
 

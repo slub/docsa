@@ -10,7 +10,7 @@ from slub_docsa.common.score import BatchedMultiClassIncidenceScore, BatchedMult
 from slub_docsa.common.score import IncidenceDecisionFunction, BatchedPerClassIncidenceScore
 from slub_docsa.common.score import BatchedPerClassProbabilitiesScore
 from slub_docsa.evaluation.classification.score.common import f1_score, precision_score, recall_score
-from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision
+from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ class BatchedConfusionScore(BatchedMultiClassIncidenceScore):
     def __call__(self) -> float:
         """Abstract method that will calculate a score based on the collected confusion counts."""
         raise NotImplementedError()
+
+    def __str__(self):
+        return f"<{self.__class__.__name__}>"
 
 
 class BatchedF1Score(BatchedConfusionScore):
@@ -77,6 +80,10 @@ class BatchedIncidenceDecisionConfusionScore(BatchedMultiClassProbabilitiesScore
         """Return the confusion based total score."""
         return self.confusion_score.__call__()
 
+    def __str__(self):
+        return f"<BatchedIncidenceDecisionConfusionScore incidence_decision={str(self.incidence_decision)} " \
+            + f"confusion_score={str(self.confusion_score)}>"
+
 
 class BatchedBestThresholdScore(BatchedMultiClassProbabilitiesScore):
     """Calculates score for multiple incidence thresholds and returns best."""
@@ -98,8 +105,8 @@ class BatchedBestThresholdScore(BatchedMultiClassProbabilitiesScore):
     def add_batch(self, true_probabilities: np.ndarray, predicted_probabilities: np.ndarray):
         """Add batch of probability matrices."""
         for threshold in self.thresholds:
-            true_incidence = threshold_incidence_decision(threshold)(true_probabilities)
-            predicted_incidence = threshold_incidence_decision(threshold)(predicted_probabilities)
+            true_incidence = ThresholdIncidenceDecision(threshold)(true_probabilities)
+            predicted_incidence = ThresholdIncidenceDecision(threshold)(predicted_probabilities)
 
             for optimizer in self.optimizers:
                 optimizer.add_batch(true_incidence, predicted_incidence)
@@ -113,6 +120,10 @@ class BatchedBestThresholdScore(BatchedMultiClassProbabilitiesScore):
         max_threshold_idx = np.argmax(optimizer_values)
         logger.debug("return score for best threshold=%s", str(self.thresholds[max_threshold_idx]))
         return self.scores[max_threshold_idx]()
+
+    def __str__(self):
+        return f"<BatchedBestThresholdScore score_generator={str(self.score_generator())} " \
+            + f"optimizer_generator={str(self.optimizer_generator())} thresholds={str(self.thresholds)}>"
 
 
 class BatchedPerClassConfusionScore(BatchedPerClassIncidenceScore):
@@ -137,6 +148,9 @@ class BatchedPerClassConfusionScore(BatchedPerClassIncidenceScore):
     def __call__(self) -> float:
         """Abstract method that will calculate a score based on the collected confusion counts."""
         raise NotImplementedError()
+
+    def __str__(self):
+        return f"<{self.__class__.__name__}>"
 
 
 class BatchedPerClassF1Score(BatchedPerClassConfusionScore):
@@ -181,6 +195,10 @@ class BatchedIncidenceDecisionPerClassConfusionScore(BatchedPerClassProbabilitie
         """Return the confusion based total score."""
         return self.confusion_score.__call__()
 
+    def __str__(self):
+        return f"<BatchedIncidenceDecisionPerClassConfusionScore incidence_decision={str(self.incidence_decision)} " \
+            + f"confusion_score={str(self.confusion_score)}>"
+
 
 class BatchedNumberOfTestExamplesPerClass(BatchedPerClassProbabilitiesScore):
     """Count the number of test examples for each subject."""
@@ -198,3 +216,6 @@ class BatchedNumberOfTestExamplesPerClass(BatchedPerClassProbabilitiesScore):
     def __call__(self) -> float:
         """Return the number of test examples for each subject."""
         return self.counts
+
+    def __str__(self):
+        return "<BatchedNumberOfTestExamplesPerClass>"

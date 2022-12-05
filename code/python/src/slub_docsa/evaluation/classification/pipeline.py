@@ -6,7 +6,7 @@ import logging
 import time
 
 from itertools import islice
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Callable, Iterator, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -30,17 +30,110 @@ MultiSplitScores = Sequence[MultiModelScores]
 MultiSplitPerClassScores = Sequence[MultiModelPerClassScores]
 
 
-class TrainModelFunction:
+def default_train_model(
+    model: ClassificationModel,
+    subject_order: Sequence[str],
+    train_dataset: Dataset,
+    validation_dataset: Optional[Dataset],
+):
+    logger.info("train model %s", str(model))
+    # calcuate incidences
+    train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
+
+    validation_documents = None
+    validation_incidence = None
+    if validation_dataset:
+        validation_documents = validation_dataset.documents
+        validation_incidence = subject_incidence_matrix_from_targets(validation_dataset.subjects, subject_order)
+
+    model.fit(train_dataset.documents, train_incidence, validation_documents, validation_incidence)
+
+
+def default_batch_predict_model(
+    model: ClassificationModel,
+    subject_order: Sequence[str],
+    test_dataset: Dataset,
+    batch_size: int = 100,
+) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+    test_document_generator = iter(test_dataset.documents)
+    test_subjects_generator = iter(test_dataset.subjects)
+
+    chunk_count = 0
+    document_count = 0
+    while True:
+        logger.debug("evaluate chunk %d of test documents (%d so far)", chunk_count, document_count)
+
+        loading_start = time.time()
+        test_document_chunk = list(islice(test_document_generator, batch_size))
+        test_subjects_chunk = list(islice(test_subjects_generator, batch_size))
+        logger.debug("loading chunk %d took %d ms", chunk_count, (time.time() - loading_start) * 1000)
+
+        if not test_document_chunk:
+            break
+
+        incidence_start = time.time()
+        test_incidence_chunk = subject_incidence_matrix_from_targets(test_subjects_chunk, subject_order)
+        logger.debug("incidence for chunk %d took %d ms", chunk_count, (time.time() - incidence_start) * 1000)
+
+        if isinstance(model, OracleModel):
+            # provide predictions to oracle model
+            model.set_test_targets(test_incidence_chunk)
+
+        prediction_start = time.time()
+        predicted_probabilities_chunk = model.predict_proba(test_document_chunk)
+        logger.debug("prediction of chunk %d took %d ms", chunk_count, (time.time() - prediction_start) * 1000)
+
+        chunk_count += 1
+        document_count += len(test_document_chunk)
+
+        yield test_incidence_chunk, predicted_probabilities_chunk
+
+
+def default_batch_evaluate_model(
+    model: ClassificationModel,
+    subject_order: Sequence[str],
+    test_dataset: Dataset,
+    score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
+    batch_size: int = 100,
+) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
+    # initialize new batched scoring functions
+    batched_scores = [generator() for generator in score_generators]
+    batched_per_class_scores = [generator() for generator in per_class_score_generators]
+
+    chunk_count = 0
+    test_chunk_generator = default_batch_predict_model(model, subject_order, test_dataset, batch_size)
+    for test_incidence_chunk, predicted_probabilities_chunk in test_chunk_generator:
+        scoring_start = time.time()
+        for batched_score in batched_scores:
+            batched_score.add_batch(test_incidence_chunk, predicted_probabilities_chunk)
+
+        for batched_per_class_score in batched_per_class_scores:
+            batched_per_class_score.add_batch(test_incidence_chunk, predicted_probabilities_chunk)
+        logger.debug("scoring of chunk %d took %d ms", chunk_count, (time.time() - scoring_start) * 1000)
+        chunk_count += 1
+
+    logger.debug("calculate batched scores")
+    scores = [batched_score() for batched_score in batched_scores]
+    per_class_scores = [batched_per_class_score() for batched_per_class_score in batched_per_class_scores]
+
+    return scores, per_class_scores
+
+
+class TrainAndEvaluateModelFunction:
 
     def __call__(
         self,
         model: ClassificationModel,
+        subject_order: Sequence[str],
         train_documents: Sequence[Document],
         train_incidence_matrix: np.ndarray,
+        test_dataset: Dataset,
+        score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
+        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
         validation_documents: Optional[Sequence[Document]] = None,
         validation_incidence_matrix: Optional[np.ndarray] = None,
-
-    ):
+    ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
         """Call fit and predict_proba method of a model in order to generated predictions.
 
         This is the default implementation of a fit and predict logic, which can be overwritten in order to, e.g., save
@@ -71,95 +164,25 @@ class TrainModelFunction:
         raise NotImplementedError()
 
 
-class EvaluateAndScoreModelFunction:
+class DefaultTrainAndEvaluateFunction(TrainAndEvaluateModelFunction):
 
-    def __call__(
-        self,
-        subject_order: Sequence[str],
-        model: ClassificationModel,
-        test_documents: Sequence[Document],
-        score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-    ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
-        raise NotImplementedError()
-
-
-class DefaultDoTrainingFunction(TrainModelFunction):
-
-    def __call__(
-        self,
-        model: ClassificationModel,
-        train_documents: Sequence[Document],
-        train_incidence_matrix: np.ndarray,
-        validation_documents: Optional[Sequence[Document]] = None,
-        validation_incidence_matrix: Optional[np.ndarray] = None,
-
-    ):
-        logger.info("train model %s", str(model))
-        model.fit(train_documents, train_incidence_matrix, validation_documents, validation_incidence_matrix)
-
-
-class DefaultEvaluateAndScoreModelFunction(EvaluateAndScoreModelFunction):
-
-    def __init__(self, batch_size: float = 100, ):
+    def __init__(self, batch_size: float = 100):
         self.batch_size = batch_size
 
     def __call__(
         self,
-        subject_order: Sequence[str],
         model: ClassificationModel,
+        subject_order: Sequence[str],
+        train_dataset: Dataset,
         test_dataset: Dataset,
         score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
         per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-    ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
-        test_document_generator = iter(test_dataset.documents)
-        test_subjects_generator = iter(test_dataset.subjects)
-
-        # initialize new batched scoring functions
-        batched_scores = [generator() for generator in score_generators]
-        batched_per_class_scores = [generator() for generator in per_class_score_generators]
-
-        chunk_count = 0
-        document_count = 0
-        while True:
-            logger.debug("evaluate chunk %d of test documents (%d so far)", chunk_count, document_count)
-
-            loading_start = time.time()
-            test_document_chunk = list(islice(test_document_generator, self.batch_size))
-            test_subjects_chunk = list(islice(test_subjects_generator, self.batch_size))
-            logger.debug("loading chunk %d took %d ms", chunk_count, (time.time() - loading_start) * 1000)
-
-            if not test_document_chunk:
-                break
-
-            incidence_start = time.time()
-            test_incidence_chunk = subject_incidence_matrix_from_targets(test_subjects_chunk, subject_order)
-            logger.debug("incidence for chunk %d took %d ms", chunk_count, (time.time() - incidence_start) * 1000)
-
-            if isinstance(model, OracleModel):
-                # provide predictions to oracle model
-                model.set_test_targets(test_incidence_chunk)
-
-            prediction_start = time.time()
-            predicted_probabilities_chunk = model.predict_proba(test_document_chunk)
-            logger.debug("prediction of chunk %d took %d ms", chunk_count, (time.time() - prediction_start) * 1000)
-
-            scoring_start = time.time()
-            for batched_score in batched_scores:
-                batched_score.add_batch(test_incidence_chunk, predicted_probabilities_chunk)
-
-            for batched_per_class_score in batched_per_class_scores:
-                batched_per_class_score.add_batch(test_incidence_chunk, predicted_probabilities_chunk)
-            logger.debug("scoring of chunk %d took %d ms", chunk_count, (time.time() - scoring_start) * 1000)
-
-            chunk_count += 1
-            document_count += len(test_document_chunk)
-
-        logger.debug("calculate batched scores")
-        scores = [batched_score() for batched_score in batched_scores]
-        per_class_scores = [batched_per_class_score() for batched_per_class_score in batched_per_class_scores]
-
-        return scores, per_class_scores
+        validation_dataset: Optional[Dataset] = None,
+    ):
+        default_train_model(model, subject_order, train_dataset, validation_dataset)
+        return default_batch_evaluate_model(
+            model, subject_order, test_dataset, score_generators, per_class_score_generators, self.batch_size
+        )
 
 
 def score_classification_models_for_dataset_with_splits(
@@ -170,8 +193,7 @@ def score_classification_models_for_dataset_with_splits(
     model_generators: Sequence[Callable[[], ClassificationModel]],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-    do_training: Optional[TrainModelFunction] = None,
-    do_evaluate: Optional[EvaluateAndScoreModelFunction] = None,
+    train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
     stop_after_evaluating_split: Optional[int] = None,
     use_test_data_as_validation_data: bool = False,
 ) -> Tuple[MultiSplitScores, MultiSplitPerClassScores]:
@@ -249,8 +271,7 @@ def score_classification_models_for_dataset_with_splits(
             model_generators,
             score_generators,
             per_class_score_generators,
-            do_training,
-            do_evaluate,
+            train_and_evaluate,
         )
 
         all_split_scores.append(scores)
@@ -270,8 +291,7 @@ def score_classification_models_for_dataset(
     model_generators: Sequence[Callable[[], ClassificationModel]],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-    do_training: TrainModelFunction,
-    do_evaluate: EvaluateAndScoreModelFunction,
+    train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
 
     all_model_scores = []
@@ -286,8 +306,7 @@ def score_classification_models_for_dataset(
             model_generator,
             score_generators,
             per_class_score_generators,
-            do_training,
-            do_evaluate,
+            train_and_evaluate,
         )
         all_model_scores.append(scores)
         all_model_per_class_scores.append(per_class_scores)
@@ -303,43 +322,25 @@ def score_classification_model_for_dataset(
     model_generator: Callable[[], ClassificationModel],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-    do_training: Optional[TrainModelFunction] = None,
-    do_evaluate: Optional[EvaluateAndScoreModelFunction] = None,
-    do_evaluate_batch_size: int = 100,
+    train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
+    batch_size: int = 100,
 ) -> Tuple[np.ndarray, np.ndarray]:
     # load default training and evaluation methods
-    if do_training is None:
-        do_training = DefaultDoTrainingFunction()
-    if do_evaluate is None:
-        do_evaluate = DefaultEvaluateAndScoreModelFunction(do_evaluate_batch_size)
-
-    # calcuate incidences
-    train_incidence_matrix = subject_incidence_matrix_from_targets(training_dataset.subjects, subject_order)
-
-    validation_documents = None
-    validation_incidence = None
-    if validation_dataset:
-        validation_documents = validation_dataset.documents
-        validation_incidence = subject_incidence_matrix_from_targets(validation_dataset.subjects, subject_order)
+    if train_and_evaluate is None:
+        train_and_evaluate = DefaultTrainAndEvaluateFunction(batch_size)
 
     # create new instance of model
     model = model_generator()
 
     # do training
-    do_training(
+    scores, per_class_scores = train_and_evaluate(
         model,
-        training_dataset.documents,
-        train_incidence_matrix,
-        validation_documents,
-        validation_incidence,
-    )
-
-    scores, per_class_scores = do_evaluate(
         subject_order,
-        model,
+        training_dataset,
         test_dataset,
         score_generators,
         per_class_score_generators,
+        validation_dataset,
     )
 
     return scores, per_class_scores

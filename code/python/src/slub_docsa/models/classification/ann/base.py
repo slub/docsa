@@ -12,11 +12,12 @@ from typing import Any, Optional, Sequence, cast
 import numpy as np
 import torch
 import scipy
+import transformers
 
 from sklearn.metrics import f1_score
 
 from torch.nn.modules.activation import ReLU, Tanh
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, IterableDataset
 from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
@@ -27,13 +28,25 @@ from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
 from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
 from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
-from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
 from slub_docsa.evaluation.classification.plotting import ann_training_history_plot, write_multiple_figure_formats
 
 logger = logging.getLogger(__name__)
 
 TORCH_MODEL_STATE_FILENAME = "torch_model_state.pickle"
 TORCH_MODEL_SHAPE_FILENAME = "torch_model_shape.pickle"
+
+
+class SimpleIterableDataset(IterableDataset):
+
+    def __init__(self, features, subjects: Optional[np.ndarray] = None):
+        self.features = features
+        self.subjects = subjects
+
+    def __iter__(self):
+        if self.subjects is not None:
+            return iter(zip(self.features, self.subjects))
+        return iter(self.features)
 
 
 class AbstractTorchModel(PersistableClassificationModel):
@@ -92,8 +105,11 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         for batch, (X, y) in enumerate(train_dataloader):
             # send features and targets to device
-            X, y = X.to(self.device), y.to(self.device)
-
+            if isinstance(X, transformers.BatchEncoding):
+                X = X.to(self.device)
+            else:
+                X = X.to(device=self.device, dtype=torch.float32)
+            y = y.to(self.device).to(torch.float32)
             # calculate loss
             output = self.model(X)
             loss = criterion(output, y)
@@ -118,7 +134,7 @@ class AbstractTorchModel(PersistableClassificationModel):
             )(train_targets, predicted_probabilities)
 
             epoch_top3_f1_score = scikit_incidence_metric(
-                positive_top_k_incidence_decision(3), f1_score, average="micro", zero_division=0
+                PositiveTopkIncidenceDecision(3), f1_score, average="micro", zero_division=0
             )(train_targets, predicted_probabilities)
 
         epoch_loss = epoch_loss / (batch + 1)
@@ -143,7 +159,13 @@ class AbstractTorchModel(PersistableClassificationModel):
                 epoch_loss = 0
                 batch = 0
                 for batch, (X, y) in enumerate(validation_dataloader):
-                    X, y = X.to(self.device), y.to(self.device)
+                    # send features and targets to device
+                    if isinstance(X, transformers.BatchEncoding):
+                        X = X.to(self.device)
+                    else:
+                        X = X.to(device=self.device, dtype=torch.float32)
+                    y = y.to(self.device).to(torch.float32)
+                    # evaluate model
                     output = self.model(X)
                     loss = criterion(output, y)
                     epoch_loss += loss.item()
@@ -162,7 +184,7 @@ class AbstractTorchModel(PersistableClassificationModel):
             )(validation_targets, validation_probabilities)
 
             epoch_top3_f1_score = scikit_incidence_metric(
-                positive_top_k_incidence_decision(3), f1_score, average="micro", zero_division=0
+                PositiveTopkIncidenceDecision(3), f1_score, average="micro", zero_division=0
             )(validation_targets, validation_probabilities)
 
             # reset model to training mode
@@ -173,17 +195,18 @@ class AbstractTorchModel(PersistableClassificationModel):
     def _get_data_loader_from_documents(self, texts, targets, batch_size, shuffle):
         # extract features from texts
         features = list(self.vectorizer.transform(iter(texts)))
-        features = np.array(features)
+        # features = np.array(features)
 
         # convert to tensors
-        features_tensor = torch.from_numpy(features).float()
-        targets_tensor = torch.from_numpy(targets).float()
+        # features_tensor = torch.from_numpy(features).float()
+        # targets_tensor = torch.from_numpy(targets).float()
 
         # wrap as torch data loader
-        dataset = TensorDataset(features_tensor, targets_tensor)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        dataset = SimpleIterableDataset(features, targets)
+        # dataset = TensorDataset(features_tensor, targets_tensor)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-        return dataloader, features.shape
+        return dataloader
 
     def fit(
         self,
@@ -201,7 +224,7 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # compile training data as data loader (and transform documents to features according to vectorizer)
         logger.debug("transform training data into tensors")
-        train_dataloader, train_features_shape = self._get_data_loader_from_documents(
+        train_dataloader = self._get_data_loader_from_documents(
             texts=train_corpus,
             targets=train_targets,
             batch_size=self.batch_size,
@@ -213,7 +236,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         if validation_documents is not None and validation_targets is not None:
             logger.debug("transform validation data into tensors")
             validation_corpus = [document_as_concatenated_string(d) for d in validation_documents]
-            validation_dataloader, _ = self._get_data_loader_from_documents(
+            validation_dataloader = self._get_data_loader_from_documents(
                 texts=validation_corpus,
                 targets=validation_targets,
                 batch_size=self.batch_size,
@@ -222,7 +245,7 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # initialize the torch model
         logger.info("initialize torch model on device '%s'", self.device)
-        self.model_shape = (int(train_features_shape[1]), int(train_targets.shape[1]))
+        self.model_shape = (int(self.vectorizer.shape()), int(train_targets.shape[1]))
         logger.debug("model shape will be %s", str(self.model_shape))
         self.model = self.get_model(*self.model_shape)
 
@@ -296,13 +319,9 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # transform documents to feature vectors
         features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in test_documents))
-        features = np.array(features)
-
-        # convert to tensors
-        features_tensor = torch.from_numpy(features).float()
 
         # setup torch datatsets
-        torch_dataset = TensorDataset(features_tensor)
+        torch_dataset = SimpleIterableDataset(features)
         dataloader = DataLoader(torch_dataset, batch_size=self.batch_size)
 
         # iterate over batches of all examples
@@ -310,16 +329,19 @@ class AbstractTorchModel(PersistableClassificationModel):
         self.model.eval()
         with torch.no_grad():
             for X in dataloader:
-                # send each examples to device
-                Xs = [x.to(self.device) for x in X]
+                # send features and targets to device
+                if isinstance(X, transformers.BatchEncoding):
+                    X = X.to(self.device)
+                else:
+                    X = X.to(device=self.device, dtype=torch.float32)
                 # evaluate model for each test example
-                outputs = self.model(*Xs)
+                outputs = self.model(X)
+                probabilities = torch.special.expit(outputs)
                 # retrieve outputs and collected them as numpy arrays
-                array = outputs.cpu().detach().numpy()
-                arrays.append(array)
+                arrays.append(probabilities.cpu().detach().numpy())
 
         # reverse logits and return results
-        predictions = cast(np.ndarray, cast(Any, scipy).special.expit(np.vstack(arrays)))
+        predictions = np.vstack(arrays)
         logger.debug("predictions shape is %s", predictions.shape)
         return predictions
 

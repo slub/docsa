@@ -8,7 +8,7 @@ from slub_docsa.evaluation.classification.incidence import is_crisp_cluster_memb
 from slub_docsa.evaluation.classification.incidence import membership_matrix_to_crisp_cluster_assignments
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
-from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision, top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision, TopkIncidenceDecision
 
 example_subject_order = [
     "uri://subject1",
@@ -77,9 +77,9 @@ def test_threshold_incidence_decision():
         [1, 1, 0]
     ])
 
-    assert np.array_equal(incidence_00, threshold_incidence_decision(0.0)(probabilities))
-    assert np.array_equal(incidence_05, threshold_incidence_decision(0.5)(probabilities))
-    assert np.array_equal(incidence_10, threshold_incidence_decision(1.0)(probabilities))
+    assert np.array_equal(incidence_00, ThresholdIncidenceDecision(0.0)(probabilities))
+    assert np.array_equal(incidence_05, ThresholdIncidenceDecision(0.5)(probabilities))
+    assert np.array_equal(incidence_10, ThresholdIncidenceDecision(1.0)(probabilities))
 
 
 def test_top_k_incidence_decision():
@@ -102,8 +102,8 @@ def test_top_k_incidence_decision():
         [1, 0, 1],
     ])
 
-    assert np.array_equal(incidence_top1, top_k_incidence_decision(1)(probabilities))
-    assert np.array_equal(incidence_top2, top_k_incidence_decision(2)(probabilities))
+    assert np.array_equal(incidence_top1, TopkIncidenceDecision(1)(probabilities))
+    assert np.array_equal(incidence_top2, TopkIncidenceDecision(2)(probabilities))
 
 
 def test_is_crisp_cluster_membership():

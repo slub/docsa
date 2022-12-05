@@ -211,9 +211,9 @@ the top-k subjects are implemented in `slub_docsa.evaluation.incidence`. In this
 strategy, which chooses two subjects with highest probability as the output:
 
 ```python
-from slub_docsa.evaluation.incidence import top_k_incidence_decision
+from slub_docsa.evaluation.incidence import TopkIncidenceDecision
 
-incidence_decision_function = top_k_incidence_decision(k=2)
+incidence_decision_function = TopkIncidenceDecision(k=2)
 predicted_incidence = incidence_decision_function(predicted_probabilities)
 print(predicted_incidence)
 ```
@@ -421,7 +421,7 @@ Since the predictive performance can be evaluated in various ways, we also need 
 ```python
 from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
-from slub_docsa.evaluation.incidence import positive_top_k_incidence_decision
+from slub_docsa.evaluation.incidence import PositiveTopkIncidenceDecision
 
 scores = [
     # f1 score for best threshold
@@ -430,7 +430,7 @@ scores = [
     ),
     # f1 score for top-3 selection
     scikit_incidence_metric(
-        positive_top_k_incidence_decision(3),
+        PositiveTopkIncidenceDecision(3),
         f1_score,
         average="micro",
         zero_division=0

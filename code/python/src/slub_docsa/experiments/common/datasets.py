@@ -30,7 +30,7 @@ def filter_and_cache_named_datasets(
 
     for dataset_name, lazy_sample_iterator, lazy_subject_hierarchy in dataset_list:
         # load and persist each dataset
-        logger.info("load and save persisted dataset %s", dataset_name)
+        logger.debug("load and save persisted dataset %s", dataset_name)
         filepath = os.path.join(cache_dir, f"{dataset_name}.sqlite")
         dataset = load_persisted_dataset_from_lazy_sample_iterator(lazy_sample_iterator, filepath)
         yield dataset_name, dataset, lazy_subject_hierarchy

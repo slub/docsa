@@ -71,7 +71,7 @@ if __name__ == "__main__":
     from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
     from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
     from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
-    from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
+    from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
 
     scores = [
         # f1 score for best threshold
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         ),
         # f1 score for top-3 selection
         scikit_incidence_metric(
-            positive_top_k_incidence_decision(3),
+            PositiveTopkIncidenceDecision(3),
             f1_score,
             average="micro",
             zero_division=0

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     random_state = 123
-    load_cached_predictions = False
+    load_cached_scores = False
     dataset_subset = [
         "random_no_correlations",
         "random_easy_to_predict",
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
         named_models_generator=_model_list_generator,
         n_splits=n_splits,
-        load_cached_predictions=load_cached_predictions,
+        load_cached_scores=load_cached_scores,
     )
 
     write_default_classification_plots(

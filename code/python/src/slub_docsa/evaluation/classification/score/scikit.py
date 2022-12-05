@@ -10,7 +10,7 @@ from sklearn.metrics import f1_score
 from slub_docsa.common.score import PerClassProbabilitiesScore
 from slub_docsa.common.score import IncidenceDecisionFunction
 from slub_docsa.common.score import MultiClassProbabilitiesScore, MultiClassIncidenceScore
-from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision
+from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def scikit_incidence_metric(
     incidence_decision_function: IncidenceDecisionFunctionType
         a function that transforms a subject probability matrix (as numpy.ndarray) to an incidence matrix (binary
         matrix of same shape) using some decision logic, e.g., a threshold decision via
-        `slub_docsa.evaluation.incidence.threshold_incidence_decision`
+        `slub_docsa.evaluation.incidence.ThresholdIncidenceDecision`
     metric_function: MultiClassIncidenceScoreFunction
         a function that scores the resulting incidence matrix (after applying the decision function), e.g., scikit's
         `precision_score` function
@@ -49,10 +49,10 @@ def scikit_incidence_metric(
     --------
     >>> import numpy as np
     >>> from sklearn.metrics import precision_score
-    >>> from slub_docsa.evaluation.incidence import threshold_incidence_decision
+    >>> from slub_docsa.evaluation.incidence import ThresholdIncidenceDecision
     >>> target_incidence = np.array([[0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
     >>> subject_probabilities = np.array([[0.1, 0.2, 0.9], [0.3, 0.7, 0.1]])
-    >>> threshold_function = threshold_incidence_decision(0.5)
+    >>> threshold_function = ThresholdIncidenceDecision(0.5)
     >>> score_function = scikit_incidence_metric(threshold_function, precision_score, average="micro")
     >>> score_function(target_incidence, subject_probabilities)
     1.0
@@ -108,7 +108,7 @@ def scikit_metric_for_best_threshold_based_on_f1score(
         best_incidence = np.zeros((2, 2))
         for threshold in [i / 10.0 + 0.1 for i in range(9)]:
             score = scikit_incidence_metric(
-                threshold_incidence_decision(threshold),
+                ThresholdIncidenceDecision(threshold),
                 f1_score,
                 average="micro",
                 zero_division=0
@@ -119,7 +119,7 @@ def scikit_metric_for_best_threshold_based_on_f1score(
             # logger.debug("score for threshold t=%f is %f", t, score)
 
             if score > best_score:
-                best_incidence = threshold_incidence_decision(threshold)(predicted_probabilities)
+                best_incidence = ThresholdIncidenceDecision(threshold)(predicted_probabilities)
                 best_score = score
                 best_threshold = threshold
 

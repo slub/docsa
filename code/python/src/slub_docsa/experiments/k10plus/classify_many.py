@@ -26,7 +26,7 @@ def k10plus_experiments_classify_many(
     model_subset: List[str],
     dataset_subset: Optional[List[str]],
     n_splits: int = 10,
-    # load_cached_predictions: bool = False,
+    load_cached_scores: bool = False,
     random_state: Optional[int] = None,
     split_function_name: Union[Literal["random"], Literal["stratified"]] = "random",
     stop_after_evaluating_split: Optional[int] = None,
@@ -41,7 +41,7 @@ def k10plus_experiments_classify_many(
         return initialize_classification_models_from_tuple_list(model_list, model_subset)
 
     named_datasets = filter_and_cache_named_datasets(
-        k10plus_named_datasets_tuple_list(schemas=["rvk", "ddc"], languages=[language], variants=["public"]),
+        k10plus_named_datasets_tuple_list(schemas=["rvk", "ddc"], languages=[language], variants=["slub"]),
         dataset_subset
     )
 
@@ -50,7 +50,7 @@ def k10plus_experiments_classify_many(
         split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
         named_models_generator=_model_list_generator,
         n_splits=n_splits,
-        # load_cached_predictions=load_cached_predictions,
+        load_cached_scores=load_cached_scores,
         stop_after_evaluating_split=stop_after_evaluating_split,
     )
 
@@ -58,7 +58,7 @@ def k10plus_experiments_classify_many(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     k10plus_experiments_classify_many(
         language="de",
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         ],
         dataset_subset=None,
         n_splits=10,
-        # load_cached_predictions=True,
+        load_cached_scores=True,
         random_state=123,
         split_function_name="random",
         stop_after_evaluating_split=0

@@ -10,8 +10,8 @@ from scipy.spatial.distance import cosine
 from slub_docsa.common.score import BatchedMultiClassProbabilitiesScore, BatchedPerClassProbabilitiesScore
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
-from slub_docsa.evaluation.classification.incidence import positive_top_k_incidence_decision
-from slub_docsa.evaluation.classification.incidence import threshold_incidence_decision
+from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
+from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 # from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
 from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionConfusionScore, BatchedF1Score
 from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionPerClassConfusionScore
@@ -68,36 +68,36 @@ def default_named_score_list(
             score_generator=BatchedF1Score
         )),
         ("top3 f1 micro", [0, 1], lambda: BatchedIncidenceDecisionConfusionScore(
-            incidence_decision=positive_top_k_incidence_decision(3),
+            incidence_decision=PositiveTopkIncidenceDecision(3),
             confusion_score=BatchedF1Score()
         )),
         ("t=best precision micro", [0, 1], lambda: BatchedBestThresholdScore(
             score_generator=BatchedPrecisionScore
         )),
         ("top3 precision micro", [0, 1], lambda: BatchedIncidenceDecisionConfusionScore(
-            incidence_decision=positive_top_k_incidence_decision(3),
+            incidence_decision=PositiveTopkIncidenceDecision(3),
             confusion_score=BatchedPrecisionScore()
         )),
         ("t=best recall micro", [0, 1], lambda: BatchedBestThresholdScore(
             score_generator=BatchedRecallScore
         )),
         ("top3 recall micro", [0, 1], lambda: BatchedIncidenceDecisionConfusionScore(
-            incidence_decision=positive_top_k_incidence_decision(3),
+            incidence_decision=PositiveTopkIncidenceDecision(3),
             confusion_score=BatchedRecallScore()
         )),
         # ("t=0.5 accuracy", [0, 1], scikit_incidence_metric(
-        #     threshold_incidence_decision(0.5),
+        #     ThresholdIncidenceDecision(0.5),
         #     accuracy_score
         # )),
         # ("top3 accuracy", [0, 1], scikit_incidence_metric(
-        #     positive_top_k_incidence_decision(3),
+        #     PositiveTopkIncidenceDecision(3),
         #     accuracy_score
         # )),
         # ("t=best h_loss", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
         #     cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
         # )),
         # ("top3 h_loss", [0, 1], scikit_incidence_metric(
-        #     positive_top_k_incidence_decision(3),
+        #     PositiveTopkIncidenceDecision(3),
         #     cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
         # )),
         # ("roc auc micro", [0, 1], lambda t, p: roc_auc_score(t, p, average="micro")),
@@ -111,20 +111,20 @@ def default_named_per_class_score_list() -> ScoreTupleList[BatchedPerClassProbab
     """Return a list of default per-subject score functions for evaluation."""
     scores: ScoreTupleList[BatchedPerClassProbabilitiesScore] = [
         ("t=0.5 f1", (0, 1), lambda: BatchedIncidenceDecisionPerClassConfusionScore(
-            incidence_decision=threshold_incidence_decision(0.5),
+            incidence_decision=ThresholdIncidenceDecision(0.5),
             confusion_score=BatchedPerClassF1Score(),
         )),
         ("t=0.5 precision", (0, 1), lambda: BatchedIncidenceDecisionPerClassConfusionScore(
-            incidence_decision=threshold_incidence_decision(0.5),
+            incidence_decision=ThresholdIncidenceDecision(0.5),
             confusion_score=BatchedPerClassPrecisionScore(),
         )),
         ("t=0.5 recall", (0, 1), lambda: BatchedIncidenceDecisionPerClassConfusionScore(
-            incidence_decision=threshold_incidence_decision(0.5),
+            incidence_decision=ThresholdIncidenceDecision(0.5),
             confusion_score=BatchedPerClassRecallScore(),
         )),
         ("# test samples", (0, None), BatchedNumberOfTestExamplesPerClass),
         # ("t=0.5 accuracy", (0, 1), scikit_incidence_metric(
-        #     threshold_incidence_decision(0.5),
+        #     ThresholdIncidenceDecision(0.5),
         #     accuracy_score
         # )),
         # ("mean squared error", (0, None), mean_squared_error),
@@ -150,3 +150,12 @@ def default_named_clustering_score_list(
     ]
 
     return scores
+
+
+if __name__ == "__main__":
+
+    for score_name, _, score_generator in default_named_score_list():
+        print(score_name, str(score_generator()))
+
+    for score_name, _, score_generator in default_named_per_class_score_list():
+        print(score_name, str(score_generator()))

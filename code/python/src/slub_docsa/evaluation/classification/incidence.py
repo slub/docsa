@@ -121,81 +121,94 @@ def subject_idx_from_incidence_matrix(
     return list(map(lambda l: list(np.where(l == 1)[0]), incidence_array))
 
 
-def threshold_incidence_decision(threshold: float = 0.5) -> IncidenceDecisionFunction:
-    """Select subjects based on a threshold over probabilities.
+class ThresholdIncidenceDecision(IncidenceDecisionFunction):
 
-    Parameters
-    ----------
-    threshold: float
-        the minimum probability required for a subject to be chosen
+    def __init__(self, threshold: float = 0.5):
+        """Select subjects based on a threshold over probabilities.
 
-    Returns
-    -------
-    Callback[[np.ndarray], np.ndarray]
-        A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
-        same shape representing which subjects are chosen for which documents.
-    """
-    def _decision(probabilities: np.ndarray) -> np.ndarray:
+        Parameters
+        ----------
+        threshold: float
+            the minimum probability required for a subject to be chosen
+
+        Returns
+        -------
+        Callback[[np.ndarray], np.ndarray]
+            A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
+            same shape representing which subjects are chosen for which documents.
+        """
+        self.threshold = threshold
+
+    def __call__(self, probabilities: np.ndarray) -> np.ndarray:
         # slower: return np.array(np.where(probabilities >= threshold, 1, 0))
-        return (probabilities >= threshold).astype(np.uint8)
+        return (probabilities >= self.threshold).astype(np.uint8)
 
-    return _decision
+    def __str__(self):
+        return f"<ThresholdIncidenceDecision threshold={self.threshold}>"
 
 
-def top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunction:
-    """Select exactly k subjects with highest probabilities.
+class TopkIncidenceDecision(IncidenceDecisionFunction):
 
-    Chooses random subjects if less than k subjects have positive probability.
+    def __init__(self, k: int = 3):
+        """Select exactly k subjects with highest probabilities.
 
-    Parameters
-    ----------
-    k: int
-        the maximum number of subjects that are selected and returned
+        Chooses random subjects if less than k subjects have positive probability.
 
-    Returns
-    -------
-    Callback[[np.ndarray], np.ndarray]
-        A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
-        same shape representing which subjects are chosen for which documents.
-    """
+        Parameters
+        ----------
+        k: int
+            the maximum number of subjects that are selected and returned
 
-    def _decision(probabilities: np.ndarray) -> np.ndarray:
+        Returns
+        -------
+        Callback[[np.ndarray], np.ndarray]
+            A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
+            same shape representing which subjects are chosen for which documents.
+        """
+        self.k = k
+
+    def __call__(self, probabilities: np.ndarray) -> np.ndarray:
         incidence = np.zeros(probabilities.shape)
-        x_indices = np.repeat(np.arange(0, incidence.shape[0]), k)
-        y_indices = np.argpartition(probabilities, -k)[:, -k:].flatten()
+        x_indices = np.repeat(np.arange(0, incidence.shape[0]), self.k)
+        y_indices = np.argpartition(probabilities, -self.k)[:, -self.k:].flatten()
         incidence[x_indices, y_indices] = 1
         return incidence
 
-    return _decision
+    def __str__(self):
+        return f"<TopKIncidenceDecision k={self.k}>"
 
 
-def positive_top_k_incidence_decision(k: int = 3) -> IncidenceDecisionFunction:
-    """Select at most k subjects with highest positive probabilities.
+class PositiveTopkIncidenceDecision(IncidenceDecisionFunction):
 
-    Does not choose subjects with zero probability, and thus, may even not choose any subjects at all.
-    Matches decision function used by Annif.
+    def __init__(self, k: int = 3):
+        """Select at most k subjects with highest positive probabilities.
 
-    Parameters
-    ----------
-    k: int
-        the maximum number of subjects that are selected and returned
+        Does not choose subjects with zero probability, and thus, may even not choose any subjects at all.
+        Matches decision function used by Annif.
 
-    Returns
-    -------
-    Callback[[np.ndarray], np.ndarray]
-        A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
-        same shape representing which subjects are chosen for which documents.
-    """
+        Parameters
+        ----------
+        k: int
+            the maximum number of subjects that are selected and returned
 
-    def _decision(probabilities: np.ndarray) -> np.ndarray:
+        Returns
+        -------
+        Callback[[np.ndarray], np.ndarray]
+            A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
+            same shape representing which subjects are chosen for which documents.
+        """
+        self.k = k
+
+    def __call__(self, probabilities: np.ndarray) -> np.ndarray:
         incidence = np.zeros(probabilities.shape)
-        x_indices = np.repeat(np.arange(0, incidence.shape[0]), k)
-        y_indices = np.argpartition(probabilities, -k)[:, -k:].flatten()
+        x_indices = np.repeat(np.arange(0, incidence.shape[0]), self.k)
+        y_indices = np.argpartition(probabilities, -self.k)[:, -self.k:].flatten()
         incidence[x_indices, y_indices] = 1
         incidence[probabilities <= 0.0] = 0
         return incidence
 
-    return _decision
+    def __str__(self):
+        return f"<PositiveTopkIncidenceDecision k={self.k}>"
 
 
 def extend_incidence_list_to_ancestors(

@@ -16,7 +16,7 @@ target subjects of the test dataset. Instead of learning a model it simply retur
 As a result, this model should always outperform any other classification model. This can be useful to determine
 the maximal achievable score in some scenarios where the best score is not known in advance.
 
-For example, when chosing subjects based on the `slub_docsa.evaluation.incidence.positive_top_k_incidence_decision`
+For example, when chosing subjects based on the `slub_docsa.evaluation.incidence.PositiveTopkIncidenceDecision`
 and there are documents that are annotated with more then `k` subjects, even the
 `slub_docsa.models.classification.dummy.OracleModel` will not be able to achieve the maximum `sklearn.metrics.f1_score`
 of `1.0`, since some subjects are not predicted even if their test subject probabilities are correctly predicted as
@@ -32,7 +32,7 @@ predictions.
 The `slub_docsa.models.classification.dummy.RandomModel` returns uniform random subject probabilities between `0.0` and
 `1.0`.
 
-This means, for example, using the `slub_docsa.evaluation.incidence.threshold_incidence_decision` with `threshold=0.5`,
+This means, for example, using the `slub_docsa.evaluation.incidence.ThresholdIncidenceDecision` with `threshold=0.5`,
 it will predict on average half of all available subjects.
 
 Random predictions can be useful as a minimum baseline and to determine minimum score values. Ideally, non-dummy models
