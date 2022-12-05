@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
 from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer, TfidfStemmingVectorizer
-from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann.base import TorchSingleLayerDenseReluModel
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 

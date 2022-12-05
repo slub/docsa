@@ -9,20 +9,27 @@ from sklearn.metrics import f1_score
 from slub_docsa.common.paths import get_cache_dir, get_figures_dir
 from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 from slub_docsa.evaluation.classification.incidence import unique_subject_order, subject_incidence_matrix_from_targets
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
-from slub_docsa.models.classification.ann_torch import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann.base import TorchSingleLayerDenseReluModel
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     random_state = 123
+    dataset_name = "qucosa_de_fulltexts_langid_ddc"
+    check_qucosa_download = False
+
     plot_training_history_filepath = os.path.join(get_figures_dir(), "qucosa/classify_one_ann_history")
     stemming_cache_filepath = os.path.join(get_cache_dir(), "stemming/global_cache.sqlite")
-    _, dataset, _ = list(qucosa_named_datasets(["qucosa_de_fulltexts_langid_ddc"]))[0]
+
+    _, dataset, _ = next(filter_and_cache_named_datasets(
+        qucosa_named_datasets_tuple_list(check_qucosa_download), [dataset_name]
+    ))
 
     subject_order = unique_subject_order(dataset.subjects)
 
