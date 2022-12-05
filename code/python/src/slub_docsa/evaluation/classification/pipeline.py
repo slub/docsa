@@ -13,7 +13,7 @@ import numpy as np
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
-from slub_docsa.common.score import BatchedPerClassProbabilityScore, BatchedMultiClassProbabilitiesScore
+from slub_docsa.common.score import BatchedPerClassProbabilitiesScore, BatchedMultiClassProbabilitiesScore
 from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
 from slub_docsa.evaluation.dataset.condition import check_dataset_subjects_have_minimum_samples
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
@@ -79,7 +79,7 @@ class EvaluateAndScoreModelFunction:
         model: ClassificationModel,
         test_documents: Sequence[Document],
         score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilityScore]],
+        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
         raise NotImplementedError()
 
@@ -95,7 +95,7 @@ class DefaultDoTrainingFunction(TrainModelFunction):
         validation_incidence_matrix: Optional[np.ndarray] = None,
 
     ):
-        logger.info("do training")
+        logger.info("train model %s", str(model))
         model.fit(train_documents, train_incidence_matrix, validation_documents, validation_incidence_matrix)
 
 
@@ -110,7 +110,7 @@ class DefaultEvaluateAndScoreModelFunction(EvaluateAndScoreModelFunction):
         model: ClassificationModel,
         test_dataset: Dataset,
         score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilityScore]],
+        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
         test_document_generator = iter(test_dataset.documents)
         test_subjects_generator = iter(test_dataset.subjects)
@@ -169,7 +169,7 @@ def score_classification_models_for_dataset_with_splits(
     dataset: Dataset,
     model_generators: Sequence[Callable[[], ClassificationModel]],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilityScore]],
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     do_training: Optional[TrainModelFunction] = None,
     do_evaluate: Optional[EvaluateAndScoreModelFunction] = None,
     stop_after_evaluating_split: Optional[int] = None,
@@ -269,7 +269,7 @@ def score_classification_models_for_dataset(
     validation_dataset: Optional[Dataset],
     model_generators: Sequence[Callable[[], ClassificationModel]],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilityScore]],
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     do_training: TrainModelFunction,
     do_evaluate: EvaluateAndScoreModelFunction,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -302,7 +302,7 @@ def score_classification_model_for_dataset(
     validation_dataset: Optional[Dataset],
     model_generator: Callable[[], ClassificationModel],
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
-    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilityScore]],
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     do_training: Optional[TrainModelFunction] = None,
     do_evaluate: Optional[EvaluateAndScoreModelFunction] = None,
     do_evaluate_batch_size: int = 100,

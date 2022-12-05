@@ -214,8 +214,8 @@ def per_subject_precision_recall_vs_samples_plot(
     Parameters
     ----------
     score_matrix: numpy.ndarray
-        the per-subject score matrix that contains both precision (first index) and recall (second index) for every
-        subject in a matrix of shape `(len(models), 2, n_splits, len(subjects))`
+        the per-subject score matrix that contains both the number of test samples (first index), recall (second index)
+        and precision (third index) for every subject in a matrix of shape `(n_splits, len(models), 3, len(subjects))`
     model_names: List[str]
         the list of model labels
 
@@ -224,7 +224,7 @@ def per_subject_precision_recall_vs_samples_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
-    n_models, _, _, _ = score_matrix.shape
+    _, n_models, _, _ = score_matrix.shape
 
     fig = cast(Any, make_subplots(
         rows=1,
@@ -236,8 +236,8 @@ def per_subject_precision_recall_vs_samples_plot(
         for j in [0, 1]:
             fig.add_trace(
                 cast(Any, go.Scatter)(
-                    x=score_matrix[i, 0, :, :].flatten(),
-                    y=score_matrix[i, j + 1, :, :].flatten(),
+                    x=score_matrix[:, i, 0, :].flatten(),
+                    y=score_matrix[:, i, j + 1, :].flatten(),
                     name=model_names[i],
                     showlegend=j <= 0,
                     legendgroup=i,
@@ -285,7 +285,7 @@ def per_subject_score_histograms_plot(
     ----------
     score_matrix: numpy.ndarray
         the per-subject score matrix that contains all scores for every subject in a matrix of shape
-        `(len(models), len(scores_functions), n_splits, len(subjects))`
+        `(n_splits, len(models), len(scores_functions), len(subjects))`
     model_names: List[str]
         the list of model labels
     score_names: List[str]
@@ -298,7 +298,7 @@ def per_subject_score_histograms_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
-    n_models, n_scores, _, _ = score_matrix.shape
+    _, n_models, n_scores, _ = score_matrix.shape
 
     if n_scores != len(score_names):
         raise ValueError("number of columns in score matrix does not match score names list")
@@ -315,11 +315,11 @@ def per_subject_score_histograms_plot(
     bin_ranges = []
 
     for i, score_name in enumerate(score_names):
-        bin_dict = _calculate_score_histogram_bin(score_matrix[:, i, :, :].flatten(), score_ranges[i])
+        bin_dict = _calculate_score_histogram_bin(score_matrix[:, :, i, :].flatten(), score_ranges[i])
         bin_ranges.append([bin_dict["start"], bin_dict["end"]])
 
         for j, model_name in enumerate(model_names):
-            values = score_matrix[j, i, :, :].flatten()
+            values = score_matrix[:, j, i, :].flatten()
 
             fig.add_trace(
                 cast(Any, go.Histogram)(

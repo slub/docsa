@@ -38,27 +38,28 @@ def write_default_classification_plots(
     )
 
     for dataset_result in evaluation_result:
-        prefix = f"{dataset_result.dataset_name}"
+        dataset_plot_directory = os.path.join(plot_directory, f"{dataset_result.dataset_name}")
+        os.makedirs(dataset_plot_directory, exist_ok=True)
 
         write_precision_recall_plot(
             dataset_result,
-            os.path.join(plot_directory, f"{prefix}_precision_recall_plot_{filename_suffix}"),
+            os.path.join(dataset_plot_directory, f"precision_recall_plot_{filename_suffix}"),
         )
 
-        # write_per_subject_precision_recall_vs_samples_plot(
-        #     dataset_result,
-        #     os.path.join(plot_directory, f"{prefix}_per_subject_precision_recall_vs_samples_plot_{filename_suffix}"),
-        # )
+        write_per_subject_precision_recall_vs_samples_plot(
+            dataset_result,
+            os.path.join(dataset_plot_directory, f"per_subject_precision_recall_vs_samples_plot_{filename_suffix}"),
+        )
 
         write_score_matrix_box_plot(
             dataset_result,
-            os.path.join(plot_directory, f"{prefix}_score_plot_{filename_suffix}"),
+            os.path.join(dataset_plot_directory, f"score_plot_{filename_suffix}"),
         )
 
-        # write_per_subject_score_histograms_plot(
-        #     dataset_result,
-        #     os.path.join(plot_directory, f"{prefix}_per_subject_score_{filename_suffix}"),
-        # )
+        write_per_subject_score_histograms_plot(
+            dataset_result,
+            os.path.join(dataset_plot_directory, f"per_subject_score_{filename_suffix}"),
+        )
 
 
 def write_default_clustering_plots(
@@ -172,7 +173,7 @@ def write_per_subject_precision_recall_vs_samples_plot(
     samples_idx = score_names.index("# test samples")
 
     figure = per_subject_precision_recall_vs_samples_plot(
-        evaluation_result.per_class_score_matrix[:, [samples_idx, precision_idx, recall_idx], :, :],  # type: ignore
+        evaluation_result.per_class_score_matrix[:, :, [samples_idx, precision_idx, recall_idx], :],  # type: ignore
         evaluation_result.model_names,
     )
     write_multiple_figure_formats(figure, plot_filepath)

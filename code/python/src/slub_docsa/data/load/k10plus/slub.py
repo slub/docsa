@@ -18,6 +18,7 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 from slub_docsa.common.sample import Sample
 from slub_docsa.data.load.languages import convert_language_code_to_l3, load_language_codes
+from slub_docsa.data.load.subjects.common import subject_hierarchy_by_subject_schema
 from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri
 from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
 from slub_docsa.data.load.subjects.bk import bk_notation_to_uri
@@ -242,6 +243,7 @@ def k10plus_slub_samples_generator(
     schemas: Optional[Iterable[str]] = None,
     limit: Optional[int] = None,
     require_toc: bool = True,
+    filter_unknown_subjects: bool = True
 ):
     """Read k10plus documents and combine them with fulltext information from SLUB data."""
     doc_count = 0
@@ -250,6 +252,7 @@ def k10plus_slub_samples_generator(
 
     languages = set(languages) if languages is not None else set()
     schemas = set(schemas) if schemas is not None else set()
+    subject_hierarchies = {schema: subject_hierarchy_by_subject_schema(schema) for schema in schemas}
 
     language_code_table = load_language_codes()
     languages = {convert_language_code_to_l3(code, language_code_table) for code in languages}
@@ -289,7 +292,12 @@ def k10plus_slub_samples_generator(
         )
 
         # extract requested classification information
-        subjects = sum([doc.classifications.get(schema, []) for schema in schemas], [])
+        subjects = []
+        for schema in schemas:
+            schema_subjects = doc.classifications.get(schema, [])
+            if filter_unknown_subjects:
+                schema_subjects = [s_uri for s_uri in schema_subjects if s_uri in subject_hierarchies[schema]]
+            subjects.extend(schema_subjects)
 
         # skip documents that have not classification annotations for requested schemas
         if schemas and not subjects:

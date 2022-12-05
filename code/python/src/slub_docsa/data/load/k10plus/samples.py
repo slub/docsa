@@ -9,8 +9,10 @@ from typing import Iterable, Mapping, Optional, Set
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.load.k10plus.cache import k10plus_read_from_json_cache
 from slub_docsa.data.load.languages import load_language_codes, convert_language_code_to_l3
+from slub_docsa.data.load.subjects.common import subject_hierarchy_by_subject_schema
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,8 @@ def k10plus_json_document_as_sample(
     json_document,
     languages: Set[str],
     schemas: Set[str],
+    subject_hierarchies: Mapping[str, SubjectHierarchy],
+    filter_unknown_subjects: bool = True,
 ) -> Sample:
     """Parse json document and extract title and rvk classes."""
     # check language
@@ -35,14 +39,11 @@ def k10plus_json_document_as_sample(
 
     # extract subjects
     subjects = []
-    if "rvk" in schemas:
-        subjects.extend(json_document["subjects"]["rvk"])
-    if "gnd" in schemas:
-        subjects.extend(json_document["subjects"]["gnd"])
-    if "bk" in schemas:
-        subjects.extend(json_document["subjects"]["bk"])
-    if "ddc" in schemas:
-        subjects.extend(json_document["subjects"]["ddc"])
+    for schema in schemas:
+        schema_subjects = json_document["subjects"][schema]
+        if filter_unknown_subjects:
+            schema_subjects = [s_uri for s_uri in schema_subjects if s_uri in subject_hierarchies[schema]]
+        subjects.extend(schema_subjects)
 
     if schemas and not subjects:
         return None
@@ -74,6 +75,7 @@ def k10plus_public_samples_generator(
     limit: Optional[int] = None,
     line_batch_size: int = 1000,
     workers: Optional[int] = None,
+    filter_unknown_subjects: bool = True
 ):
     """Return iterator over k10plus samples."""
     doc_count = 0
@@ -91,10 +93,14 @@ def k10plus_public_samples_generator(
         if schema not in ["rvk", "bk", "ddc", "gnd"]:
             raise ValueError(f"schema {schema} not supported")
 
+    subject_hierarchies = {schema: subject_hierarchy_by_subject_schema(schema) for schema in schemas}
+
     # iterate over all cached json documents
     json_generator = k10plus_read_from_json_cache(xml_directory, json_directory, download, workers, line_batch_size)
     for json_document in json_generator:
-        sample = k10plus_json_document_as_sample(json_document, languages, schemas)
+        sample = k10plus_json_document_as_sample(
+            json_document, languages, schemas, subject_hierarchies, filter_unknown_subjects
+        )
         if sample:
             if limit is not None and doc_count >= limit:
                 logger.debug("stop because of limit=%d", limit)
