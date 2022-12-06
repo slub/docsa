@@ -1,4 +1,4 @@
-"""Download k10plus data."""
+"""Download k10plus marc21 dump files."""
 
 import os
 import urllib.request
@@ -83,5 +83,4 @@ def k10plus_marc21_xml_files(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-
     download_k10plus_marc21_files()

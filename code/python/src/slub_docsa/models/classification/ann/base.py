@@ -25,7 +25,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
+from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizerMixin
 from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
 from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
@@ -195,12 +195,6 @@ class AbstractTorchModel(PersistableClassificationModel):
     def _get_data_loader_from_documents(self, texts, targets, batch_size, shuffle):
         # extract features from texts
         features = list(self.vectorizer.transform(iter(texts)))
-        # features = np.array(features)
-
-        # convert to tensors
-        # features_tensor = torch.from_numpy(features).float()
-        # targets_tensor = torch.from_numpy(targets).float()
-
         # wrap as torch data loader
         dataset = SimpleIterableDataset(features, targets)
         # dataset = TensorDataset(features_tensor, targets_tensor)
@@ -245,12 +239,12 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # initialize the torch model
         logger.info("initialize torch model on device '%s'", self.device)
-        self.model_shape = (int(self.vectorizer.shape()), int(train_targets.shape[1]))
+        self.model_shape = (int(self.vectorizer.output_shape()[0]), int(train_targets.shape[1]))
         logger.debug("model shape will be %s", str(self.model_shape))
         self.model = self.get_model(*self.model_shape)
 
         number_of_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        logger.debug("torch model has %d parameters", number_of_parameters)
+        logger.info("torch model has %d parameters", number_of_parameters)
 
         self.model.to(self.device)
         self.model.train()
@@ -290,7 +284,7 @@ class AbstractTorchModel(PersistableClassificationModel):
             epoch_train_top3_f1_score_history.append(epoch_train_top3_f1_score)
             epoch_vali_top3_f1_score_history.append(epoch_vali_top3_f1_score)
 
-            logger.debug(
+            logger.info(
                 "trained epoch %d, train loss %.5f, test loss %.5f, test t=best f1 %.3f, test top3 f1 %.3f",
                 epoch, epoch_train_loss, epoch_validation_loss, epoch_vali_best_threshold_f1_score,
                 epoch_vali_top3_f1_score
@@ -357,7 +351,7 @@ class AbstractTorchModel(PersistableClassificationModel):
             pickle.dump(self.model_shape, file)
 
         logger.info("save vectorizer to %s", persist_dir)
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not save vectorizer that is not persistable")
         self.vectorizer.save(persist_dir)
 
@@ -383,7 +377,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         self.model.to(self.device)
 
         logger.info("load vectorizer from %s", persist_dir)
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not load vectorizer that is not persistable")
         self.vectorizer.load(persist_dir)
 

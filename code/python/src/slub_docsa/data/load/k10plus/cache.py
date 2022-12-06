@@ -1,4 +1,8 @@
-"""Cache k10plus data as json files."""
+"""Cache k10plus data as json files.
+
+This package allows to iterate through the full k10plus marc21 xml dumps and generate json documents with relevant
+information (title, language, subjects). The xml processing is parallized to achieve high performance.
+"""
 
 from itertools import islice
 import os
@@ -45,7 +49,17 @@ def k10plus_transform_and_save_xml_to_json(
     json_filepath: str,
     line_batch_size: int = 1000,
 ):
-    """Read a single k10plus xml dump file and saves a single corresponding json cache file after transformation."""
+    """Read a single k10plus xml dump file and saves a single corresponding json cache file after transformation.
+
+    Parameters
+    ----------
+    xml_filepath : str
+        the filepath to the k10plus marc21 xml dump file
+    json_filepath : str
+        the filepath to the corresponding json cache file that is generated
+    line_batch_size : int, optional
+        the number of lines that are read in one batch to improve performance, by default 1000
+    """
     if os.path.exists(json_filepath):
         logger.info("k10plus json cache file already exists at, skipping: %s", json_filepath)
         return
@@ -69,7 +83,7 @@ def k10plus_build_json_cache(
     workers: Optional[int] = None,
     line_batch_size: int = 1000,
 ):
-    """Read all k10plus marc21 xml dump files and creates corresponding json cache files.
+    """Read all k10plus marc21 xml dump files and create corresponding json cache files.
 
     Parameters
     ----------
@@ -111,7 +125,7 @@ def k10plus_read_from_json_cache(
     workers: Optional[int] = None,
     line_batch_size: int = 1000,
 ):
-    """Read from all k10plus json cache files (and create cache if missing).
+    """Read from all k10plus json cache files (and create json cache if missing).
 
     Parameters
     ----------

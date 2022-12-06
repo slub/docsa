@@ -117,6 +117,7 @@ def default_batch_evaluate_model(
     scores = [batched_score() for batched_score in batched_scores]
     per_class_scores = [batched_per_class_score() for batched_per_class_score in batched_per_class_scores]
 
+    logger.info("scores for model %s are %s", str(model), scores)
     return scores, per_class_scores
 
 

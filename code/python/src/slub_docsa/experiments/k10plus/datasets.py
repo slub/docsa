@@ -2,7 +2,7 @@
 
 from functools import partial
 import logging
-from typing import Optional, Sequence
+from typing import Sequence, Tuple
 
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
 from slub_docsa.data.load.k10plus.samples import k10plus_public_samples_generator
@@ -18,10 +18,9 @@ def _filter_k10plus_samples(samples_generator, min_samples, subject_hierarchy_ge
 
 
 def k10plus_named_datasets_tuple_list(
-    limit: Optional[int] = 10000,
     languages: Sequence[str] = ("de", "en"),
     schemas: Sequence[str] = ("rvk", "ddc", "bk"),
-    variants: Sequence[str] = ("public", "slub"),
+    variants: Sequence[Tuple[str, int]] = (("public", 100000), ("slub", 20000)),
     min_samples: int = 50,
 ) -> DatasetTupleList:
     """Return list of k10plus datasets as tuples."""
@@ -29,17 +28,17 @@ def k10plus_named_datasets_tuple_list(
     for language in languages:
         for schema in schemas:
             for variant in variants:
-                if limit is not None:
-                    public_name = f"k10plus_{variant}_{language}_{schema}_ms={min_samples}_limit={limit}"
+                if variant[1] is not None:
+                    public_name = f"k10plus_{variant[0]}_{language}_{schema}_ms={min_samples}_limit={variant[1]}"
                 else:
-                    public_name = f"k10plus_{variant}_{language}_{schema}_ms={min_samples}"
-                if variant == "public":
+                    public_name = f"k10plus_{variant[0]}_{language}_{schema}_ms={min_samples}"
+                if variant[0] == "public":
                     samples_generator = partial(
-                        k10plus_public_samples_generator, languages=[language], schemas=[schema], limit=limit
+                        k10plus_public_samples_generator, languages=[language], schemas=[schema], limit=variant[1]
                     )
                 else:
                     samples_generator = partial(
-                        k10plus_slub_samples_generator, languages=[language], schemas=[schema], limit=limit
+                        k10plus_slub_samples_generator, languages=[language], schemas=[schema], limit=variant[1]
                     )
                 subject_hierarchy_generator = partial(subject_hierarchy_by_subject_schema, schema=schema)
                 samples_generator = partial(

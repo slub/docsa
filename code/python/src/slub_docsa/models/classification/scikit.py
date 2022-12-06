@@ -13,7 +13,7 @@ import numpy as np
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
-from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizer
+from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizerMixin
 from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
 
 logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ class ScikitClassifier(PersistableClassificationModel):
             pickle.dump(self.predictor, file)
 
         logger.info("save vectorizer to %s", persist_dir)
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not save vectorizer that is not persistable")
         self.vectorizer.save(persist_dir)
 
@@ -119,7 +119,7 @@ class ScikitClassifier(PersistableClassificationModel):
             self.predictor = pickle.load(file)  # nosec
 
         logger.info("load vectorizer from %s", persist_dir)
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not load vectorizer that is not persistable")
         self.vectorizer.load(persist_dir)
 

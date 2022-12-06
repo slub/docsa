@@ -1,10 +1,12 @@
 """Bert model."""
 
+from typing import Any, Mapping, Optional
 import torch
 
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertForSequenceClassification
 
+from slub_docsa.data.preprocess.vectorizer import AbstractSequenceVectorizer
 from slub_docsa.models.classification.ann.base import AbstractTorchModel
 
 
@@ -24,6 +26,7 @@ class BertModule(torch.nn.Module):
             vocab_size=vocabulary_size,
             max_position_embeddings=max_length,
             num_labels=number_of_subjects,
+            type_vocab_size=1,
             **kwargs
         )
         self.model = BertForSequenceClassification(config)
@@ -35,17 +38,28 @@ class BertModule(torch.nn.Module):
 
 class TorchBertModel(AbstractTorchModel):
 
+    def __init__(
+        self,
+        vectorizer: AbstractSequenceVectorizer,
+        epochs: int = 50,
+        batch_size: int = 32,
+        lr: float = 0.001,
+        plot_training_history_filepath: Optional[str] = None,
+        bert_config: Mapping[str, Any] = None,
+    ):
+        """Initialize custom Bert model."""
+        super().__init__(vectorizer, epochs, batch_size, lr, plot_training_history_filepath)
+        self.bert_config = bert_config if bert_config is not None else {}
+
     def get_model(self, n_inputs, n_outputs) -> torch.nn.Module:
         return BertModule(
             vocabulary_size=n_inputs,
-            max_length=self.vectorizer.max_length,
+            max_length=self.vectorizer.max_sequence_length(),
             number_of_subjects=n_outputs,
-            hidden_size=256,
-            num_hidden_layers=2,
-            hidden_dropout_prob=0.1,
-            intermediate_size=512,
-            num_attention_heads=8,
-            attention_dropout_prob=0.1,
-            classifier_dropout=0.1,
-            type_vocab_size=1,
+            **self.bert_config
         )
+
+    def __str__(self):
+        """Return representative string for model."""
+        return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
+            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.lr} bert_config={self.bert_config}>"

@@ -78,7 +78,9 @@ def persisted_training_and_evaluation(
         logger.info("hash code for scores is %s, needed %d ms", hash_code, (time.time() - hashing_start) * 1000)
         if load_cached_predictions and hash_code in store:
             logger.info("use cached scores, skip training and evaluation")
-            return store[hash_code]
+            scores, per_class_scores = store[hash_code]
+            logger.info("scores for model %s are %s", str(model), scores)
+            return scores, per_class_scores
 
         logger.info("score not available, train and evaluate the model")
         default_train_model(model, subject_order, train_dataset, validation_dataset)

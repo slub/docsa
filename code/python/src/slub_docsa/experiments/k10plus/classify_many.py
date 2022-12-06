@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 from typing_extensions import Literal
 
 from slub_docsa.common.paths import get_figures_dir
@@ -15,7 +15,7 @@ from slub_docsa.experiments.common.pipeline import get_split_function_by_name
 from slub_docsa.experiments.common.plots import write_default_classification_plots
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
-from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
+from slub_docsa.experiments.k10plus.models import default_k10plus_named_classification_model_list
 from slub_docsa.experiments.k10plus.datasets import k10plus_named_datasets_tuple_list
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 def k10plus_experiments_classify_many(
     language: str,
     model_subset: List[str],
-    dataset_subset: Optional[List[str]],
+    dataset_schemas: List[str],
+    dataset_variants: List[Tuple[str, int]],
     n_splits: int = 10,
     load_cached_scores: bool = False,
     random_state: Optional[int] = None,
@@ -36,13 +37,15 @@ def k10plus_experiments_classify_many(
 
     def _model_list_generator(subject_order, subject_hierarchy):
         model_list = default_dummy_named_model_list() \
-            + default_qucosa_named_classification_model_list() \
+            + default_k10plus_named_classification_model_list(language) \
             + default_annif_named_model_list(language, subject_order, subject_hierarchy)
         return initialize_classification_models_from_tuple_list(model_list, model_subset)
 
     named_datasets = filter_and_cache_named_datasets(
-        k10plus_named_datasets_tuple_list(schemas=["rvk", "ddc"], languages=[language], variants=["slub"]),
-        dataset_subset
+        k10plus_named_datasets_tuple_list(
+            schemas=dataset_schemas, languages=[language], variants=dataset_variants
+        ),
+        None
     )
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
@@ -59,6 +62,7 @@ def k10plus_experiments_classify_many(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("sqlitedict").setLevel(logging.WARNING)
 
     k10plus_experiments_classify_many(
         language="de",
@@ -66,30 +70,22 @@ if __name__ == "__main__":
             # ### "random", ####
             "oracle",
             "nihilistic",
-            # "tfidf_2k_knn_k=1",
-            # "tfidf_10k_knn_k=1",
-            # "tfidf_40k_knn_k=1",
-            # "dbmdz_bert_sts1_knn_k=1",
-            # "dbmdz_bert_sts8_knn_k=1",
-            # "tfidf_rforest",
+            "tfidf_10k_knn_k=1",
+            "dbmdz_bert_sts1_knn_k=1",
             # "dbmdz_bert_sts1_rforest",
-            # "tfidf_scikit_mlp",
-            # "tfidf_2k_torch_ann",
-            # "tfidf_10k_torch_ann",
-            # "tfidf_40k_torch_ann",
-            # "dbmdz_bert_sts1_scikit_mlp",
-            # "dbmdz_bert_sts1_torch_ann",
-            # "dbmdz_bert_sts8_torch_ann",
-            # "annif_tfidf",
-            # "annif_svc",
+            # "tfidf_10k_rforest",
+            "tfidf_10k_torch_ann",
+            "dbmdz_bert_sts1_torch_ann",
+            "tiny_bert_torch_ann",
+            "annif_tfidf",
+            "annif_svc",
             "annif_omikuji",
-            # "annif_vw_multi",
             # "annif_mllm",
-            # "annif_fasttext"
+            "annif_fasttext"
             # "annif_yake",
-            # ### "annif_stwfsa" ###
         ],
-        dataset_subset=None,
+        dataset_schemas=["rvk"],
+        dataset_variants=[("public", 100000), ("slub", 20000)],
         n_splits=10,
         load_cached_scores=True,
         random_state=123,

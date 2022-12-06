@@ -7,6 +7,7 @@ import os
 import pickle  # nosec
 import gzip
 import re
+import time
 
 from typing import Iterator, Optional, Any, cast
 from itertools import islice
@@ -63,11 +64,11 @@ class AbstractVectorizer:
         """
         raise NotImplementedError()
 
-    def shape(self):
+    def output_shape(self):
         raise NotImplementedError()
 
 
-class PersistableVectorizer(AbstractVectorizer):
+class PersistableVectorizerMixin:
     """Extend a vectorizer to support save/load methods that can be used to persist it."""
 
     def load(self, persist_dir: str):
@@ -91,7 +92,7 @@ class PersistableVectorizer(AbstractVectorizer):
         raise NotImplementedError()
 
 
-class TfidfVectorizer(PersistableVectorizer):
+class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Vectorizer using Scikit TfidfVectorizer."""
 
     PERSIST_FILENAME = "tfidf_vectorizer.pickle.gz"
@@ -130,8 +131,8 @@ class TfidfVectorizer(PersistableVectorizer):
                 row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
             yield row
 
-    def shape(self):
-        return self.size
+    def output_shape(self):
+        return (self.size,)
 
     def save(self, persist_dir: str):
         """Save tfidf vectorizer to disc using pickle."""
@@ -236,15 +237,15 @@ class RandomVectorizer(AbstractVectorizer):
         for row in np.random.random((len(list(texts)), self.size)):
             yield row
 
-    def shape(self):
-        return self.size
+    def output_shape(self):
+        return (self.size,)
 
     def __str__(self):
         """Return representative string of vectorizer."""
         return "<RandomVectorizer>"
 
 
-class CachedVectorizer(PersistableVectorizer):
+class CachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Caches vectorizations for fast repeated transforms."""
 
     def __init__(self, vectorizer: AbstractVectorizer, batch_size: int = 1000, fit_only_once: bool = False):
@@ -297,18 +298,18 @@ class CachedVectorizer(PersistableVectorizer):
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
-    def shape(self):
-        return self.vectorizer.shape()
+    def output_shape(self):
+        return self.vectorizer.output_shape()
 
     def save(self, persist_dir):
         """Relay save call to vectorizer."""
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not persist vectorizer that is not persistable")
         self.vectorizer.save(persist_dir)
 
     def load(self, persist_dir):
         """Relay load call to vectorizer."""
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not load vectorizer that is not persistable")
         self.vectorizer.load(persist_dir)
 
@@ -317,7 +318,7 @@ class CachedVectorizer(PersistableVectorizer):
         return f"<CachedVectorizer of={str(self.vectorizer)}>"
 
 
-class PersistedCachedVectorizer(PersistableVectorizer):
+class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Stores vectorizations in persistent cache."""
 
     def __init__(self, filepath: str, vectorizer: AbstractVectorizer, batch_size: int = 100):
@@ -369,19 +370,19 @@ class PersistedCachedVectorizer(PersistableVectorizer):
             total += len(texts_chunk)
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
-    def shape(self):
-        return self.vectorizer.shape()
+    def output_shape(self):
+        return self.vectorizer.output_shape()
 
     def save(self, persist_dir: str):
         """Relay save call to parent vectorizer."""
-        if isinstance(self.vectorizer, PersistableVectorizer):
+        if isinstance(self.vectorizer, PersistableVectorizerMixin):
             self.vectorizer.save(persist_dir)
         else:
             raise ValueError("can not save vectorizer that is not persistable")
 
     def load(self, persist_dir: str):
         """Relay load class to parent vectorizer."""
-        if isinstance(self.vectorizer, PersistableVectorizer):
+        if isinstance(self.vectorizer, PersistableVectorizerMixin):
             self.vectorizer.load(persist_dir)
         else:
             raise ValueError("can not load vectorizer that is not persistable")
@@ -411,7 +412,7 @@ def _extract_subtext_samples(text: str, samples: int) -> Iterator[str]:
         yield sub_text
 
 
-class HuggingfaceBertVectorizer(PersistableVectorizer):
+class HuggingfaceBertVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Evaluates a pre-trained bert model for text vectorization.
 
     Embeddings are extracted as the last hidden states of the first "[CLS]" token, see:
@@ -497,6 +498,7 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         i = 0
         # total = len(texts)
         total_so_far = 0
+        last_log = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -516,10 +518,12 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             )
             encodings.to(self.device)
 
-            logger.debug(
-                "evaluate huggingface model for vectorization of chunk %d, total %d",
-                i, total_so_far
-            )
+            if time.time() - last_log > 5:
+                logger.info(
+                    "evaluate huggingface model for vectorization of chunk %d, total %d",
+                    i, total_so_far
+                )
+                last_log = time.time()
 
             # evaluate model
             with torch.no_grad():
@@ -539,8 +543,8 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             total_so_far += len(texts_chunk)
             i += 1
 
-    def shape(self):
-        raise NotImplementedError()
+    def output_shape(self):
+        return (768 * self.hidden_states,)
 
     def save(self, persist_dir: str):
         """Bert vectorizer is not stateful and needs no saving."""
@@ -556,7 +560,15 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             + f"subtext_samples={self.subtext_samples} hidden_states={self.hidden_states}>"
 
 
-class WordpieceVectorizer(PersistableVectorizer):
+class AbstractSequenceVectorizer(AbstractVectorizer):
+    """Encodes text as a sequence vector."""
+
+    def max_sequence_length(self) -> int:
+        """Return the maximum supported length of vectorized sequences."""
+        raise NotImplementedError()
+
+
+class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer):
 
     FILENAME = "wordpiece_tokenizer.json.gz"
 
@@ -577,7 +589,7 @@ class WordpieceVectorizer(PersistableVectorizer):
         self.encoder = None
 
     def fit(self, texts: Iterator[str]):
-        unk_token = "[UNK]"
+        unk_token = "[UNK]"  # nosec
         spl_tokens = ["[UNK]", "[SEP]", "[MASK]", "[CLS]", "[PAD]"]
         character_filter = re.compile(r"[\U0000024f-\U0010ffff]")
 
@@ -611,8 +623,11 @@ class WordpieceVectorizer(PersistableVectorizer):
             features["token_type_ids"] = features["token_type_ids"][0]
             yield features
 
-    def shape(self):
-        return self.vocabulary_size
+    def max_sequence_length(self):
+        return self.max_length
+
+    def output_shape(self):
+        return (self.vocabulary_size,)
 
     def save(self, persist_dir: str):
         if self.tokenizer is None:
@@ -625,3 +640,8 @@ class WordpieceVectorizer(PersistableVectorizer):
         with gzip.open(os.path.join(persist_dir, self.FILENAME), "rt") as file:
             self.tokenizer = tokenizers.Tokenizer.from_str(file.read())
         self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
+
+    def __str__(self):
+        """Return representative string of vectorizer."""
+        return f"<WordpieceVectorizer language=\"{self.language}\" vocabulary_size={self.vocabulary_size} " \
+            + f"max_length={self.max_length} uncased={self.uncased} use_wikipedia_texts={self.use_wikipedia_texts}>"
