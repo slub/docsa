@@ -63,7 +63,7 @@ def _experiments_qucosa_classify_many_action(args):
         model_subset=model_subset,
         n_splits=n_splits,
         random_state=None,
-        load_cached_predictions=False,
+        load_cached_scores=False,
         split_function_name="random",
         stop_after_evaluating_split=None,
         check_qucosa_download=check_qucosa_download,

@@ -49,6 +49,7 @@ def download_file(url: str, filepath: str, gzip_compress: bool = False):
         the filepath where the file is saved
     gzip_compress: bool = False
         whether to compress the downloaded file
+        (or store the compressed file if the web server supports gzip compression)
 
     Returns
     -------

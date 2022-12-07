@@ -1,6 +1,6 @@
 """Provides various utilily methods for experimentation."""
 
-# pylint: disable=too-many-arguments, unnecessary-lambda, too-many-locals
+# pylint: disable=too-many-arguments, unnecessary-lambda, too-many-locals, too-many-function-args
 
 import os
 import logging

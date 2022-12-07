@@ -1,1 +1,1 @@
-"""Evaluation methods used for clustering."""
+"""Methods for evaluating clustering algorithms."""

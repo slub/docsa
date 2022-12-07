@@ -1,7 +1,7 @@
 """Tests for ANN models based on torch."""
 
 from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
-from slub_docsa.models.classification.ann.base import TorchSingleLayerDenseTanhModel
+from slub_docsa.models.classification.ann.dense import TorchSingleLayerDenseTanhModel
 
 from .common import check_model_persistence_equal_predictions, check_model_predicts_non_zero_probabilities
 

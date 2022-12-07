@@ -9,7 +9,7 @@ import gzip
 import re
 import time
 
-from typing import Iterator, Optional, Any, cast
+from typing import Iterator, Optional, Any, Sequence, Union, cast
 from itertools import islice
 
 import torch
@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer as ScikitTfidfVector
 from torch.nn.modules.module import Module
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, BatchEncoding
 
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
@@ -49,7 +49,7 @@ class AbstractVectorizer:
         """
         raise NotImplementedError()
 
-    def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
+    def transform(self, texts: Iterator[str]) -> Union[Iterator[np.ndarray], Iterator[BatchEncoding]]:
         """Return vector representation of texts as array.
 
         Parameters
@@ -59,12 +59,20 @@ class AbstractVectorizer:
 
         Returns
         -------
-        Iterator[np.ndarray]
-            an iterator over the vectorized texts as numpy array
+        Iterator[np.ndarray] | Iterator[BatchEncoding]
+            an iterator over the vectorized texts as numpy array, or an iterator over dictionaries containing the
+            encodings as `transformers.BatchEncoding`
         """
         raise NotImplementedError()
 
-    def output_shape(self):
+    def output_shape(self) -> Sequence[int]:
+        """Return the shape of each matrix returned by the transform method.
+
+        Returns
+        -------
+        Sequence[int]
+            the matrix shape as tuple, e.g. (128,).
+        """
         raise NotImplementedError()
 
 
@@ -113,7 +121,7 @@ class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
         self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
 
     def fit(self, texts: Iterator[str]):
-        """Fit vectorizer."""
+        """Apply the scikit tfidf vectorizer."""
         corpus = list(texts)
         logger.debug("do scikit tfidf vectorization of %d texts and %d features", len(corpus), self.max_features)
         self.vectorizer.fit(corpus)
@@ -132,6 +140,7 @@ class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
             yield row
 
     def output_shape(self):
+        """Return the size of the matrices returned by transform, typically `(max_features,)`."""
         return (self.size,)
 
     def save(self, persist_dir: str):
@@ -238,6 +247,7 @@ class RandomVectorizer(AbstractVectorizer):
             yield row
 
     def output_shape(self):
+        """Return the requested size of random features vectors as tuple (size,)."""
         return (self.size,)
 
     def __str__(self):
@@ -299,6 +309,7 @@ class CachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
     def output_shape(self):
+        """Return the output shape of the cached vectorizer."""
         return self.vectorizer.output_shape()
 
     def save(self, persist_dir):
@@ -371,6 +382,7 @@ class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
             logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
 
     def output_shape(self):
+        """Return the output shape of the cached vectorizer."""
         return self.vectorizer.output_shape()
 
     def save(self, persist_dir: str):
@@ -544,6 +556,7 @@ class HuggingfaceBertVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
             i += 1
 
     def output_shape(self):
+        """Return the output shape of the pre-trained Huggingface Bert-Vectorizer."""
         return (768 * self.hidden_states,)
 
     def save(self, persist_dir: str):
@@ -564,11 +577,18 @@ class AbstractSequenceVectorizer(AbstractVectorizer):
     """Encodes text as a sequence vector."""
 
     def max_sequence_length(self) -> int:
-        """Return the maximum supported length of vectorized sequences."""
+        """Return the maximum supported length of vectorized sequences.
+
+        Returns
+        -------
+        int
+            the maximum supported length of vectorized sequences
+        """
         raise NotImplementedError()
 
 
 class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer):
+    """Uses the Wordpiece strategy provided by the `tokenizers` library to vectorize texts."""
 
     FILENAME = "wordpiece_tokenizer.json.gz"
 
@@ -580,6 +600,22 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         uncased: bool = True,
         use_wikipedia_texts: bool = True
     ):
+        """Initialize a wordpiece vectorizer.
+
+        Parameters
+        ----------
+        language : str
+            the language of the input texts
+        vocabulary_size : int
+            the vocabulary size (maximum number of different extracted wordpieces)
+        max_length : int
+            the maximum supported length of the vectorized sequence (longer texts are truncated)
+        uncased : bool, optional
+            whether to convert the input texts to lowercase before vectorization, by default True
+        use_wikipedia_texts : bool, optional
+            whether to load wikipedia texts in the provided language to improve the wordpiece model using those texts,
+            by default True
+        """
         self.language = language
         self.vocabulary_size = vocabulary_size
         self.max_length = max_length
@@ -589,6 +625,7 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         self.encoder = None
 
     def fit(self, texts: Iterator[str]):
+        """Train a wordpiece vectorizer for the provided texts (and possibly additional texts from wikipedia)."""
         unk_token = "[UNK]"  # nosec
         spl_tokens = ["[UNK]", "[SEP]", "[MASK]", "[CLS]", "[PAD]"]
         character_filter = re.compile(r"[\U0000024f-\U0010ffff]")
@@ -610,7 +647,8 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         self.tokenizer.train_from_iterator(text_generator, trainer=trainer)
         self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
 
-    def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
+    def transform(self, texts: Iterator[str]) -> Iterator[BatchEncoding]:
+        """Return sequence vectors for the provided texts by applying the wordpiece strategy."""
         if self.tokenizer is None or self.encoder is None:
             raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
         for text in texts:
@@ -623,13 +661,16 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
             features["token_type_ids"] = features["token_type_ids"][0]
             yield features
 
-    def max_sequence_length(self):
+    def max_sequence_length(self) -> int:
+        """Return the maximum supported sequence length."""
         return self.max_length
 
     def output_shape(self):
+        """Return the output shape of the feature matrix."""
         return (self.vocabulary_size,)
 
     def save(self, persist_dir: str):
+        """Save the generated wordpiece vectorizer to a directory."""
         if self.tokenizer is None:
             raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
         os.makedirs(persist_dir, exist_ok=True)
@@ -637,6 +678,7 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
             file.write(self.tokenizer.to_str(pretty=True))
 
     def load(self, persist_dir: str):
+        """Load a persisted wordpiece vectorizer from a directory."""
         with gzip.open(os.path.join(persist_dir, self.FILENAME), "rt") as file:
             self.tokenizer = tokenizers.Tokenizer.from_str(file.read())
         self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec

@@ -1,28 +1,82 @@
 """Common methods used to score the performance of classification models."""
 
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 
 
-def f1_score(true_positive, false_positive, false_negative):
-    """Calculate f1 score."""
+def f1_score(
+    true_positive: Union[float, np.ndarray],
+    false_positive: Union[float, np.ndarray],
+    false_negative: Union[float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    """Calculate f1 score.
+
+    Parameters
+    ----------
+    true_positive : Union[float, np.ndarray]
+        the number of true positive cases
+    false_positive : Union[float, np.ndarray]
+        the number of false positive cases
+    false_negative : Union[float, np.ndarray]
+        the number of false negative cases
+
+    Returns
+    -------
+    Union[float, np.ndarray]
+        the f1 score
+    """
     precision = precision_score(true_positive, false_positive)
     recall = recall_score(true_positive, false_negative)
     return 2 * precision * recall / (precision + recall + 1e-7)
 
 
-def precision_score(true_positive, false_positive):
-    """Calculate f1 score."""
+def precision_score(
+    true_positive: Union[float, np.ndarray],
+    false_positive: Union[float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    """Calculate precison score.
+
+    Parameters
+    ----------
+    true_positive : Union[float, np.ndarray]
+        the number of true positive cases
+    false_positive : Union[float, np.ndarray]
+        the number of false positive cases
+
+    Returns
+    -------
+    Union[float, np.ndarray]
+        the precision score
+    """
     return true_positive / (true_positive + false_positive + 1e-7)
 
 
-def recall_score(true_positive, false_negative):
-    """Calculate f1 score."""
+def recall_score(
+    true_positive: Union[float, np.ndarray],
+    false_negative: Union[float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    """Calculate recall score.
+
+    Parameters
+    ----------
+    true_positive : Union[float, np.ndarray]
+        the number of true positive cases
+    false_negative : Union[float, np.ndarray]
+        the number of false negative cases
+
+    Returns
+    -------
+    Union[float, np.ndarray]
+        the recall score
+    """
     return true_positive / (true_positive + false_negative + 1e-7)
 
 
-def absolute_confusion_from_incidence(true_incidence, predicted_incidence) -> Tuple[float, float, float, float]:
+def absolute_confusion_from_incidence(
+    true_incidence: np.ndarray,
+    predicted_incidence: np.ndarray
+) -> Tuple[float, float, float, float]:
     """Return the absolute number of true positives, true negatives, false positives and false negatives.
 
     Parameters

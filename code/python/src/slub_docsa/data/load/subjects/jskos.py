@@ -8,7 +8,7 @@ import gzip
 import json
 import urllib
 
-from typing import Mapping, Optional
+from typing import Any, Mapping, Optional
 
 from slub_docsa.common.paths import get_resources_dir, get_cache_dir
 from slub_docsa.common.subject import SimpleSubjectHierarchy, SubjectHierarchy, print_subject_hierarchy
@@ -24,28 +24,61 @@ JSKOS_DOWNLOAD_URI_BY_SCHEMA = {
     "ddc": "https://coli-conc.gbv.de/api/voc/concepts?uri=http://dewey.info/scheme/edition/e23/&download=json",
     "bk": "https://api.dante.gbv.de/export/download/bk/default/bk__default.jskos.jsonld",
     "rvk": "https://coli-conc.gbv.de/rvk/data/2022_3/rvko_2022_3.raw.ndjson",
-    "gnd": "http://bartoc.org/en/node/430"
+    # "gnd": "http://bartoc.org/en/node/430"
 }
 
 
 def default_jskos_download_url(
     schema: str
-):
-    """Return default download url for supported schema."""
+) -> str:
+    """Return default download url for supported schema.
+
+    Parameters
+    ----------
+    schema : str
+        the schema ("rvk", "bk", "ddc")
+
+    Returns
+    -------
+    str
+        the download url for the jskos file
+    """
     return JSKOS_DOWNLOAD_URI_BY_SCHEMA[schema]
 
 
 def default_jskos_schema_json_filepath(
     schema: str
-):
-    """Return default filepath for json schema file."""
+) -> str:
+    """Return default filepath for json schema file.
+
+    Parameters
+    ----------
+    schema : str
+        the schema ("rvk", "bk", "ddc")
+
+    Returns
+    -------
+    str
+        the default filepath that is used to store the downloaded jskos json file
+    """
     return os.path.join(get_resources_dir(), f"jskos/{schema}.json.gz")
 
 
 def default_jskos_schema_cache_filepath(
     schema: str
-):
-    """Return default filepath to sqlite cache for subject hierarchy."""
+) -> str:
+    """Return default filepath to sqlite cache for subject hierarchy.
+
+    Parameters
+    ----------
+    schema : str
+        the schema ("rvk", "bk", "ddc")
+
+    Returns
+    -------
+    str
+        the default filepath to the generated Sqlite file that caches the subject hierarchy
+    """
     return os.path.join(get_cache_dir(), f"jskos/{schema}.sqlite")
 
 
@@ -54,7 +87,29 @@ def download_jskos_json_file(
     url: Optional[str] = None,
     filepath: Optional[str] = None,
 ):
-    """Download a schema json file."""
+    """Download a schema json file.
+
+    Parameters
+    ----------
+    schema : str
+        the schema ("rvk", "bk", "ddc")
+    url : Optional[str], optional
+        the download url for the jskos json file, if None, the default download url for the requested schema is
+        determined via `default_jskos_download_url`
+    filepath : Optional[str], optional
+        the filepath where the downloaded jskos json file is stored, if None, the default storage location for the
+        requested schema is determined via `default_jskos_schema_json_filepath`
+
+    Returns
+    -------
+    None
+        as soon as the file is downloaded; or in case the file already exists
+
+    Raises
+    ------
+    ValueError
+        if no download url and filepath is provided for a schema that is not already known ("rvk", "ddc", "bk")
+    """
     if filepath is None:
         filepath = default_jskos_schema_json_filepath(schema)
 
@@ -73,6 +128,17 @@ def download_jskos_json_file(
 
 
 def _repair_ddc_subject_hierarchy_from_coliconc(subject_parent: Mapping[str, str]):
+    """Repair the ddc subject hierarchy downloaded from the Coli-Conc API.
+
+    The DDC subject hierarchy from Coli-Conc contains a few subjects that have no parent or incorrect parent subject
+    URIs. These cases are repaired by generating artificial parent subject URIs by removing the last digit from the
+    DDC notation until the resulting DDC notation is found amongst all valid DDC subjects.
+
+    Parameters
+    ----------
+    subject_parent : Mapping[str, str]
+        the mapping of DDC subject URIs to their parents subject URI that is repaired
+    """
     # repair incorrect ddc parents
     incorrect_parents = ["http://dewey.info/class/617.4-617.483/e23/", "http://dewey.info/class/355.01/e23/"]
     for parent_uri in incorrect_parents:
@@ -86,7 +152,17 @@ def _repair_ddc_subject_hierarchy_from_coliconc(subject_parent: Mapping[str, str
             parent_uri = ddc_parent_from_uri(parent_uri)
 
 
-def _repair_jskos_subject_hierarchy(subject_parent, subject_labels, subject_notation):
+def _repair_jskos_subject_hierarchy(
+    subject_parent: Mapping[str, str],
+    subject_labels: Mapping[str, Mapping[str, str]],
+    subject_notation: Mapping[str, str],
+):
+    """Check and repair any jskos subject hierarchy.
+
+    Verifies that all information (parent, labels, notation) is available for all subject URIs.
+    If anything is missing, the data structure for this subject is initialized with its default values (no parent,
+    no labels, no notation).
+    """
     # make sure that referenced subjects are available
     # such that there will not be any broken links
     all_subjects = set(subject_parent.keys()) \
@@ -106,7 +182,13 @@ def _repair_jskos_subject_hierarchy(subject_parent, subject_labels, subject_nota
             subject_notation[missing_uri] = None
 
 
-def _parse_subject_from_jskos_object(subject_data, subject_parent, subject_labels, subject_notation):
+def _parse_subject_from_jskos_object(
+    subject_data: Mapping[str, Any],
+    subject_parent: Mapping[str, str],
+    subject_labels: Mapping[str, Mapping[str, str]],
+    subject_notation: Mapping[str, str],
+):
+    """Transfer information (parent, label, notation) from a jskos object to the subject hierarchy."""
     subject_uri = subject_data["uri"]
     subject_labels[subject_uri] = subject_data.get("prefLabel", {})
     if not subject_labels[subject_uri]:
@@ -124,8 +206,27 @@ def build_jskos_subject_hierarchy(
     download_url: Optional[str] = None,
     json_filepath: Optional[str] = None,
     download: bool = True,
-):
-    """Build a subject hierarchy by parsing a JSKOS file optionally downloaded from a URL."""
+) -> SubjectHierarchy:
+    """Build a subject hierarchy by parsing a JSKOS file optionally downloaded from a URL.
+
+    Parameters
+    ----------
+    schema : str
+        the schema that is represented in the JSKOS file ("rvk", "ddc", "bk")
+    download_url : Optional[str], optional
+        the download url for the jskos json file, if None, the default download url for the requested schema is
+        determined via `default_jskos_download_url`
+    json_filepath : Optional[str], optional
+        the filepath where the downloaded jskos json file is stored, if None, the default storage location for the
+        requested schema is determined via `default_jskos_schema_json_filepath`
+    download : bool, optional
+        whether to do the download in case the file does not exist yet, by default True
+
+    Returns
+    -------
+    SubjectHierarchy
+        the subject hierarchy that is generated by parsing the JSKOS file
+    """
     if json_filepath is None:
         json_filepath = default_jskos_schema_json_filepath(schema)
 
@@ -186,12 +287,22 @@ def load_jskos_subject_hierarchy_from_sqlite(
 
     Parameters
     ----------
+    schema : str
+        the schema that is supposed to be loaded ("rvk", "ddc", "bk")
     cache_filepath: str = None
-        The path that is used to cache a loaded subject hierarchy
+        The path that is used to cache a loaded subject hierarchy; if None, the cache filepath for the requested schema
+        is determined via `default_jskos_schema_cache_filepath`
     download_url: str = None
-        The url that is used to download the coli-conc json file
+        the download url for the jskos json file, if None, the default download url for the requested schema is
+        determined via `default_jskos_download_url`
     json_filepath: str = None
-        The filepath that is used to store the downloaded schema json file
+        the filepath where the downloaded jskos json file is stored, if None, the default storage location for the
+        requested schema is determined via `default_jskos_schema_json_filepath`
+    download : bool, optional
+        whether to do the download in case the file does not exist yet, by default True
+    preload_contains: bool, optional
+        wether to preload all available subject URIs into memory such that the contains operation
+        (subject_uri in subject_hierarchy) can be executed much faster (in comparison to the Sqlite database)
 
     Returns
     -------
@@ -210,7 +321,8 @@ def load_jskos_subject_hierarchy_from_sqlite(
     return SqliteSubjectHierarchy(cache_filepath, preload_contains)
 
 
-def _list_coliconc_concept_schema_uris():
+def _print_coliconc_concept_schema_uris():
+    """Print all available schema or vocabularies using the Coli-Conc API."""
     url = "https://coli-conc.gbv.de/api/voc"
     with urllib.request.urlopen(url) as response:  # nosec
         data = json.load(response)
@@ -221,10 +333,9 @@ def _list_coliconc_concept_schema_uris():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    # _list_coliconc_concept_schema_uris()
+    # _print_coliconc_concept_schema_uris()
 
     _schema = "bk"  # pylint: disable=invalid-name
     _subject_hierarchy = load_jskos_subject_hierarchy_from_sqlite(_schema)
     print(f"schema '{_schema}' has", sum(1 for _ in _subject_hierarchy), "total subjects")
-
     print_subject_hierarchy("de", _subject_hierarchy, depth=2)

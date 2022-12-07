@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
 
-    check_qucosa_download = False
+    CHECK_QUCOSA_DOWNLOAD = False
     MIN_SAMPLES = 10
     LIMIT = 5
     MODEL_TYPE = "tfidf"
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     logger.info("load dataset")
     _, dataset, _ = next(filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), ["qucosa_de_titles_rvk"]
+        qucosa_named_datasets_tuple_list(CHECK_QUCOSA_DOWNLOAD), ["qucosa_de_titles_rvk"]
     ))
 
     logger.info("load rvk subjects")

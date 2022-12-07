@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class SqliteSubjectIterable(Iterable[str]):  # pylint: disable=too-few-public-methods
-    """Iterable implementation for root subjects."""
+    """Iterable implementation that is used to load a simple list of subjects from an `sqlitedict`.
+
+    The keys are integers representing the order in the list of subjects. The amount of subjects is stored in the
+    key "count".
+    """
 
     def __init__(self, subject_store: SqliteDict):
         """Init iterable with subject store."""
@@ -20,7 +24,7 @@ class SqliteSubjectIterable(Iterable[str]):  # pylint: disable=too-few-public-me
         self.count = int(subject_store["count"])
 
     def __iter__(self):
-        """Iterate over root subjects."""
+        """Iterate over the list of subjects."""
         for i in range(self.count):
             yield self.subject_store[str(i)]
 
@@ -35,7 +39,16 @@ class SqliteSubjectHierarchy(SubjectHierarchy):
     TABLE_FOR_SUBJECT_NOTATION = "subject_notation"
 
     def __init__(self, filepath: str, preload_contains: bool = False):
-        """Init sqlite subject hierarchy."""
+        """Load sqlite subject hierarchy.
+
+        Parameters
+        ----------
+        filepath : str
+            the filepath to the sqlite database file
+        preload_contains : bool, optional
+            whether to load all available subject URIs into memory in order to improve the performance of the
+            `__contains__` operation, by default False
+        """
         self.root_subjects_store = SqliteDict(filepath, tablename=self.TABLE_FOR_ROOT_SUBJECTS, flag="r")
         self.labels_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_LABELS, flag="r")
         self.parent_store = SqliteDict(filepath, tablename=self.TABLE_FOR_SUBJECT_PARENT, flag="r")
@@ -76,7 +89,15 @@ class SqliteSubjectHierarchy(SubjectHierarchy):
         subject_hierarchy: SubjectHierarchy,
         filepath: str,
     ):
-        """Save a subject hierarchy to an sqlite file using multiple tables."""
+        """Save a subject hierarchy to an sqlite file using multiple tables.
+
+        Parameters
+        ----------
+        subject_hierarchy : SubjectHierarchy
+            the subject hierarchy to be saved in an sqlite database
+        filepath : str
+            the filepath to the sqlite database file that is generated
+        """
         logger.info("save subject hierarchy as sqlite file")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 

@@ -1,5 +1,7 @@
 """Bert model."""
 
+# pylint: disable=too-many-arguments
+
 from typing import Any, Mapping, Optional
 import torch
 
@@ -20,6 +22,17 @@ class BertModule(torch.nn.Module):
         number_of_subjects: int,
         **kwargs,
     ):
+        """Initialize Bert module with various parameters.
+
+        Parameters
+        ----------
+        vocabulary_size : int
+            the vocubulary size of the vectorizer (e.g. Wordpiece)
+        max_length : int
+            the maximum sequence length of the vectorizer
+        number_of_subjects : int
+            the number of output neurons required
+        """
         super().__init__()
 
         config = BertConfig(
@@ -32,11 +45,12 @@ class BertModule(torch.nn.Module):
         self.model = BertForSequenceClassification(config)
 
     def forward(self, token_encodings):
-        """Forward."""
+        """Forward that returns logits from Bert model."""
         return self.model(**token_encodings).logits
 
 
 class TorchBertModel(AbstractTorchModel):
+    """A model based on the BERT architecture as provided by HuggingFace."""
 
     def __init__(
         self,
@@ -47,11 +61,12 @@ class TorchBertModel(AbstractTorchModel):
         plot_training_history_filepath: Optional[str] = None,
         bert_config: Mapping[str, Any] = None,
     ):
-        """Initialize custom Bert model."""
+        """Initialize BERT model."""
         super().__init__(vectorizer, epochs, batch_size, lr, plot_training_history_filepath)
         self.bert_config = bert_config if bert_config is not None else {}
 
     def get_model(self, n_inputs, n_outputs) -> torch.nn.Module:
+        """Return the torch module describing the BERT neural network."""
         return BertModule(
             vocabulary_size=n_inputs,
             max_length=self.vectorizer.max_sequence_length(),

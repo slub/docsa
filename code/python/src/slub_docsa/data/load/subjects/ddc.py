@@ -257,7 +257,10 @@ def cached_ddc_children_from_uri_via_coliconc(
 
 
 class SimpleDdcSubjectHierarchy(SubjectHierarchy):
-    """A simple subject hierarchy implementation that is not stored."""
+    """A simple subject hierarchy implementation that is not stored.
+
+    Deprecated: Please use `slub_docsa.data.load.subjects.jskos` to load full DDC subject hierarchy.
+    """
 
     def __init__(
         self,

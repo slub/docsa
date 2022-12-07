@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     logger.debug("initialize model")
 
-    def model_generator():
+    def _model_generator():
         # return AnnifModel(model_type="omikuji", lang_code="de")
         # model = TorchSingleLayerDenseTanhModel(
         # model = TorchBertSequenceClassificationHeadModel(
@@ -65,12 +65,14 @@ if __name__ == "__main__":
             plot_training_history_filepath=plot_training_history_filepath
         )
 
-    scores = initialize_named_score_tuple_list(default_named_score_list(subject_order, subject_hierarchy_generator()))
+    scores = initialize_named_score_tuple_list(default_named_score_list(
+        # subject_order, subject_hierarchy_generator()
+    ))
     per_class_scores = initialize_named_score_tuple_list(default_named_per_class_score_list())
 
     scores, per_class_scores = score_classification_models_for_dataset_with_splits(
         10, scikit_kfold_splitter(10, random_state=123),
-        subject_order, dataset, [model_generator], scores.generators, per_class_scores.generators,
+        subject_order, dataset, [_model_generator], scores.generators, per_class_scores.generators,
         stop_after_evaluating_split=0,
         use_test_data_as_validation_data=True
     )

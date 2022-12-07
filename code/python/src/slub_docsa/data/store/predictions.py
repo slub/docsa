@@ -1,6 +1,6 @@
 """Persistent storage for model predictions."""
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-function-args
 
 import logging
 import hashlib
@@ -17,33 +17,36 @@ from slub_docsa.common.score import BatchedPerClassProbabilitiesScore
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.classification.pipeline import SingleModelPerClassScores, SingleModelScores
 from slub_docsa.evaluation.classification.pipeline import TrainAndEvaluateModelFunction
-from slub_docsa.evaluation.classification.pipeline import default_batch_evaluate_model, default_train_model
+from slub_docsa.evaluation.classification.pipeline import default_batch_predict_model, default_train_model
 
 logger = logging.getLogger(__name__)
 
 
 def persisted_training_and_evaluation(
     filepath: str,
-    load_cached_predictions: bool = False,
+    load_cached_scores: bool = False,
     batch_size: int = 100,
 ) -> TrainAndEvaluateModelFunction:
-    """Load model predictions from a dbm database if they have been stored previously.
+    """Load model evaluation scores from a sqlite database if they have been stored previously.
 
-    Stored predictions are only used if the exact same training and test data is used for the same model.
+    Stored evaluation scores are only used if the exact same training and test data is used for the same model.
     This is checked by calculating a hash function over both the training and test data, as well as the descriptive
     string `__str__()` of the model class.
 
     Parameters
     ----------
     filepath: str
-        The path to the dbm database where predictions are stored
-    load_cached_predictions: bool = False
-        A flag to prevent loading predictions from cache in case it is disabled, e.g., upon user request
+        The path to the sqlite database where evaluation scores are stored
+    load_cached_scores: bool = False
+        A flag to prevent loading scores from cache (the are still saved though)
+    batch_size: int = 100
+        The batch size at which models are evaluated using test data and scores are calculated
 
     Returns
     -------
-    FitModelAndPredictCallable
-        a function that calculates predictions based on the training data, test data and model
+    TrainAndEvaluateModelFunction
+        the function that can be used as a replacement for the default strategy, such that calculated evaluation scores
+        are persisted and loaded from the generated sqlite database
     """
     store = SqliteDict(filepath, tablename="scores", autocommit=True, flag="c")
 
@@ -76,7 +79,7 @@ def persisted_training_and_evaluation(
 
         hash_code = hasher.hexdigest()
         logger.info("hash code for scores is %s, needed %d ms", hash_code, (time.time() - hashing_start) * 1000)
-        if load_cached_predictions and hash_code in store:
+        if load_cached_scores and hash_code in store:
             logger.info("use cached scores, skip training and evaluation")
             scores, per_class_scores = store[hash_code]
             logger.info("scores for model %s are %s", str(model), scores)
@@ -84,7 +87,7 @@ def persisted_training_and_evaluation(
 
         logger.info("score not available, train and evaluate the model")
         default_train_model(model, subject_order, train_dataset, validation_dataset)
-        scores, per_class_scores = default_batch_evaluate_model(
+        scores, per_class_scores = default_batch_predict_model(
             model, subject_order, test_dataset, score_generators, per_class_score_generators, batch_size
         )
 

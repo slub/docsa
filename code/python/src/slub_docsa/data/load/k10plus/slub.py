@@ -1,4 +1,4 @@
-"""Parse and index k10plus data dump provided by SLUB Dresden."""
+"""Parse and load k10plus data provided by SLUB Dresden."""
 
 # pylint: disable=too-many-arguments, too-many-locals
 
@@ -10,14 +10,14 @@ import codecs
 import re
 import time
 
-from typing import Iterable, Mapping, NamedTuple, Iterator, Optional
+from typing import Callable, Iterable, Mapping, NamedTuple, Iterator, Optional
 
 from sqlitedict import SqliteDict
 from slub_docsa.common.document import Document
 
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 from slub_docsa.common.sample import Sample
-from slub_docsa.data.load.languages import convert_language_code_to_l3, load_language_codes
+from slub_docsa.data.load.languages import LanguageCodeTable, convert_language_code_to_l3, load_language_codes
 from slub_docsa.data.load.subjects.common import subject_hierarchy_by_subject_schema
 from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri
 from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
@@ -64,6 +64,18 @@ def get_k10plus_slub_data_cache_filepath():
 
 
 def _convert_classifications_to_uris(classifications: Mapping[str, Iterable[str]]) -> Mapping[str, Iterable[str]]:
+    """Convert subject notations to full subject URIs for all available subjects.
+
+    Parameters
+    ----------
+    classifications : Mapping[str, Iterable[str]]
+        the map of subjects indexed by schema
+
+    Returns
+    -------
+    Mapping[str, Iterable[str]]
+        the converted map of subjects such that each subject is represented by its subject URI
+    """
     if "rvk" in classifications:
         classifications["rvk"] = [rvk_notation_to_uri(notation) for notation in classifications["rvk"]]
     if "ddc" in classifications:
@@ -77,15 +89,21 @@ def _convert_classifications_to_uris(classifications: Mapping[str, Iterable[str]
 
 
 def read_k10plus_slub_json_from_file(filepath: Optional[str] = None) -> Iterator[K10plusSlubJsonObject]:
-    """Read k10plus data dump provided by SLUB."""
+    """Read k10plus data dump file provided by SLUB.
+
+    Parameters
+    ----------
+    filepath : Optional[str], optional
+        the filepath to the k10plus data dump provided by SLUB
+
+    Yields
+    ------
+    K10plusSlubJsonObject
+        parsed json documents as `K10plusSlubJsonObject`
+    """
     if filepath is None:
         filepath = get_k10plus_slub_json_tar_gz_filepath()
 
-    # read zip file
-    # with zipfile.ZipFile(filepath, "r") as f_zip:
-    #     for filename in f_zip.namelist():
-    #         with f_zip.open(filename, "r") as data:
-    # read tar.gz file
     with tarfile.open(filepath, "r|gz") as tar_file:
         for member in tar_file:
             json_file = codecs.getreader("utf-8")(tar_file.extractfile(member))
@@ -106,20 +124,28 @@ def read_k10plus_slub_json_from_file(filepath: Optional[str] = None) -> Iterator
                 )
 
 
-def _clean_text(text):
+def _clean_text_for_language_detection(text):
+    """Clean text for language detection by removing most non-letter characters from the text."""
     tokens = text.replace("\n", ". ").replace(r"\s+", " ").split(" ")
     return " ".join(token for token in tokens if re.match(r"\w+", token) and len(token) > 2)
 
 
-def _detect_language(doc: K10plusSlubJsonObject, language_detector, language_code_table):
+def _detect_language(
+    doc: K10plusSlubJsonObject,
+    language_detector: Callable[[str], str],
+    language_code_table: LanguageCodeTable
+) -> Optional[str]:
+    """Detect the language of a document of the k10plus dump provided by SLUB."""
+    # first try to detect language from title
     combined_titles = doc.titles.main + " " + doc.titles.sub
     detected_language = convert_language_code_to_l3(
         language_detector(combined_titles),
         language_code_table,
         raise_invalid=False
     )
+    # if language detection based on title didn't work, use other texts (e.g. the toc) of the document
     if not detected_language:
-        cleaned_texts = _clean_text(" ".join(doc.texts.values())[:500])
+        cleaned_texts = _clean_text_for_language_detection(" ".join(doc.texts.values())[:500])
         detected_language = convert_language_code_to_l3(
             language_detector(cleaned_texts),
             language_code_table,
@@ -133,7 +159,19 @@ def cache_and_index_k10plus_slub_data(
     cache_filepath: Optional[str] = None,
     language_detection_certainty: float = 0.5,
 ):
-    """Store k10plus data provided by SLUB indexed by PPN in Sqlite file."""
+    """Store k10plus data provided by SLUB indexed by PPN in an sqlite file.
+
+    Parameters
+    ----------
+    json_filepath : Optional[str], optional
+        the filepath to the json file provided by SLUB; if None, uses the default path that is returned by
+        `get_k10plus_slub_json_tar_gz_filepath`
+    cache_filepath : Optional[str], optional
+        the filepath to the generated cache sqlite database; if None, uses the default path that is returned by
+        `get_k10plus_slub_data_cache_filepath`
+    language_detection_certainty : float, optional
+        the minimum certainy score that is used to assume that the language detection was successful, by default 0.5
+    """
     if cache_filepath is None:
         cache_filepath = get_k10plus_slub_data_cache_filepath()
     os.makedirs(os.path.dirname(cache_filepath), exist_ok=True)
@@ -160,13 +198,33 @@ def cache_and_index_k10plus_slub_data(
 def load_cached_k10plus_slub_data(
     json_filepath: Optional[str] = None,
     cache_filepath: Optional[str] = None,
+    language_detection_certainty: float = 0.5,
 ) -> Mapping[str, K10plusSlubJsonObject]:
-    """Load k10plus data provided by SLUB indexed by ppn."""
+    """Load cached Sqlite database containing k10plus data provided by SLUB indexed by ppn.
+
+    If the Sqlite database doesn't exist, it will be created from the k10plus data json dump provided by SLUB.
+
+    Parameters
+    ----------
+    json_filepath : Optional[str], optional
+        the filepath to the json file provided by SLUB; if None, uses the default path that is returned by
+        `get_k10plus_slub_json_tar_gz_filepath`
+    cache_filepath : Optional[str], optional
+        the filepath to the generated cache sqlite database; if None, uses the default path that is returned by
+        `get_k10plus_slub_data_cache_filepath`
+    language_detection_certainty : float, optional
+        the minimum certainy score that is used to assume that the language detection was successful, by default 0.5
+
+    Returns
+    -------
+    Mapping[str, K10plusSlubJsonObject]
+        the sqlite database as dictionary mapping ppn numbers to all information about a document
+    """
     if cache_filepath is None:
         cache_filepath = get_k10plus_slub_data_cache_filepath()
 
     if not os.path.exists(cache_filepath):
-        cache_and_index_k10plus_slub_data(json_filepath, cache_filepath)
+        cache_and_index_k10plus_slub_data(json_filepath, cache_filepath, language_detection_certainty)
 
     return SqliteDict(cache_filepath, tablename="k10plus", flag="r")
 
@@ -184,8 +242,45 @@ def k10plus_slub_merged_with_public_samples_generator(
     workers: Optional[int] = None,
     require_toc: bool = True,
     use_slub_subjects: bool = True,
-):
-    """Read k10plus documents and combine them with fulltext information from SLUB data."""
+) -> Iterator[Sample]:
+    """Read k10plus public documents and combine them with fulltext information from SLUB data dump.
+
+    Parameters
+    ----------
+    xml_directory : str, optional
+        the directory where the public k10plus marc21 xml dump files are stored; if None, the directory
+        `SLUB_RESOURCE_DIR/k10plus/marc21` is used
+    json_directory : str, optional
+        the directory where the public k10plus json cache files are stored at; if None, the directory
+        `SLUB_CACHE_DIR/k10plus/json` is used
+    slub_json_filepath : Optional[str], optional
+        the filepath to the json file provided by SLUB; if None, uses the default path that is returned by
+        `get_k10plus_slub_json_tar_gz_filepath`
+    slub_cache_filepath : Optional[str], optional
+        the filepath to the generated cache sqlite database containing k10plus documents provided by SLUB; if None,
+        uses the default path that is returned by `get_k10plus_slub_data_cache_filepath`
+    languages : Optional[Iterable[str]], optional
+        the set of acceptable languages or None, if all languages are acceptable
+    schemas : Optional[Iterable[str]], optional
+        the set of acceptable subject schema or None, if no subjects are required
+    download : bool, optional
+        whether to download public k10plus marc21 xml dump files if they do not exist yet, by default True
+    limit : Optional[int], optional
+        the maximum amount of samples to return or None, if all possible samples are required, by default None
+    line_batch_size : int, optional
+        the number of lines that are read in one batch to improve performance, by default 1000
+    workers : Optional[int], optional
+        the number of worker threads to process marc21 xml files; if None, the number of available cpu cores is used
+    require_toc : bool, optional
+        whether to only return samples for documents that have a ToC provided from the SLUB data dump, by default True
+    use_slub_subjects : bool, optional
+        whether to return subjects extracted from the SLUB data dump, or from the public k10plus data, by default True
+
+    Yields
+    ------
+    Sample
+        each k10plus document matching the above specified criteria for language, schema, etc., as a sample
+    """
     doc_count = 0
     slub_store = load_cached_k10plus_slub_data(slub_json_filepath, slub_cache_filepath)
     slub_ppns = set(slub_store.keys())
@@ -244,8 +339,33 @@ def k10plus_slub_samples_generator(
     limit: Optional[int] = None,
     require_toc: bool = True,
     filter_unknown_subjects: bool = True
-):
-    """Read k10plus documents and combine them with fulltext information from SLUB data."""
+) -> Iterator[Sample]:
+    """Read k10plus documents including fulltext information as provided from the SLUB data dump.
+
+    Parameters
+    ----------
+    json_filepath : Optional[str], optional
+        the filepath to the json file provided by SLUB; if None, uses the default path that is returned by
+        `get_k10plus_slub_json_tar_gz_filepath`
+    cache_filepath : Optional[str], optional
+        the filepath to the generated cache sqlite database containing k10plus documents provided by SLUB; if None,
+        uses the default path that is returned by `get_k10plus_slub_data_cache_filepath`
+    languages : Optional[Iterable[str]], optional
+        the set of acceptable languages or None, if all languages are acceptable
+    schemas : Optional[Iterable[str]], optional
+        the set of acceptable subject schema or None, if no subjects are required
+    limit : Optional[int], optional
+        the maximum amount of samples to return or None, if all possible samples are required, by default None
+    require_toc : bool, optional
+        whether to only return samples for documents that have a ToC provided from the SLUB data dump, by default True
+    filter_unknown_subjects : bool, optional
+        whether to filter subjects that are not known in the provided subject hierarchies, by default True
+
+    Yields
+    ------
+    Iterator[Sample]
+        each k10plus document matching the above specified criteria for language, schema, etc., as a sample
+    """
     doc_count = 0
     last_log_time = time.time()
     slub_store = load_cached_k10plus_slub_data(json_filepath, cache_filepath)
@@ -313,16 +433,13 @@ def k10plus_slub_samples_generator(
 
 
 def _print_occurances_of_text_types():
+    """Print the number of k10plus documents that contain a fulltext of some type (e.g. toc)."""
     slub_store = load_cached_k10plus_slub_data()
     count_by_type: Mapping[str, int] = {}
     for doc in slub_store.values():
         for text_type in doc.classifications.keys():
             if doc.classifications.get(text_type):
                 count_by_type[text_type] = count_by_type.setdefault(text_type, 0) + 1
-            # if text_type == "Klappentext":
-            #     print("----")
-            #     print(texts[text_type].replace("\n", " ").strip())
-            #     print("----")
 
     for text_type, count in reversed(sorted(count_by_type.items(), key=lambda x: x[1])):
         print(text_type, ":", count)

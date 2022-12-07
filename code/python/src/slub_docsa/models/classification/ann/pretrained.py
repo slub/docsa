@@ -1,4 +1,4 @@
-"""Huggingface Sequence Classification Model."""
+"""Pretrained sequence classification models from Huggingface."""
 
 # pylint: disable=too-many-instance-attributes, invalid-name, no-member
 
@@ -12,6 +12,8 @@ import torch
 import numpy as np
 from torch.nn.modules.module import Module
 from torch.utils.data import Dataset as TorchDataset
+from torch.nn.modules.activation import Tanh
+from torch.nn import Sequential, Linear, Dropout
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.auto.modeling_auto import AutoModelForSequenceClassification
 from transformers.training_args import TrainingArguments
@@ -22,8 +24,27 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
+from slub_docsa.models.classification.ann.base import AbstractTorchModel
 
 logger = logging.getLogger(__name__)
+
+
+class TorchBertSequenceClassificationHeadModel(AbstractTorchModel):
+    """A torch model that follows the classification head of a Bert Sequence Classification network.
+
+    See HuggingFace: https://huggingface.co/transformers/_modules/transformers/modeling_bert.html
+    """
+
+    def get_model(self, n_inputs, n_outputs):
+        """Return the sequence classification head model."""
+        return Sequential(
+            # BertPooler
+            Linear(n_inputs, n_inputs),
+            Tanh(),
+            Dropout(p=0.1),
+            # Classifier
+            Linear(n_inputs, n_outputs),
+        )
 
 
 class _CustomTorchDataset(TorchDataset):

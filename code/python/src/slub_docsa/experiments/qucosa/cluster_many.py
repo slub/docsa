@@ -7,12 +7,13 @@ import os
 from typing import Sequence, Optional
 
 from slub_docsa.common.paths import get_figures_dir
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.common.models import initialize_clustering_models_from_tuple_list
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_clustering_evaluation
 from slub_docsa.experiments.common.plots import write_default_clustering_plots
 from slub_docsa.experiments.common.scores import default_named_clustering_score_list, initialize_named_score_tuple_list
 
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 
@@ -39,8 +40,12 @@ def qucosa_experiments_cluster_many(
             default_named_clustering_score_list(vectorizer)
         )
 
+    named_datasets = filter_and_cache_named_datasets(
+        qucosa_named_datasets_tuple_list(check_qucosa_download), dataset_subset
+    )
+
     evaluation_result = do_default_score_matrix_clustering_evaluation(
-        named_datasets=qucosa_named_datasets(dataset_subset, check_qucosa_download),
+        named_datasets=named_datasets,
         named_models_generator=_model_generator,
         named_scores_generator=_score_generator,
         repeats=repeats,

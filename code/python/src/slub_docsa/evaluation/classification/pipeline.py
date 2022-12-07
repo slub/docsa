@@ -1,6 +1,6 @@
-"""Provides a basic evaluation pipeline for multiple models."""
+"""Basic evaluation pipelines for a single or multiple classification models, including cross-validation."""
 
-# pylint: disable=fixme, too-many-locals, too-many-arguments
+# pylint: disable=fixme, too-many-locals, too-many-arguments, too-few-public-methods
 
 import logging
 import time
@@ -11,7 +11,6 @@ from typing import Callable, Iterator, Optional, Sequence, Tuple
 import numpy as np
 
 from slub_docsa.common.dataset import Dataset
-from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
 from slub_docsa.common.score import BatchedPerClassProbabilitiesScore, BatchedMultiClassProbabilitiesScore
 from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
@@ -36,6 +35,19 @@ def default_train_model(
     train_dataset: Dataset,
     validation_dataset: Optional[Dataset],
 ):
+    """Apply datasets to the fit method of the model, meaning the default training method for a model.
+
+    Parameters
+    ----------
+    model : ClassificationModel
+        the model to be trained
+    subject_order : Sequence[str]
+        the subject order required to determine target incidences
+    train_dataset : Dataset
+        a training dataset provided to the fit method
+    validation_dataset : Optional[Dataset]
+        optional validation dataset provided to the fit method
+    """
     logger.info("train model %s", str(model))
     # calcuate incidences
     train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
@@ -55,6 +67,24 @@ def default_batch_predict_model(
     test_dataset: Dataset,
     batch_size: int = 100,
 ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+    """Predict test data for a model in batches, meaning the default prediciton strategy.
+
+    Parameters
+    ----------
+    model : ClassificationModel
+        the model to be used for prediction
+    subject_order : Sequence[str]
+        the subject order used to build target incidences
+    test_dataset : Dataset
+        the test dataset that is supposed to be predicted
+    batch_size : int, optional
+        the batch size, by default 100
+
+    Yields
+    ------
+    Tuple[np.ndarray, np.ndarray]
+        a tuple of (test_incidence_chunk, predicted_probabilities_chunk) that can be evalated further
+    """
     test_document_generator = iter(test_dataset.documents)
     test_subjects_generator = iter(test_dataset.subjects)
 
@@ -97,6 +127,29 @@ def default_batch_evaluate_model(
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     batch_size: int = 100,
 ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
+    """Evaluate a model given a test dataset and various score functions in batches.
+
+    Parameters
+    ----------
+    model : ClassificationModel
+        the model to be evaluated
+    subject_order : Sequence[str]
+        the subject order that is used to generate target incidence matrices
+    test_dataset : Dataset
+        the test dataset that is evaluated and scored
+    score_generators : Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+        generators for batched score functions that measure the overall classification performance
+    per_class_score_generators : Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+        generators for batched score functions that measure the classification performance for each subject
+    batch_size : int, optional
+        the batch size, by default 100
+
+    Returns
+    -------
+    Tuple[SingleModelScores, SingleModelPerClassScores]
+        both the overall score results, and the score matrices when measuring the classification performance
+        for each subject
+    """
     # initialize new batched scoring functions
     batched_scores = [generator() for generator in score_generators]
     batched_per_class_scores = [generator() for generator in per_class_score_generators]
@@ -122,52 +175,61 @@ def default_batch_evaluate_model(
 
 
 class TrainAndEvaluateModelFunction:
+    """An abstract interface for training and evaluating a classification model."""
 
     def __call__(
         self,
         model: ClassificationModel,
         subject_order: Sequence[str],
-        train_documents: Sequence[Document],
-        train_incidence_matrix: np.ndarray,
+        train_dataset: Dataset,
         test_dataset: Dataset,
         score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
         per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
-        validation_documents: Optional[Sequence[Document]] = None,
-        validation_incidence_matrix: Optional[np.ndarray] = None,
+        validation_dataset: Dataset = None,
     ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
-        """Call fit and predict_proba method of a model in order to generated predictions.
-
-        This is the default implementation of a fit and predict logic, which can be overwritten in order to, e.g., save
-        predictions to a database, load predictions from a database, etc.
+        """Evaluate a model by training a model and scoring its classification performance via test data.
 
         Parameters
         ----------
         model: Model
-            the initialized model that can be fitted and used for predictions afterwards
-        train_documents: Sequence[Document]
-            the sequence of training documents
-        train_incidence_matrix: np.ndarray
-            the subject incidence matrix for the training documents
-        test_documents: Sequence[Document],
-            the sequence of test documents
-        validation_documents: Optional[Sequence[Document]] = None
-            an optional sequence of validation documents
-            (used by the torch ann model to generate evaluation scores during training)
-        validation_incidence_matrix: Optional[np.ndarray] = None
-            an optional subject incidence matrix for the validation documents
-            (used by the torch ann model to generate evaluation scores during training)
+            a freshly initialized model that can be fitted and used for predictions afterwards
+        subject_order : Sequence[str]
+            the subject order that is used to generate incidence matrices
+        train_dataset: Sequence[Document]
+            the training dataset used to fit the model
+        test_dataset: Sequence[Document],
+            the test dataset used to score the classification performance of the model
+        score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+            generators for batched score functions that measure the overall classification performance
+        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+            generators for batched score functions that measure the classification performance for each subject
+        validation_dataset : Optional[Dataset]
+            optional validation dataset provided to the fit method
 
         Returns
         -------
-        numpy.ndarray
-            the subject prediction probability matrix as returned by the `predict_proba` method of the model
+        Tuple[SingleModelScores, SingleModelPerClassScores]
+            both the overall score results, and the score matrices when measuring the classification performance
+            for each subject
         """
         raise NotImplementedError()
 
 
 class DefaultTrainAndEvaluateFunction(TrainAndEvaluateModelFunction):
+    """Default training and evaluation strategy.
+
+    This is the default implementation of a fit and predict logic, which can be overwritten in order to, e.g., save
+    predictions to a database, load predictions from a database, etc.
+    """
 
     def __init__(self, batch_size: float = 100):
+        """Initialize the default train and evaluation strategy with a batch size.
+
+        Parameters
+        ----------
+        batch_size : float, optional
+            the batch size at which the model is evaluated and scored, by default 100
+        """
         self.batch_size = batch_size
 
     def __call__(
@@ -179,7 +241,32 @@ class DefaultTrainAndEvaluateFunction(TrainAndEvaluateModelFunction):
         score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
         per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
         validation_dataset: Optional[Dataset] = None,
-    ):
+    ) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
+        """Return scores after applying the default training and evaluation strategy.
+
+        Parameters
+        ----------
+        model: Model
+            a freshly initialized model that can be fitted and used for predictions afterwards
+        subject_order : Sequence[str]
+            the subject order that is used to generate incidence matrices
+        train_dataset: Dataset
+            the training dataset used to fit the model
+        test_dataset: Dataset
+            the test dataset used to score the classification performance of the model
+        score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+            generators for batched score functions that measure the overall classification performance
+        per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+            generators for batched score functions that measure the classification performance for each subject
+        validation_dataset : Optional[Dataset]
+            optional validation dataset provided to the fit method
+
+        Returns
+        -------
+        Tuple[SingleModelScores, SingleModelPerClassScores]
+            both the overall score results, and the score matrices when measuring the classification performance
+            for each subject
+        """
         default_train_model(model, subject_order, train_dataset, validation_dataset)
         return default_batch_evaluate_model(
             model, subject_order, test_dataset, score_generators, per_class_score_generators, self.batch_size
@@ -197,6 +284,7 @@ def score_classification_models_for_dataset_with_splits(
     train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
     stop_after_evaluating_split: Optional[int] = None,
     use_test_data_as_validation_data: bool = False,
+    batch_size: int = 100,
 ) -> Tuple[MultiSplitScores, MultiSplitPerClassScores]:
     """Evaluate a dataset using cross-validation for a number of models and score functions.
 
@@ -204,41 +292,41 @@ def score_classification_models_for_dataset_with_splits(
     ----------
     n_splits: int
         the number of splits of the cross-validation
-    dataset: Dataset
-        the full dataset that is then being split into training and test sets during evaluation
-    subject_order: Sequence[str]
-        a subject order list describing a unique order of subjects, which is used as index for incidence and
-        probability matrices (column ordering)
-    models: Sequence[Model]
-        the list of models that are evaluated
     split_function: DatasetSplitFunction,
         the function that can be used to split the full dataset into `n_splits` different sets of training and test
         data sets, e.g., `slub_docsa.evaluation.split.scikit_base_folder_splitter`.
-    overall_score_functions: Sequence[MultiClassScoreFunctionType]
-        the list of score functions that are applied to the full probability matrices after predicting the full test
-        data set
-    per_class_score_functions: Sequence[BinaryClassScoreFunctionType],
-        the list of score functions that are applied on a per subject basis (one vs. rest) in order to evaluate the
-        prediction quality of every subject
-    fit_and_predict: FitClassificationModelAndPredictCallable = fit_classification_model_and_predict_test_documents,
-        a function that allows to overwrite the basic fit and predict logic, e.g., by caching model predictions
+    subject_order: Sequence[str]
+        a subject order list describing a unique order of subjects, which is used as index for incidence and
+        probability matrices (column ordering)
+    dataset: Dataset
+        the full dataset that is then being split into training and test sets during evaluation
+    model_generators: Sequence[Callable[[], ClassificationModel]]
+        the list of generators for models that will be instanciated, trained and evaluated one after another
+    score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+        generators for batched score functions that measure the overall classification performance
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+        generators for batched score functions that measure the classification performance for each subject
+    train_and_evaluate: TrainAndEvaluateModelFunction = None
+        training and evaluation strategy, if None, the default strategy `DefaultTrainAndEvaluateFunction` is used
     stop_after_evaluating_split: int = None,
         a flag that allows to stop the evaluation early, but still return the full score matrices (e.g. in order to
         test parameters settings without calculting all `n_splits` splits, which can take a long time)
     use_test_data_as_validation_data: bool = False
         a flag that if true provides the test data as validation data to the model's fit method, e.g., in order to
         evaluate the fitting behaviour of ann algorithms over multiple epochs of training
+    batch_size : int, optional
+        the batch size at which the model is evaluated and scored, by default 100; only applies to the default
+        training and evaluation strategy
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray]
-        A tuple of both score matrices, the overall score matrix and the per-subject score matrix.
-        The overall score matrix will have a shape of `(len(models), len(overall_score_functions), n_splits)` and
+    Tuple[MultiSplitScores, MultiSplitPerClassScores]
+        A tuple of both the overall scores and per-class scores. After conversion to a numpy array, the overall score
+        matrix will have a shape of `(n_splits, len(model_generators), len(score_generators))` and
         contains all score values calculated for every model over the test data of every split.
         The per subject score matrix will have shape of
-        `(len(models), len(per_class_score_functions), n_splits, len(subject_order))` and contains score values for
-        every subject calculated for every model, score function and split.
-
+        `(n_splits, len(model_generators), len(per_class_score_generators), len(subject_order))` and contains score
+        values for every subject calculated for every model, score function and split.
     """
     logger.info("check minimum requirements for cross-validation")
     if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
@@ -254,7 +342,7 @@ def score_classification_models_for_dataset_with_splits(
         check_dataset_subject_distribution(train_dataset, test_dataset, (0.5 / n_splits, 2.0 / n_splits))
 
         logger.info(
-            "evaluate %d-th cross validation split with %d training and %d test samples",
+            "train and evaluate %d-th cross validation split with %d training and %d test samples",
             i + 1,
             len(train_dataset.subjects),
             len(test_dataset.subjects)
@@ -273,6 +361,7 @@ def score_classification_models_for_dataset_with_splits(
             score_generators,
             per_class_score_generators,
             train_and_evaluate,
+            batch_size,
         )
 
         all_split_scores.append(scores)
@@ -293,8 +382,38 @@ def score_classification_models_for_dataset(
     score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]],
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    batch_size: int = 100,
+) -> Tuple[MultiModelScores, MultiModelPerClassScores]:
+    """Train, evaluate and score multiple models for the same dataset.
 
+    Parameters
+    ----------
+    subject_order : Sequence[str]
+        a subject order list describing a unique order of subjects, which is used as index for incidence and
+        probability matrices (column ordering)
+    train_dataset: Dataset
+        the training dataset used to fit the model
+    test_dataset: Dataset
+        the test dataset used to score the classification performance of the model
+    validation_dataset : Optional[Dataset]
+        optional validation dataset provided to the fit method
+    model_generators: Sequence[Callable[[], ClassificationModel]]
+        the list of generators for models that will be instanciated, trained and evaluated one after another
+    score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+        generators for batched score functions that measure the overall classification performance
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+        generators for batched score functions that measure the classification performance for each subject
+    train_and_evaluate: TrainAndEvaluateModelFunction = None
+        training and evaluation strategy, if None, the default strategy `DefaultTrainAndEvaluateFunction` is used
+    batch_size : int, optional
+        the batch size at which the model is evaluated and scored, by default 100; only applies to the default
+        training and evaluation strategy
+
+    Returns
+    -------
+    Tuple[MultiModelScores, MultiModelPerClassScores]
+        both the overall and per-class scores for each model
+    """
     all_model_scores = []
     all_model_per_class_scores = []
 
@@ -308,6 +427,7 @@ def score_classification_models_for_dataset(
             score_generators,
             per_class_score_generators,
             train_and_evaluate,
+            batch_size,
         )
         all_model_scores.append(scores)
         all_model_per_class_scores.append(per_class_scores)
@@ -325,13 +445,44 @@ def score_classification_model_for_dataset(
     per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]],
     train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
     batch_size: int = 100,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[SingleModelScores, SingleModelPerClassScores]:
+    """Train, evaluate and score and single model for a single dataset.
+
+    Parameters
+    ----------
+    subject_order : Sequence[str]
+        a subject order list describing a unique order of subjects, which is used as index for incidence and
+        probability matrices (column ordering)
+    train_dataset: Dataset
+        the training dataset used to fit the model
+    test_dataset: Dataset
+        the test dataset used to score the classification performance of the model
+    validation_dataset : Optional[Dataset]
+        optional validation dataset provided to the fit method
+    model_generators: Sequence[Callable[[], ClassificationModel]]
+        the list of generators for models that will be instanciated, trained and evaluated one after another
+    score_generators: Sequence[Callable[[], BatchedMultiClassProbabilitiesScore]]
+        generators for batched score functions that measure the overall classification performance
+    per_class_score_generators: Sequence[Callable[[], BatchedPerClassProbabilitiesScore]]
+        generators for batched score functions that measure the classification performance for each subject
+    train_and_evaluate: TrainAndEvaluateModelFunction = None
+        training and evaluation strategy, if None, the default strategy `DefaultTrainAndEvaluateFunction` is used
+    batch_size : int, optional
+        the batch size at which the model is evaluated and scored, by default 100; only applies to the default
+        training and evaluation strategy
+
+    Returns
+    -------
+    Tuple[SingleModelScores, SingleModelPerClassScores]
+        both the overall scores and per-class scores that are the result of evaluating the model
+    """
     # load default training and evaluation methods
     if train_and_evaluate is None:
         train_and_evaluate = DefaultTrainAndEvaluateFunction(batch_size)
 
     # create new instance of model
     model = model_generator()
+    logger.info("train and evaluate model %s", str(model))
 
     # do training
     scores, per_class_scores = train_and_evaluate(

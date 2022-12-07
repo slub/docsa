@@ -16,9 +16,8 @@ import transformers
 
 from sklearn.metrics import f1_score
 
-from torch.nn.modules.activation import ReLU, Tanh
-from torch.utils.data import DataLoader, IterableDataset
-from torch.nn import Sequential, Linear, Dropout, BCEWithLogitsLoss
+from torch.utils.data import DataLoader, IterableDataset, Dataset as TorchDataset
+from torch.nn import BCEWithLogitsLoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
 
@@ -38,15 +37,41 @@ TORCH_MODEL_SHAPE_FILENAME = "torch_model_shape.pickle"
 
 
 class SimpleIterableDataset(IterableDataset):
+    """Simple torch dataset that provides access to feature and incidences via an iterator."""
 
-    def __init__(self, features, subjects: Optional[np.ndarray] = None):
+    def __init__(self, features, subject_incidences: Optional[np.ndarray] = None):
+        """Initialize dataset with iterable features and iterable subject incidences."""
+        self.features = features
+        self.subject_incidences = subject_incidences
+
+    def __iter__(self):
+        """Return an iterator over tuples of features and the corresponding subject incidence vector."""
+        if self.subject_incidences is not None:
+            return iter(zip(self.features, self.subject_incidences))
+        return iter(self.features)
+
+    def __getitem__(self, idx) -> Any:
+        """Not available for iterable datasets."""
+        raise NotImplementedError()
+
+
+class SimpleIndexedDataset(TorchDataset):
+    """Simple torch dataset that provides access to feature and incidences via an index."""
+
+    def __init__(self, features: Sequence[Any], subjects: Optional[np.ndarray] = None):
+        """Initialize dataset with a sequence of features and subject incidences."""
         self.features = features
         self.subjects = subjects
 
-    def __iter__(self):
+    def __getitem__(self, idx):
+        """Return a specific tuple of feature and subject incidence vector at index position."""
         if self.subjects is not None:
-            return iter(zip(self.features, self.subjects))
-        return iter(self.features)
+            return self.features[idx], self.subjects[idx]
+        return self.features[idx]
+
+    def __len__(self):
+        """Return the number of samples."""
+        return len(self.features)
 
 
 class AbstractTorchModel(PersistableClassificationModel):
@@ -196,10 +221,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         # extract features from texts
         features = list(self.vectorizer.transform(iter(texts)))
         # wrap as torch data loader
-        dataset = SimpleIterableDataset(features, targets)
-        # dataset = TensorDataset(features_tensor, targets_tensor)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-
+        dataset = SimpleIndexedDataset(features, targets)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
         return dataloader
 
     def fit(
@@ -385,48 +408,3 @@ class AbstractTorchModel(PersistableClassificationModel):
         """Return representative string for model."""
         return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
             f"epochs={self.epochs} batch_size={self.batch_size} lr={self.lr}>"
-
-
-class TorchBertSequenceClassificationHeadModel(AbstractTorchModel):
-    """A torch model that follows the classification head of a Bert Sequence Classification network.
-
-    See HuggingFace: https://huggingface.co/transformers/_modules/transformers/modeling_bert.html
-    """
-
-    def get_model(self, n_inputs, n_outputs):
-        """Return the sequence classification head model."""
-        return Sequential(
-            # BertPooler
-            Linear(n_inputs, n_inputs),
-            Tanh(),
-            Dropout(p=0.1),
-            # Classifier
-            Linear(n_inputs, n_outputs),
-        )
-
-
-class TorchSingleLayerDenseReluModel(AbstractTorchModel):
-    """A simple torch model consisting of one hidden layer of 1024 neurons with ReLU activations."""
-
-    def get_model(self, n_inputs, n_outputs):
-        """Return the linear network."""
-        return Sequential(
-            Linear(n_inputs, 1024),
-            ReLU(),
-            Dropout(p=0.0),
-            Linear(1024, n_outputs),
-        )
-
-
-class TorchSingleLayerDenseTanhModel(AbstractTorchModel):
-    """A simple torch model consisting of one hidden layer of 1024 neurons with tanh activations."""
-
-    def get_model(self, n_inputs, n_outputs):
-        """Return the linear network."""
-        return Sequential(
-            # Dropout(p=0.2),
-            Linear(n_inputs, 1024),
-            Tanh(),
-            # Dropout(p=0.2),
-            Linear(1024, n_outputs),
-        )

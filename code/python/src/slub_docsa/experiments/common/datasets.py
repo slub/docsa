@@ -1,3 +1,5 @@
+"""Common methods when experimenting with datasets."""
+
 import os
 import logging
 
@@ -21,7 +23,21 @@ def filter_and_cache_named_datasets(
     dataset_list: DatasetTupleList,
     name_subset: Optional[Sequence[str]] = None,
 ) -> Iterator[Tuple[str, Dataset, Callable[[], SubjectHierarchy]]]:
-    """Return default qucosa dataset variants."""
+    """Filter and cache named datasets to an sqlite database.
+
+    Parameters
+    ----------
+    dataset_list : DatasetTupleList
+        the dataset list as list of tuples
+    name_subset : Optional[Sequence[str]], optional
+        optional name subset that is used to filter the full dataset list
+
+    Yields
+    ------
+    Tuple[str, Dataset, Callable[[], SubjectHierarchy]]
+        tuples of dataset name, the dataset loaded as sqlite database, and a generator to load the corresponding
+        subject hierarchy
+    """
     cache_dir = os.path.join(get_cache_dir(), "datasets")
 
     # filter data sets based on name subset parameter

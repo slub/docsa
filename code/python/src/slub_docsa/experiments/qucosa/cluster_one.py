@@ -10,13 +10,15 @@ import numpy as np
 
 from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_level, subject_label_breadcrumb_as_string
-from slub_docsa.evaluation.classification.incidence import membership_matrix_to_crisp_cluster_assignments
+from slub_docsa.evaluation.clustering.membership import membership_matrix_to_crisp_cluster_assignments
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
-from slub_docsa.evaluation.classification.plotting import cluster_distribution_by_subject_plot
-from slub_docsa.evaluation.classification.plotting import subject_distribution_by_cluster_plot
+from slub_docsa.evaluation.clustering.plotting import cluster_distribution_by_subject_plot
+from slub_docsa.evaluation.clustering.plotting import subject_distribution_by_cluster_plot
 from slub_docsa.evaluation.classification.plotting import write_multiple_figure_formats
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,10 @@ def qucosa_experiments_cluster_one(
     check_qucosa_download: bool = False,
 ):
     """Run clustering experiment evaluating single dataset."""
-    _, dataset, subject_hierarchy = list(qucosa_named_datasets([dataset_name], check_qucosa_download))[0]
+    named_datasets = filter_and_cache_named_datasets(
+        qucosa_named_datasets_tuple_list(check_qucosa_download), [dataset_name]
+    )
+    _, dataset, subject_hierarchy = list(named_datasets)[0]
     lang_code = "de"
 
     if max_documents is not None:

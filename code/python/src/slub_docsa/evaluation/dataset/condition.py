@@ -1,4 +1,4 @@
-"""Methods checking various prerequisites or conditions."""
+"""Methods checking various prerequisites or conditions for datasets."""
 
 import logging
 from typing import Tuple

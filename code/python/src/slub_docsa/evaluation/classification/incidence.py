@@ -1,7 +1,7 @@
 """Methods to work with incidence matrices."""
 
 import logging
-from typing import List, Sequence, cast
+from typing import List, Sequence
 
 import numpy as np
 from slub_docsa.common.score import IncidenceDecisionFunction
@@ -60,7 +60,7 @@ def subject_incidence_matrix_from_targets(
         by which subject. The column order corresponds to the order of subjects found in `subject_order`.
         The order of row corresponds to the order of `targets`.
     """
-    incidence_matrix = np.zeros((len(targets), len(subject_order)), dtype=np.int32)
+    incidence_matrix = np.zeros((len(targets), len(subject_order)), dtype=np.uint8)
     for i, uri_list in enumerate(targets):
         for uri in uri_list:
             if uri in subject_order:
@@ -117,11 +117,11 @@ def subject_idx_from_incidence_matrix(
         which contains the list of indexes (columns) that equals to 1 for the corresponding element in
         `incidence_matrix`.
     """
-    incidence_array = np.array(incidence_matrix)
-    return list(map(lambda l: list(np.where(l == 1)[0]), incidence_array))
+    return list(map(lambda l: list(np.where(l == 1)[0]), np.array(incidence_matrix)))
 
 
 class ThresholdIncidenceDecision(IncidenceDecisionFunction):
+    """Incidence decision based on a simple threshold."""
 
     def __init__(self, threshold: float = 0.5):
         """Select subjects based on a threshold over probabilities.
@@ -134,20 +134,33 @@ class ThresholdIncidenceDecision(IncidenceDecisionFunction):
         Returns
         -------
         Callback[[np.ndarray], np.ndarray]
-            A functions that transforms a numpy array of subject probabilities to an incidence matrix of the
-            same shape representing which subjects are chosen for which documents.
+
         """
         self.threshold = threshold
 
     def __call__(self, probabilities: np.ndarray) -> np.ndarray:
+        """Transform a numpy array of subject probabilities to an incidence matrix by applying a thresold.
+
+        Parameters
+        ----------
+        probabilities : np.ndarray
+            the matrix containg probability scores between 0 and 1
+
+        Returns
+        -------
+        np.ndarray
+            the incidence matrix containing incidences (either 0 or 1)
+        """
         # slower: return np.array(np.where(probabilities >= threshold, 1, 0))
         return (probabilities >= self.threshold).astype(np.uint8)
 
     def __str__(self):
+        """Return a string representation of this incidence decision function, which is used for caching."""
         return f"<ThresholdIncidenceDecision threshold={self.threshold}>"
 
 
 class TopkIncidenceDecision(IncidenceDecisionFunction):
+    """Incidence decision function that selects the top k subjects with highest probability (including zero)."""
 
     def __init__(self, k: int = 3):
         """Select exactly k subjects with highest probabilities.
@@ -168,17 +181,31 @@ class TopkIncidenceDecision(IncidenceDecisionFunction):
         self.k = k
 
     def __call__(self, probabilities: np.ndarray) -> np.ndarray:
-        incidence = np.zeros(probabilities.shape)
+        """Return top-k incidence matrix for a probability matrix.
+
+        Parameters
+        ----------
+        probabilities : np.ndarray
+            the matrix containg probability scores between 0 and 1
+
+        Returns
+        -------
+        np.ndarray
+            the incidence matrix containing incidences (either 0 or 1)
+        """
+        incidence = np.zeros(probabilities.shape, dtype=np.uint8)
         x_indices = np.repeat(np.arange(0, incidence.shape[0]), self.k)
         y_indices = np.argpartition(probabilities, -self.k)[:, -self.k:].flatten()
         incidence[x_indices, y_indices] = 1
         return incidence
 
     def __str__(self):
+        """Return a string representation of this incidence decision function, which is used for caching."""
         return f"<TopKIncidenceDecision k={self.k}>"
 
 
 class PositiveTopkIncidenceDecision(IncidenceDecisionFunction):
+    """Incidence decision function that selects the top k subjects with highest positive (non-zero) probability."""
 
     def __init__(self, k: int = 3):
         """Select at most k subjects with highest positive probabilities.
@@ -200,6 +227,18 @@ class PositiveTopkIncidenceDecision(IncidenceDecisionFunction):
         self.k = k
 
     def __call__(self, probabilities: np.ndarray) -> np.ndarray:
+        """Return positive top-k incidence matrix for a probability matrix.
+
+        Parameters
+        ----------
+        probabilities : np.ndarray
+            the matrix containg probability scores between 0 and 1
+
+        Returns
+        -------
+        np.ndarray
+            the incidence matrix containing incidences (either 0 or 1)
+        """
         incidence = np.zeros(probabilities.shape)
         x_indices = np.repeat(np.arange(0, incidence.shape[0]), self.k)
         y_indices = np.argpartition(probabilities, -self.k)[:, -self.k:].flatten()
@@ -208,6 +247,7 @@ class PositiveTopkIncidenceDecision(IncidenceDecisionFunction):
         return incidence
 
     def __str__(self):
+        """Return a string representation of this incidence decision function, which is used for caching."""
         return f"<PositiveTopkIncidenceDecision k={self.k}>"
 
 
@@ -246,83 +286,3 @@ def extend_incidence_list_to_ancestors(
                     ancestor_id = subject_order.index(ancestor)
                     extended_incidence[ancestor_id] = 1
     return extended_incidence
-
-
-def is_crisp_cluster_membership(membership: np.ndarray) -> bool:
-    """Check wheter a clustering membership matrix has only crisp assignments.
-
-    Meaning, each document is assigned to exactly one cluster with a membership degree of 1.
-
-    Parameters
-    ----------
-    membership: numpy.ndarray
-        the membership matrix to check
-
-    Returns
-    -------
-    bool
-        True if the membership matrix represents a crisp cluster assignment
-    """
-    if np.max(membership) > 1.0:
-        # there is a value larger than one, which is not allowed
-        raise ValueError("membership matrix has value larger than 1")
-
-    if np.min(membership) < 0.0:
-        # there is avlue smaller than zero, which is not allowed
-        raise ValueError("membership matrix has value smaller than 0")
-
-    if not cast(np.ndarray, ((membership == 0) | (membership == 1))).all():
-        # there are values that are not zeros or ones
-        return False
-
-    if not cast(np.ndarray, (np.sum(membership, axis=1) == 1)).all():
-        # there are rows that do not sum up to 1
-        return False
-
-    return True
-
-
-def crips_cluster_assignments_to_membership_matrix(
-    assignments: Sequence[int],
-) -> np.ndarray:
-    """Convert crisp cluster assignemnts to a cluster membership matrix.
-
-    Parameters
-    ----------
-    assignments: Sequence[int]
-        cluster assignments as list of cluster indices
-
-    Returns
-    -------
-    numpy.ndarray
-        membership matrix as simple binary matrix representing cluster assignemnts
-    """
-    n_documents, n_clusters = len(assignments), np.max(assignments) + 1
-
-    # initialize membership matrix
-    membership = np.zeros((n_documents, n_clusters))
-
-    # set membership in matrix
-    membership[list(range(n_documents)), assignments] = 1
-
-    return membership
-
-
-def membership_matrix_to_crisp_cluster_assignments(
-    membership: np.ndarray,
-) -> Sequence[int]:
-    """Covert membership matrix to a crisp cluster assignment list.
-
-    Parameters
-    ----------
-    membership: numpy.ndarray
-        the membership matrix representing a crisp clustering
-
-    Returns
-    -------
-    Sequence[int]
-        a list of cluster assignments (column indexes from membership matrix where values equal 1)
-    """
-    if not is_crisp_cluster_membership(membership):
-        raise ValueError("can not determine crisp cluster assignemnts for non-crisp membership")
-    return cast(np.ndarray, np.where(membership == 1)[1]).tolist()

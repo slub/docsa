@@ -10,7 +10,7 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClusteringModel
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
-from slub_docsa.evaluation.classification.incidence import crips_cluster_assignments_to_membership_matrix
+from slub_docsa.evaluation.clustering.membership import crips_cluster_assignments_to_membership_matrix
 
 logger = logging.getLogger(__name__)
 

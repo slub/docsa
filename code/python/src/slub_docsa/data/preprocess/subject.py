@@ -69,7 +69,18 @@ def subject_siblings_list(
 
 
 def root_subjects_from_subject_parent_map(subject_parent: Mapping[str, str]) -> Iterable[str]:
-    """Extract root subjects that do not have a parent."""
+    """Extract root subjects that do not have a parent.
+
+    Parameters
+    ----------
+    subject_parent : Mapping[str, str]
+        the mapping from subject URIs to parent subject URIs
+
+    Returns
+    -------
+    Iterable[str]
+        the list of root subject that do have `None` as parent URI in the provided mapping
+    """
     root_subjects = set()
     for child_uri, parent_uri in subject_parent.items():
         if parent_uri is None:
@@ -133,20 +144,23 @@ def subject_label_breadcrumb_as_string(
     subject_uri: str,
     lang_code: str,
     subject_hierarchy: SubjectHierarchy,
-) -> Iterable[Mapping[str, str]]:
+) -> Iterable[str]:
     """Return a list of label mappings describing the subject hierarchy path from root to this subject.
 
     Parameters
     ----------
     subject_uri: str
         the uri of the subject whose ancestor path (breadcrumb) is supposed to be returned
+    lang_code: str
+        the ISO 639-1 language code of the language the breadcrumb is requested in
     subject_hierarchy: SubjectHierarchy
         the subject hierarchy that is searched for ancestors of the specified subject
 
     Returns
     -------
-    Iterable[Mapping[str, str]]
-        a simple breadcrumb string (e.g. subject1 | subject2 | subject3) describing the ancestor path of the subject
+    Iterable[str]
+        a simple breadcrumb string (e.g. ["subject1", "subject2", "subject3"]) describing the ancestor path of the
+        subject including the requested subject itself
     """
     subject_path = subject_ancestors_list(subject_uri, subject_hierarchy)
     return list(subject_label_as_string(subject_uri, lang_code, subject_hierarchy) for subject_uri in subject_path)
@@ -159,6 +173,18 @@ def subject_ancestors_for_subject_list(
     """Return the set of all ancestors of a list of subjects from a subject hierarchy.
 
     Can be used to reduce a large subject hierarchy to a smaller set of relevant subjects.
+
+    Parameters
+    ----------
+    subject_list : Iterable[str]
+        the list of subjects whose ancestors are determined
+    subject_hierarchy : SubjectHierarchy
+        the subject hierarchy that is used to find ancestors for a subject
+
+    Returns
+    -------
+    Iterable[str]
+        the set of subject URIs for the provided subjects and all of their ancestors
     """
     return set(
         a_uri for s_uri in subject_list for a_uri in subject_ancestors_list(s_uri, subject_hierarchy)
@@ -305,7 +331,18 @@ def children_map_from_subject_parent_map(
 def build_subject_hierarchy_from_subject_tuples(
     subject_tuples: Iterable[SubjectTuple]
 ) -> SubjectHierarchy:
-    """Build a subject hierarchy from a list of subject tuples."""
+    """Build a subject hierarchy from a list of subject tuples.
+
+    Parameters
+    ----------
+    subject_tuples : Iterable[SubjectTuple]
+        the list of subject tuples containing information about each subjects URI, labels, parent subject
+
+    Returns
+    -------
+    SubjectHierarchy
+        the generated subject hierarchy
+    """
     subject_parent: Mapping[str, str] = {}
     subject_labels: Mapping[str, Mapping[str, str]] = {}
     subject_notation: Mapping[str, str] = {}

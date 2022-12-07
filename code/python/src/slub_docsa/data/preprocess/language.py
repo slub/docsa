@@ -17,6 +17,7 @@ from slub_docsa.data.preprocess.document import document_as_concatenated_string
 
 
 FASTTEXT_LANGUAGE_MODEL_URL = "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
+"""the default download URL for the fasttext language model"""
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,21 @@ def download_fasttext_language_model(
     url: str = FASTTEXT_LANGUAGE_MODEL_URL,
     filepath: str = None,
 ):
-    """Download fasttext language model."""
+    """Download fasttext language model.
+
+    Parameters
+    ----------
+    url : str, optional
+        the url to the fasttext language model, by default `FASTTEXT_LANGUAGE_MODEL_URL`
+    filepath : str, optional
+        the filepath where the language model is stored, if None, a default path of
+        `SLUB_DOCSA_RESOURCES_DIR/fasttext/lid.176.bin` is used
+
+    Returns
+    -------
+    None
+        as soon as the file is downloaded, or immediately if the file already exists
+    """
     if filepath is None:
         filepath = os.path.join(get_resources_dir(), "fasttext/lid.176.bin")
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -48,7 +63,7 @@ def load_fasttext_language_detector(
     min_probability : float, optional
         the minimum score to consider a language a correct detection, by default 0.5
     model_url : str, optional
-        the URL that is used to download the required fasttext language model
+        the URL that is used to download the required fasttext language model; default is `FASTTEXT_LANGUAGE_MODEL_URL`
     model_filepath : str, optional
         the filepath to the downloaded fasttext language model; if None, the filepath
         `$SLUB_DOCSA_RESOURCES_DIR/fasttext/lid.176.bin` is used

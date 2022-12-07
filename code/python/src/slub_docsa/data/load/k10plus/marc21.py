@@ -1,4 +1,4 @@
-"""Loads k10plus data from various sources."""
+"""Load and parse k10plus marc21 xml documents."""
 
 import logging
 import time
@@ -6,7 +6,7 @@ import re
 import xml.etree.ElementTree as ET  # nosec
 
 from itertools import islice
-from typing import Any, Callable, Mapping, Optional, Sequence
+from typing import Any, Callable, Iterator, Mapping, Optional, Sequence
 from slub_docsa.data.load.subjects.bk import bk_notation_to_uri
 from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, ddc_reduce_notation_to_short_notation
 from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri
@@ -85,7 +85,6 @@ def _extract_ddc_subjects(root_xml: ET.Element) -> Sequence[str]:
 
 def _extract_k10plus_marc_xml_title(root: ET.Element) -> Optional[str]:
     """Extract title from k10plus marc xml file."""
-    # extract title
     title_element = root.find("./marc:datafield[@tag='245']/marc:subfield[@code='a']", NAMESPACE)
     if title_element is None or not str(title_element.text):
         return None
@@ -101,7 +100,7 @@ def _extract_k10plus_marc_xml_subtitle(root: ET.Element) -> Optional[str]:
 
 
 def _extract_k10plus_marc_xml_language(root: ET.Element, language_code_table: LanguageCodeTable) -> Optional[str]:
-    """Extract language from k10plus marc xml file."""
+    """Extract language from k10plus marc xml document."""
     # extract language from tag 008
     control_element = root.find("./marc:controlfield[@tag='008']", NAMESPACE)
     control_language = None
@@ -124,6 +123,7 @@ def _extract_k10plus_marc_xml_language(root: ET.Element, language_code_table: La
 
 
 def _extract_k10plus_marc_xml_pica_ppn(root: ET.Element) -> Optional[str]:
+    """Extract pica ppn number from k10plus marc xml document."""
     control_element = root.find("./marc:controlfield[@tag='001']", NAMESPACE)
     if control_element is not None and control_element.text is not None:
         return control_element.text
@@ -133,8 +133,8 @@ def _extract_k10plus_marc_xml_pica_ppn(root: ET.Element) -> Optional[str]:
 def parse_single_k10plus_marc21_xml_file(
     filepath: str,
     line_batch_size: int = 1000,
-) -> str:
-    """Read single marc21 xml documents (as strings) from a k10plus xml dump file.
+) -> Iterator[str]:
+    """Read a single k10plus dump file and return each marc21 xml as string.
 
     Parameters
     ----------
@@ -197,6 +197,8 @@ def parse_k10plus_marc_xml_to_json(
     language_detector : Callable[[str], Optional[str]]
         a language detection method that is used in case the marc21 document doesn't contain
         any language information about the document
+    language_code_table: LanguageCodeTable
+        the language code tables that is used to convert l2 language codes to l3 after detection
 
     Returns
     -------

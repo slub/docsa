@@ -78,7 +78,7 @@ def load_language_codes(
     Returns
     -------
     LanguageCodeTable
-        _description_
+        the loaded language code table
     """
     if filepath is None:
         filepath = os.path.join(get_resources_dir(), "loc_gov/iso-639-2.txt")
@@ -100,11 +100,32 @@ def load_language_codes(
 
 
 def convert_language_code_to_l3(
-    code,
+    code: str,
     language_code_table: LanguageCodeTable,
     raise_invalid: bool = True
 ) -> Optional[str]:
-    """Convert potential 2-letter language code to 3-letter code."""
+    """Convert potential 2-letter language code to 3-letter code.
+
+    Parameters
+    ----------
+    code : str
+        the language code (either 2-letter or 3-letter) to convert to 3-letter
+    language_code_table : LanguageCodeTable
+        the language code table that is used for conversion
+    raise_invalid : bool, optional
+        whether to raise an ValueError if the provided language code can not be found in the provided language code
+        table, by default True
+
+    Returns
+    -------
+    Optional[str]
+        the converted language code as 3-letter code
+
+    Raises
+    ------
+    ValueError
+        if the provided language code can not be found in the provided language code table
+    """
     if code in language_code_table.by_l2:
         return language_code_table.by_l2[code].l3
     if code in language_code_table.by_l3:

@@ -4,8 +4,9 @@ import argparse
 
 from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.experiments.annif.models import default_annif_named_model_list
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets, qucosa_named_datasets_tuple_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
 
@@ -37,7 +38,10 @@ def available_qucosa_dataset_names():
 
 def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool):
     """Return a single dataset retrieving it by its name."""
-    dataset_tuple = next(qucosa_named_datasets([dataset_name], check_qucosa_download))
+    named_datasets = named_datasets = filter_and_cache_named_datasets(
+        qucosa_named_datasets_tuple_list(check_qucosa_download), [dataset_name]
+    )
+    dataset_tuple = next(named_datasets)
     if dataset_tuple is not None:
         return dataset_tuple[1], dataset_tuple[2]
     raise ValueError(f"dataset with name '{dataset_name}' not known")

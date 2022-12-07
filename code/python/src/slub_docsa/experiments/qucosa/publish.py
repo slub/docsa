@@ -13,7 +13,8 @@ from slub_docsa.common.paths import get_serve_dir
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets, unique_subject_order
 from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
 from slub_docsa.serve.common import PublishedClassificationModelStatistics, current_date_as_model_creation_date
 from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
 from slub_docsa.serve.rest.service.models import classify_with_limit_and_threshold
@@ -100,8 +101,12 @@ def _publish_model(model_generator, model_type, dataset, dataset_name, random_st
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
+    _check_qucosa_download = False
     _dataset_name = "qucosa_de_titles_rvk"
-    _named_datasets = qucosa_named_datasets([_dataset_name])
+
+    _named_datasets = filter_and_cache_named_datasets(
+        qucosa_named_datasets_tuple_list(_check_qucosa_download), [_dataset_name]
+    )
     _, _dataset, subject_hierarchy = next(_named_datasets)
 
     for _model_type, _model_generator in get_classic_classification_models_map().items():

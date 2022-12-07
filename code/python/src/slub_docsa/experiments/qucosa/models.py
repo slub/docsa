@@ -14,8 +14,8 @@ from sklearn.svm import LinearSVC
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 from slub_docsa.data.preprocess.vectorizer import RandomVectorizer
-from slub_docsa.models.classification.ann.base import TorchSingleLayerDenseReluModel
-from slub_docsa.models.classification.ann.base import TorchBertSequenceClassificationHeadModel
+from slub_docsa.models.classification.ann.dense import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann.pretrained import TorchBertSequenceClassificationHeadModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer, get_cached_tfidf_vectorizer

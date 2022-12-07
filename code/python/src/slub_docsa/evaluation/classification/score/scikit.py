@@ -1,4 +1,4 @@
-"""Defines various scores that can be used to judge the classification performance of models."""
+"""Defines non-batch classification performance scores based on the `scikit-learn` library."""
 
 # pylint: disable=too-many-locals, unused-argument
 

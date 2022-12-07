@@ -1,11 +1,11 @@
-"""Load k10plus data as iterator over samples."""
+"""Load k10plus data as an iterator over samples."""
 
 # pylint: disable=too-many-arguments, too-many-locals
 
 import time
 import logging
 
-from typing import Iterable, Mapping, Optional, Set
+from typing import Any, Iterable, Iterator, Mapping, Optional, Set
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
@@ -17,21 +17,51 @@ from slub_docsa.data.load.subjects.common import subject_hierarchy_by_subject_sc
 logger = logging.getLogger(__name__)
 
 
-def k10plus_json_combined_language(json_document):
-    """Return provided language or detected language if not language is provided."""
+def k10plus_json_combined_language(json_document: Mapping[str, Any]) -> str:
+    """Return provided language or detected language if not language is provided.
+
+    Parameters
+    ----------
+    json_document :
+        the json document as dictionary
+
+    Returns
+    -------
+    the combined language code
+    """
     if json_document["language"]["provided"]:
         return json_document["language"]["provided"]
     return json_document["language"]["detected"]
 
 
 def k10plus_json_document_as_sample(
-    json_document,
+    json_document: Mapping[str, Any],
     languages: Set[str],
     schemas: Set[str],
     subject_hierarchies: Mapping[str, SubjectHierarchy],
     filter_unknown_subjects: bool = True,
-) -> Sample:
-    """Parse json document and extract title and rvk classes."""
+) -> Optional[Sample]:
+    """Parse json document and extract title and subjects.
+
+    Parameters
+    ----------
+    json_document : Mapping[str, Any]
+        the json document as dictionary
+    languages : Set[str]
+        the set of acceptable languages; if a document has a different language, None is returned
+    schemas : Set[str]
+        the set of acceptable subject schema; if a document has no subjects from these schemas, None is returned
+    subject_hierarchies : Mapping[str, SubjectHierarchy]
+        the subject hierarchies for all schema, which are used to check whether a subject URI refers to a known subject
+        in the subject hierarchy if `filter_unknown_subjects` is True
+    filter_unknown_subjects : bool, optional
+        whether to filter subjects that are not known in the provided subject hierarchies, by default True
+
+    Returns
+    -------
+    Optional[Sample]
+        the sample or None, if the document is not acceptable regarding the provided language and schema restrictions
+    """
     # check language
     language = k10plus_json_combined_language(json_document)
     if languages and language not in languages:
@@ -76,8 +106,42 @@ def k10plus_public_samples_generator(
     line_batch_size: int = 1000,
     workers: Optional[int] = None,
     filter_unknown_subjects: bool = True
-):
-    """Return iterator over k10plus samples."""
+) -> Iterator[Sample]:
+    """Return iterator over k10plus samples.
+
+    Parameters
+    ----------
+    xml_directory : str, optional
+        the directory where k10plus marc21 xml dump files are stored; if None, the directory
+        `SLUB_RESOURCE_DIR/k10plus/marc21` is used
+    json_directory : str, optional
+        the directory where generated json cache files are stored at; if None, the directory
+        `SLUB_CACHE_DIR/k10plus/json` is used
+    languages : Optional[Iterable[str]], optional
+        the set of acceptable languages or None, if all languages are acceptable
+    schemas : Optional[Iterable[str]], optional
+        the set of acceptable subject schema or None, if no subjects are required
+    download : bool, optional
+        whether to download k10plus marc21 xml dump files if they do not exist yet, by default True
+    limit : Optional[int], optional
+        the maximum amount of samples to return or None, if all possible samples are required, by default None
+    line_batch_size : int, optional
+        the number of lines that are read in one batch to improve performance, by default 1000
+    workers : Optional[int], optional
+        the number of worker threads to process marc21 xml files; if None, the number of available cpu cores is used
+    filter_unknown_subjects : bool, optional
+        whether to filter subjects that are not known in the provided subject hierarchies, by default True
+
+    Yields
+    ------
+    Sample
+        each k10plus document matching the above specified criteria for language, schema, etc., as a sample
+
+    Raises
+    ------
+    ValueError
+        if a schema is provided that is not supported
+    """
     doc_count = 0
     last_log_time = time.time()
 

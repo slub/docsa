@@ -6,8 +6,8 @@ from functools import partial
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 
-from slub_docsa.models.classification.ann.base import TorchSingleLayerDenseReluModel
-from slub_docsa.models.classification.ann.base import TorchBertSequenceClassificationHeadModel
+from slub_docsa.models.classification.ann.dense import TorchSingleLayerDenseReluModel
+from slub_docsa.models.classification.ann.pretrained import TorchBertSequenceClassificationHeadModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 from slub_docsa.models.classification.ann.bert import TorchBertModel
 

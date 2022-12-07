@@ -11,8 +11,8 @@ from slub_docsa.common.document import Document
 from slub_docsa.common.score import ClusteringScore
 from slub_docsa.common.similarity import IndexedDocumentDistanceFunction, IndexedDocumentDistanceGenerator
 from slub_docsa.common.subject import SubjectTargets
-from slub_docsa.evaluation.classification.incidence import is_crisp_cluster_membership
-from slub_docsa.evaluation.classification.incidence import membership_matrix_to_crisp_cluster_assignments
+from slub_docsa.evaluation.clustering.membership import is_crisp_cluster_membership
+from slub_docsa.evaluation.clustering.membership import membership_matrix_to_crisp_cluster_assignments
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)

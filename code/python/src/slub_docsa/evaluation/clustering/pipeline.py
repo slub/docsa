@@ -1,4 +1,4 @@
-"""Pipeline for evaluating clustering models."""
+"""Pipeline for evaluating clustering algorithms."""
 
 # pylint: disable=too-many-arguments, too-many-locals
 
