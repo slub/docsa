@@ -68,7 +68,9 @@ def do_default_score_matrix_classification_evaluation(
         # setup models and scores
         model_lists = named_models_generator(subject_order, subject_hierarchy)
         score_lists = initialize_named_score_tuple_list(
-            default_named_score_list(subject_order, subject_hierarchy),
+            default_named_score_list(
+                # subject_order, subject_hierarchy
+            ),
             score_name_subset
         )
         per_class_score_lists = initialize_named_score_tuple_list(

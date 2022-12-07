@@ -1,11 +1,13 @@
 """Cached vectorizer for various experiments."""
 
+# pylint: disable=too-many-arguments
+
 import os
 
 from typing import Optional
 
 from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer, CachedVectorizer, PersistedCachedVectorizer
-from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, TfidfVectorizer, WordpieceVectorizer
 from slub_docsa.common.paths import get_cache_dir
 
 
@@ -56,3 +58,38 @@ def get_cached_tfidf_stemming_vectorizer(
     )
 
     return CachedVectorizer(tfidf_vectorizer, fit_only_once=fit_only_once)
+
+
+def get_static_wikipedia_wordpiece_vectorizer(
+    lang_code: str,
+    max_length: int = 32,
+    vocabulary_size: int = 10000,
+    uncased: bool = True,
+    limit: int = None,
+    cache_directory: str = None,
+):
+    """Load or generate a static Wordpiece vectorizer solely based on Wikipedia texts."""
+    if cache_directory is None:
+        props = "_".join(
+            [lang_code, f"vs{vocabulary_size}"]
+            + ["uncased" if uncased else "cased"]
+            + ([f"l{limit}"] if limit is not None else [])
+        )
+        cache_directory = os.path.join(get_cache_dir(), f"wordpiece/wikpedia_{props}")
+
+    if not os.path.exists(cache_directory):
+        vectorizer = WordpieceVectorizer(
+            lang_code,
+            vocabulary_size=vocabulary_size,
+            max_length=max_length,
+            uncased=uncased,
+            wikipedia_texts_limit=limit
+        )
+        vectorizer.fit(iter([]))
+        vectorizer.save(cache_directory)
+
+    vectorizer = WordpieceVectorizer(
+        lang_code, vocabulary_size=vocabulary_size, max_length=max_length, uncased=uncased, ignore_fit=True
+    )
+    vectorizer.load(cache_directory)
+    return vectorizer

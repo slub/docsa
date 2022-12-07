@@ -86,6 +86,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         epochs: int = 50,
         batch_size: int = 32,
         lr: float = 0.001,
+        positive_class_weight: float = 1.0,
+        positive_class_weight_decay: float = 1.0,
         plot_training_history_filepath: Optional[str] = None,
     ):
         """Initialize model.
@@ -100,6 +102,12 @@ class AbstractTorchModel(PersistableClassificationModel):
             the number examples used to calculate a gradient as a single batch
         lr: float
             the learning rate
+        positive_class_weight: float = 1.0
+            the positive class weight that is assigned to all positive cases (1.0 means no extra weight)
+        positive_class_weight_decay: float = 1.0
+            the decay factor that is applied to the positive class weight on each training epoch (1.0 means no decay)
+        plot_training_history_filepath: Optional[str] = None
+            the path to the training history plot
         """
         self.vectorizer = vectorizer
         self.epochs = epochs
@@ -107,6 +115,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         self.model_shape = None
         self.batch_size = batch_size
         self.lr = lr
+        self.positive_class_weight = positive_class_weight
+        self.positive_class_weight_decay = positive_class_weight_decay
         self.plot_training_history_filepath = plot_training_history_filepath
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -117,6 +127,13 @@ class AbstractTorchModel(PersistableClassificationModel):
     def _fit_epoch(self, train_dataloader, criterion, optimizer, calculate_f1_scores: bool = False):
         if self.model is None:
             raise RuntimeError("can't fit a model that is not yet initialized")
+
+        if self.positive_class_weight != 1.0 or self.positive_class_weight_decay != 1.0:
+            self.positive_class_weight = max(
+                1.0, self.positive_class_weight * self.positive_class_weight_decay
+            )
+            logger.info("set positive class weight to %f", self.positive_class_weight)
+            criterion.pos_weight = (torch.ones([self.model_shape[1]]) * self.positive_class_weight).to(self.device)
 
         # do training
         loss: Any = None

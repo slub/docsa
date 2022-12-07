@@ -148,15 +148,11 @@ class BatchedBestThresholdScore(BatchedMultiClassProbabilitiesScore):
         predicted_incidences: np.ndarray
             the matrix containing predicted subject probabilities in shape (document_batch, subjects).
         """
-        for threshold in self.thresholds:
+        for i, threshold in enumerate(self.thresholds):
             true_incidence = ThresholdIncidenceDecision(threshold)(true_probabilities)
             predicted_incidence = ThresholdIncidenceDecision(threshold)(predicted_probabilities)
-
-            for optimizer in self.optimizers:
-                optimizer.add_batch(true_incidence, predicted_incidence)
-
-            for score in self.scores:
-                score.add_batch(true_incidence, predicted_incidence)
+            self.optimizers[i].add_batch(true_incidence, predicted_incidence)
+            self.scores[i].add_batch(true_incidence, predicted_incidence)
 
     def __call__(self) -> float:
         """Return the best threshold score."""

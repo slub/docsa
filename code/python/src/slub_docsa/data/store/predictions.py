@@ -17,7 +17,7 @@ from slub_docsa.common.score import BatchedPerClassProbabilitiesScore
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.evaluation.classification.pipeline import SingleModelPerClassScores, SingleModelScores
 from slub_docsa.evaluation.classification.pipeline import TrainAndEvaluateModelFunction
-from slub_docsa.evaluation.classification.pipeline import default_batch_predict_model, default_train_model
+from slub_docsa.evaluation.classification.pipeline import default_batch_evaluate_model, default_train_model
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def persisted_training_and_evaluation(
 
         logger.info("score not available, train and evaluate the model")
         default_train_model(model, subject_order, train_dataset, validation_dataset)
-        scores, per_class_scores = default_batch_predict_model(
+        scores, per_class_scores = default_batch_evaluate_model(
             model, subject_order, test_dataset, score_generators, per_class_score_generators, batch_size
         )
 

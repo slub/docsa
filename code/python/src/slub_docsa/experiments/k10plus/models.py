@@ -11,7 +11,7 @@ from slub_docsa.models.classification.ann.pretrained import TorchBertSequenceCla
 from slub_docsa.models.classification.scikit import ScikitClassifier
 from slub_docsa.models.classification.ann.bert import TorchBertModel
 
-from slub_docsa.data.preprocess.vectorizer import WordpieceVectorizer
+from slub_docsa.experiments.common.vectorizer import get_static_wikipedia_wordpiece_vectorizer
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 from slub_docsa.experiments.common.vectorizer import get_cached_dbmdz_bert_vectorizer
 from slub_docsa.experiments.common.models import NamedClassificationModelTupleList
@@ -23,8 +23,8 @@ def default_k10plus_named_classification_model_list(language) -> NamedClassifica
         get_cached_tfidf_stemming_vectorizer, lang_code=language, max_features=10000, cache_prefix="k10plus"
     )
     dbmdz_bert_vectorizer = partial(get_cached_dbmdz_bert_vectorizer, subtext_samples=1)
-    wordpiece_vectorizer = partial(
-        WordpieceVectorizer, language="de", vocabulary_size=10000, max_length=32, uncased=True
+    wikipedia_wordpiece_vectorizer = partial(
+        get_static_wikipedia_wordpiece_vectorizer, lang_code="de", vocabulary_size=40000, max_length=48, uncased=True
     )
 
     models = [
@@ -57,16 +57,18 @@ def default_k10plus_named_classification_model_list(language) -> NamedClassifica
             vectorizer=dbmdz_bert_vectorizer(),
         )),
         ("tiny_bert_torch_ann", lambda: TorchBertModel(
-            vectorizer=wordpiece_vectorizer(),
+            vectorizer=wikipedia_wordpiece_vectorizer(),
             batch_size=64,
             epochs=64,
             lr=0.0001,
+            positive_class_weight=200.0,
+            positive_class_weight_decay=0.95,
             bert_config={
-                "hidden_size": 128,
+                "hidden_size": 256,
                 "num_hidden_layers": 2,
                 "hidden_dropout_prob": 0.1,
-                "intermediate_size": 256,
-                "num_attention_heads": 8,
+                "intermediate_size": 512,
+                "num_attention_heads": 4,
                 "attention_dropout_prob": 0.1,
                 "classifier_dropout": 0.1,
             }

@@ -58,11 +58,21 @@ class TorchBertModel(AbstractTorchModel):
         epochs: int = 50,
         batch_size: int = 32,
         lr: float = 0.001,
+        positive_class_weight: float = 1.0,
+        positive_class_weight_decay: float = 1.0,
         plot_training_history_filepath: Optional[str] = None,
         bert_config: Mapping[str, Any] = None,
     ):
         """Initialize BERT model."""
-        super().__init__(vectorizer, epochs, batch_size, lr, plot_training_history_filepath)
+        super().__init__(
+            vectorizer=vectorizer,
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=lr,
+            positive_class_weight=positive_class_weight,
+            positive_class_weight_decay=positive_class_weight_decay,
+            plot_training_history_filepath=plot_training_history_filepath
+        )
         self.bert_config = bert_config if bert_config is not None else {}
 
     def get_model(self, n_inputs, n_outputs) -> torch.nn.Module:

@@ -85,7 +85,7 @@ if __name__ == "__main__":
             # "annif_yake",
         ],
         dataset_schemas=["rvk"],
-        dataset_variants=[("public", 100000), ("slub", 20000)],
+        dataset_variants=[("public", 100000), ("slub_raw", 20000), ("slub_clean", 20000)],
         n_splits=10,
         load_cached_scores=True,
         random_state=123,

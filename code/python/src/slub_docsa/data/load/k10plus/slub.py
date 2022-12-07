@@ -338,7 +338,8 @@ def k10plus_slub_samples_generator(
     schemas: Optional[Iterable[str]] = None,
     limit: Optional[int] = None,
     require_toc: bool = True,
-    filter_unknown_subjects: bool = True
+    filter_unknown_subjects: bool = True,
+    clean_toc: bool = False,
 ) -> Iterator[Sample]:
     """Read k10plus documents including fulltext information as provided from the SLUB data dump.
 
@@ -360,6 +361,8 @@ def k10plus_slub_samples_generator(
         whether to only return samples for documents that have a ToC provided from the SLUB data dump, by default True
     filter_unknown_subjects : bool, optional
         whether to filter subjects that are not known in the provided subject hierarchies, by default True
+    clean_toc: bool, optional
+        whether to clean the table of contents text by removing any non-letter characters, by default False
 
     Yields
     ------
@@ -383,6 +386,9 @@ def k10plus_slub_samples_generator(
 
         doc = slub_store[ppn]
         toc = doc.texts.get("toc", "").strip() or None
+
+        if clean_toc and toc is not None:
+            toc = _clean_text_for_language_detection(toc)
 
         # skip document if it does not have a toc
         if require_toc and toc is None:

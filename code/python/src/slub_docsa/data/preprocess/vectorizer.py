@@ -10,7 +10,7 @@ import re
 import time
 
 from typing import Iterator, Optional, Any, Sequence, Union, cast
-from itertools import islice
+from itertools import chain, islice
 
 import torch
 import numpy as np
@@ -24,6 +24,7 @@ from transformers.models.bert.modeling_bert import BertModel
 from transformers import PreTrainedTokenizerFast, BatchEncoding
 
 from slub_docsa.common.paths import get_cache_dir
+from slub_docsa.data.load.wikipedia import load_wikipedia_cirrus_texts
 from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
 from slub_docsa.data.preprocess.document import persisted_nltk_snowball_text_stemming_function
 from slub_docsa.data.store.array import bytes_to_numpy_array, numpy_array_to_bytes
@@ -598,7 +599,9 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         vocabulary_size: int,
         max_length: int,
         uncased: bool = True,
-        use_wikipedia_texts: bool = True
+        use_wikipedia_texts: bool = True,
+        wikipedia_texts_limit: int = None,
+        ignore_fit: bool = False,
     ):
         """Initialize a wordpiece vectorizer.
 
@@ -615,17 +618,22 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         use_wikipedia_texts : bool, optional
             whether to load wikipedia texts in the provided language to improve the wordpiece model using those texts,
             by default True
+        wikipedia_texts_limit: int = None
+            the amount of wikipedia texts to use to generated the Wordpiece vectorizer
+        ignore_fit: bool = False
+            whether to ignore any calls to fit, e.g. after loading an already fitted wordpiece model
         """
         self.language = language
         self.vocabulary_size = vocabulary_size
         self.max_length = max_length
         self.uncased = uncased
         self.use_wikipedia_texts = use_wikipedia_texts
+        self.wikipedia_texts_limit = wikipedia_texts_limit
+        self.ignore_fit = ignore_fit
         self.tokenizer = None
         self.encoder = None
 
-    def fit(self, texts: Iterator[str]):
-        """Train a wordpiece vectorizer for the provided texts (and possibly additional texts from wikipedia)."""
+    def _fit(self, texts: Iterator[str]):
         unk_token = "[UNK]"  # nosec
         spl_tokens = ["[UNK]", "[SEP]", "[MASK]", "[CLS]", "[PAD]"]
         character_filter = re.compile(r"[\U0000024f-\U0010ffff]")
@@ -646,6 +654,17 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
 
         self.tokenizer.train_from_iterator(text_generator, trainer=trainer)
         self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
+
+    def fit(self, texts: Iterator[str]):
+        """Train a wordpiece vectorizer for the provided texts (and possibly additional texts from wikipedia)."""
+        if self.ignore_fit:
+            return
+        if self.use_wikipedia_texts:
+            logger.info("generating wordpiece vectorizer from wikipedia texts, this may take a long time")
+            wiki_texts = load_wikipedia_cirrus_texts(self.language, limit=self.wikipedia_texts_limit)
+            self._fit(chain(wiki_texts, texts))
+        else:
+            self._fit(texts)
 
     def transform(self, texts: Iterator[str]) -> Iterator[BatchEncoding]:
         """Return sequence vectors for the provided texts by applying the wordpiece strategy."""
