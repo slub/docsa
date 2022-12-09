@@ -6,6 +6,7 @@
 import logging
 import os
 import pickle  # nosec
+import time
 
 from typing import Any, Optional, Sequence, cast
 
@@ -72,6 +73,32 @@ class SimpleIndexedDataset(TorchDataset):
     def __len__(self):
         """Return the number of samples."""
         return len(self.features)
+
+
+class LazyIndexedDataset(TorchDataset):
+    """A torch dataset implementation that applies the vectorizer only when a sample is requested."""
+
+    def __init__(
+        self,
+        vectorizer: AbstractVectorizer,
+        documents: Sequence[Document],
+        subject_targets: Optional[Sequence[np.ndarray]] = None
+    ):
+        """Initialize dataset with a sequence of features and subject incidences."""
+        self.vectorizer = vectorizer
+        self.documents = documents
+        self.subject_targets = subject_targets
+
+    def __getitem__(self, idx):
+        """Return a specific tuple of feature and subject incidence vector at index position."""
+        features = next(self.vectorizer.transform(iter([document_as_concatenated_string(self.documents[idx])])))
+        if self.subject_targets is not None:
+            return features, self.subject_targets[idx]
+        return features
+
+    def __len__(self):
+        """Return the number of samples."""
+        return len(self.documents)
 
 
 class AbstractTorchModel(PersistableClassificationModel):
@@ -141,6 +168,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         epoch_loss = 0
         epoch_best_threshold_f1_score = None
         epoch_top3_f1_score = None
+        last_log_time = time.time()
+        last_log_batch = 0
 
         output_arrays = []
         y_arrays = []
@@ -162,6 +191,15 @@ class AbstractTorchModel(PersistableClassificationModel):
             optimizer.step()
 
             epoch_loss += loss.item()
+
+            if time.time() - last_log_time > 5.0:
+                samples_per_second = ((batch - last_log_batch) * self.batch_size) / (time.time() - last_log_time)
+                current_avg_loss = epoch_loss / (batch + 1)
+                logger.info(
+                    "processing batch %d with %d samples/s, loss=%.5f", batch, samples_per_second, current_avg_loss
+                )
+                last_log_time = time.time()
+                last_log_batch = batch
 
             if calculate_f1_scores:
                 output_arrays.append(output.cpu().detach().numpy())
@@ -234,32 +272,32 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         return epoch_loss, epoch_best_threshold_f1_score, epoch_top3_f1_score
 
-    def _get_data_loader_from_documents(self, texts, targets, batch_size, shuffle):
+    def _get_data_loader_from_documents(self, documents, targets, batch_size, shuffle):
         # extract features from texts
-        features = list(self.vectorizer.transform(iter(texts)))
+        # logger.info("extract features via vectorizer")
+        # features = list(self.vectorizer.transform(texts_iterator))
         # wrap as torch data loader
-        dataset = SimpleIndexedDataset(features, targets)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        dataset = LazyIndexedDataset(self.vectorizer, documents, targets)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
         return dataloader
 
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[np.ndarray],
         validation_documents: Optional[Sequence[Document]] = None,
         validation_targets: Optional[np.ndarray] = None,
     ):
         """Train the fully connected network for all training documents."""
         logger.info("train torch network with %d training examples", len(train_documents))
-        train_corpus = [document_as_concatenated_string(d) for d in train_documents]
 
         logger.debug("fit vectorizer based on training documents")
-        self.vectorizer.fit(iter(train_corpus))
+        self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
 
         # compile training data as data loader (and transform documents to features according to vectorizer)
         logger.debug("transform training data into tensors")
         train_dataloader = self._get_data_loader_from_documents(
-            texts=train_corpus,
+            documents=train_documents,
             targets=train_targets,
             batch_size=self.batch_size,
             shuffle=True,
@@ -269,9 +307,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         validation_dataloader = None
         if validation_documents is not None and validation_targets is not None:
             logger.debug("transform validation data into tensors")
-            validation_corpus = [document_as_concatenated_string(d) for d in validation_documents]
             validation_dataloader = self._get_data_loader_from_documents(
-                texts=validation_corpus,
+                documents=validation_documents,
                 targets=validation_targets,
                 batch_size=self.batch_size,
                 shuffle=False,
@@ -279,7 +316,7 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # initialize the torch model
         logger.info("initialize torch model on device '%s'", self.device)
-        self.model_shape = (int(self.vectorizer.output_shape()[0]), int(train_targets.shape[1]))
+        self.model_shape = (int(self.vectorizer.output_shape()[0]), int(len(train_targets[0])))
         logger.debug("model shape will be %s", str(self.model_shape))
         self.model = self.get_model(*self.model_shape)
 

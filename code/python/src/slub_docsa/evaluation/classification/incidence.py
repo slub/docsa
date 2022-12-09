@@ -1,7 +1,7 @@
 """Methods to work with incidence matrices."""
 
 import logging
-from typing import List, Sequence
+from typing import Iterator, List, Sequence
 
 import numpy as np
 from slub_docsa.common.score import IncidenceDecisionFunction
@@ -61,10 +61,11 @@ def subject_incidence_matrix_from_targets(
         The order of row corresponds to the order of `targets`.
     """
     incidence_matrix = np.zeros((len(targets), len(subject_order)), dtype=np.uint8)
+    subject_order_map = {s_uri: i for i, s_uri in enumerate(subject_order)}
     for i, uri_list in enumerate(targets):
         for uri in uri_list:
-            if uri in subject_order:
-                incidence_matrix[i, subject_order.index(uri)] = 1
+            if uri in subject_order_map:
+                incidence_matrix[i, subject_order_map[uri]] = 1
             else:
                 logger.warning("subject '%s' not given in subject_order list (maybe only in test data)", uri)
     return incidence_matrix
@@ -286,3 +287,54 @@ def extend_incidence_list_to_ancestors(
                     ancestor_id = subject_order.index(ancestor)
                     extended_incidence[ancestor_id] = 1
     return extended_incidence
+
+
+class LazySubjectIncidenceTargets(Sequence[Sequence[int]]):
+    """Wrapper that calculates subject incidences on-the-fly when retrieving them."""
+
+    def __init__(self, subject_targets: SubjectTargets, subject_order: Sequence[str]):
+        """Initialize wrapper with subject targets and unique subject order.
+
+        Parameters
+        ----------
+        subject_targets : SubjectTargets
+            the subject targets that are wrapped
+        subject_order : Sequence[str]
+            the subject order that is used to calculate the individual incidence arrays
+        """
+        self.subject_targets = subject_targets
+        self.number_of_samples = len(subject_targets)
+        self.number_of_subjects = len(subject_order)
+        self.subject_order_map = {s_uri: i for i, s_uri in enumerate(subject_order)}
+
+    def __getitem__(self, key: int) -> Sequence[int]:
+        """Retrieve an incidence array for a specific index of the subject targets list.
+
+        Subject incidence are returned as numpy array.
+
+        Parameters
+        ----------
+        key : int
+            the index of the requested subject target incidence
+
+        Returns
+        -------
+        Sequence[int]
+            the subject target incidence array
+        """
+        incidence_array = np.zeros(self.number_of_subjects, dtype=np.uint8)
+        for uri in self.subject_targets[key]:
+            if uri in self.subject_order_map:
+                incidence_array[self.subject_order_map[uri]] = 1
+            else:
+                logger.warning("subject '%s' not given in subject_order list (maybe only in test data)", uri)
+        return incidence_array
+
+    def __len__(self):
+        """Return the number of samples in subject targets."""
+        return self.number_of_samples
+
+    def __iter__(self) -> Iterator[Sequence[int]]:
+        """Iterate over all subject incidences."""
+        for i in range(self.number_of_samples):
+            yield self[i]

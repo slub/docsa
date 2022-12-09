@@ -16,6 +16,7 @@ from slub_docsa.common.score import BatchedPerClassProbabilitiesScore, BatchedMu
 from slub_docsa.evaluation.dataset.condition import check_dataset_subject_distribution
 from slub_docsa.evaluation.dataset.condition import check_dataset_subjects_have_minimum_samples
 from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.incidence import LazySubjectIncidenceTargets
 from slub_docsa.evaluation.classification.split import DatasetSplitFunction
 from slub_docsa.models.classification.dummy import OracleModel
 
@@ -50,7 +51,8 @@ def default_train_model(
     """
     logger.info("train model %s", str(model))
     # calcuate incidences
-    train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
+    train_incidence = LazySubjectIncidenceTargets(train_dataset.subjects, subject_order)
+    # train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
 
     validation_documents = None
     validation_incidence = None
@@ -285,6 +287,8 @@ def score_classification_models_for_dataset_with_splits(
     stop_after_evaluating_split: Optional[int] = None,
     use_test_data_as_validation_data: bool = False,
     batch_size: int = 100,
+    check_minimum_samples: bool = True,
+    check_split_distribution: bool = True,
 ) -> Tuple[MultiSplitScores, MultiSplitPerClassScores]:
     """Evaluate a dataset using cross-validation for a number of models and score functions.
 
@@ -317,6 +321,8 @@ def score_classification_models_for_dataset_with_splits(
     batch_size : int, optional
         the batch size at which the model is evaluated and scored, by default 100; only applies to the default
         training and evaluation strategy
+    check_minimum_samples: bool, optional
+        check whether the dataset has sufficient samples for each subject to do a x-fold cross-validation
 
     Returns
     -------
@@ -328,9 +334,10 @@ def score_classification_models_for_dataset_with_splits(
         `(n_splits, len(model_generators), len(per_class_score_generators), len(subject_order))` and contains score
         values for every subject calculated for every model, score function and split.
     """
-    logger.info("check minimum requirements for cross-validation")
-    if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
-        logger.warning("dataset contains subjects with insufficient number of samples")
+    if check_minimum_samples:
+        logger.info("check minimum requirements for cross-validation")
+        if not check_dataset_subjects_have_minimum_samples(dataset, n_splits):
+            logger.warning("dataset contains subjects with insufficient number of samples")
 
     all_split_scores = []
     all_split_per_class_scores = []
@@ -339,7 +346,8 @@ def score_classification_models_for_dataset_with_splits(
         logger.info("prepare %d-th cross validation split", i + 1)
         train_dataset, test_dataset = split
 
-        check_dataset_subject_distribution(train_dataset, test_dataset, (0.5 / n_splits, 2.0 / n_splits))
+        if check_split_distribution:
+            check_dataset_subject_distribution(train_dataset, test_dataset, (0.5 / n_splits, 2.0 / n_splits))
 
         logger.info(
             "train and evaluate %d-th cross validation split with %d training and %d test samples",

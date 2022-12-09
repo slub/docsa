@@ -13,6 +13,7 @@ from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.common.dataset import Dataset
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.store.predictions import persisted_training_and_evaluation
+from slub_docsa.data.store.subject import cached_unique_subject_order
 from slub_docsa.evaluation.classification.incidence import unique_subject_order
 from slub_docsa.evaluation.classification.split import DatasetSplitFunction, scikit_kfold_splitter
 from slub_docsa.evaluation.classification.split import skmultilearn_iterative_stratification_splitter
@@ -48,6 +49,8 @@ def do_default_score_matrix_classification_evaluation(
     per_class_score_name_subset: Optional[Iterable[str]] = None,
     load_cached_scores: bool = False,
     stop_after_evaluating_split: Optional[int] = None,
+    check_minimum_samples: bool = True,
+    check_split_distribution: bool = True,
 ) -> DefaultScoreMatrixResult:
     """Do 10-fold cross validation for default models and scores and save box plot."""
     results: DefaultScoreMatrixResult = []
@@ -62,7 +65,7 @@ def do_default_score_matrix_classification_evaluation(
         )
 
         # define subject ordering
-        subject_order = list(sorted(unique_subject_order(dataset.subjects)))
+        subject_order = cached_unique_subject_order(dataset_name, dataset.subjects)
         subject_hierarchy = subject_hierarchy_generator()
 
         # setup models and scores
@@ -89,6 +92,8 @@ def do_default_score_matrix_classification_evaluation(
             per_class_score_generators=per_class_score_lists.generators,
             train_and_evaluate=train_and_evaluate,
             stop_after_evaluating_split=stop_after_evaluating_split,
+            check_minimum_samples=check_minimum_samples,
+            check_split_distribution=check_split_distribution,
         )
 
         results.append(DefaultScoreMatrixDatasetResult(

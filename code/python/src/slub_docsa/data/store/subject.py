@@ -2,11 +2,14 @@
 
 import logging
 import os
+import pickle  # nosec
 
-from typing import Callable, Iterable, Iterator, Mapping, Optional
+from typing import Callable, Iterable, Iterator, Mapping, Optional, Sequence
 
 from sqlitedict import SqliteDict
-from slub_docsa.common.subject import SubjectHierarchy
+from slub_docsa.common.subject import SubjectHierarchy, SubjectTargets
+from slub_docsa.common.paths import get_cache_dir
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
 logger = logging.getLogger(__name__)
 
@@ -149,3 +152,46 @@ def load_persisted_subject_hierarchy_from_lazy_subject_generator(
     if not os.path.exists(filepath):
         SqliteSubjectHierarchy.save(lazy_subject_hierarchy(), filepath)
     return SqliteSubjectHierarchy(filepath)
+
+
+def cached_unique_subject_order(
+    dataset_name: str,
+    subject_targets: SubjectTargets,
+    cache_directory: Optional[str] = None
+) -> Sequence[str]:
+    """Load or generate a unique subject order from cache to improve performance.
+
+    Parameters
+    ----------
+    dataset_name : str
+        the dataset name that is used to identify a cached unique subject order
+    subject_targets : SubjectTargets
+        the subject targets that are used to generate the unique subject order in case it was not cached yet
+    cache_directory : Optional[str], optional
+        the directory where unique subject order are saved to, if None, the directory
+        `SLUB_DOCSA_CACHE_DIR/subject_order` is used
+
+    Returns
+    -------
+    Sequence[str]
+        the loaded or generated unique subject order for a dataset
+    """
+    if cache_directory is None:
+        cache_directory = os.path.join(get_cache_dir(), "subject_order")
+    os.makedirs(cache_directory, exist_ok=True)
+
+    filepath = os.path.join(cache_directory, f"{dataset_name}.pickle")
+    if os.path.exists(filepath):
+        # load subject order
+        logger.debug("load unique subject order from cache file for dataset '%s'", dataset_name)
+        with open(filepath, "rb") as file:
+            subject_order = pickle.load(file)  # nosec
+        return subject_order
+
+    # generate and save suject order
+    logger.debug("generate and save unique subject order for dataset '%s'", dataset_name)
+    subject_order = unique_subject_order(subject_targets)
+    with open(filepath, "wb") as file:
+        pickle.dump(subject_order, file)
+
+    return subject_order

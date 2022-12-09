@@ -2,8 +2,10 @@
 
 import os
 import logging
+import sqlite3
+import pickle  # nosec
 
-from typing import Callable, Iterator, Sequence
+from typing import Any, Callable, Iterator, Sequence
 
 from sqlitedict import SqliteDict
 
@@ -13,6 +15,67 @@ from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectUriList
 
 logger = logging.getLogger(__name__)
+
+
+class ReadOnlySqliteSequence(Sequence[Any]):
+    """Read only sequence implementation for SqliteDict that works with multiprocessing."""
+
+    def __init__(self, filepath: str, table: str):
+        """Initialize a read only sqlite dict.
+
+        Parameters
+        ----------
+        filepath : str
+            the filepath to the sqlite database
+        table : str
+            the table name from which objects are loaded
+        """
+        self.table = table
+        self.connection = sqlite3.connect(filepath, check_same_thread=False, isolation_level=None)
+        self.cursor = self.connection.cursor()
+
+    def __getitem__(self, key: int) -> Any:
+        """Retrieve an object from the sqlite database.
+
+        Parameters
+        ----------
+        key : int
+            the key for the object
+
+        Returns
+        -------
+        Any
+            the loaded object
+        """
+        result = self.cursor.execute(f"SELECT value FROM \"{self.table}\" WHERE key = ?", (key,))  # nosec
+        return pickle.loads(bytes(result.fetchone()[0]))  # nosec
+
+    def __len__(self) -> int:
+        """Return the number of objects stored in the sqlite database.
+
+        Returns
+        -------
+        int
+            the length
+        """
+        result = self.cursor.execute(f"SELECT COUNT(*) FROM \"{self.table}\"")  # nosec
+        return int(result.fetchone()[0])
+
+    def __iter__(self) -> Any:
+        """Iterate over all objects of the Sqlite database.
+
+        Yields
+        ------
+        Any
+            objects previously stored in the sqlite database
+        """
+        for i in range(len(self)):
+            yield self[i]
+
+    def close(self):
+        """Close the sqlite database connection."""
+        if self.connection:
+            self.connection.close()
 
 
 class _DatasetSqliteStoreSequence(Sequence):
@@ -101,7 +164,10 @@ class DatasetSqliteStore(Dataset):
         """
         self.populate_mode = populate_mode
         self.batch_size = batch_size
-        self.store = SqliteDict(filepath, "dataset", autocommit=not populate_mode, flag="w" if populate_mode else "r")
+        if populate_mode:
+            self.store = SqliteDict(filepath, "dataset", autocommit=False, flag="w")
+        else:
+            self.store = ReadOnlySqliteSequence(filepath, "dataset")
         self._documents = _DatasetSqliteStoreSequence(self.store, self.populate_mode, 0)
         self._subjects = _DatasetSqliteStoreSequence(self.store, self.populate_mode, 1)
         self.documents = self._documents

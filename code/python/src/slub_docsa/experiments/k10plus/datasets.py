@@ -71,7 +71,9 @@ if __name__ == "__main__":
     logging.getLogger("sqlitedict").setLevel(logging.WARNING)
 
     # loads all data sets and generates persistent storage for them
-    dataset_list = k10plus_named_datasets_tuple_list()
+    dataset_list = k10plus_named_datasets_tuple_list(
+        languages=["en"], variants=[("public", None), ("slub_raw", None), ("slub_clean", None)]
+    )
     for dn, ds, _ in filter_and_cache_named_datasets(dataset_list):
         n_unique_subjects = len(unique_subject_order(ds.subjects))
         logger.info(

@@ -84,7 +84,7 @@ if __name__ == "__main__":
             "annif_fasttext"
             # "annif_yake",
         ],
-        dataset_schemas=["rvk"],
+        dataset_schemas=["bk"],
         dataset_variants=[("public", 100000), ("slub_raw", 20000), ("slub_clean", 20000)],
         n_splits=10,
         load_cached_scores=True,
