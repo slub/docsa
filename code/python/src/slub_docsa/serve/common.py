@@ -4,10 +4,14 @@
 
 from datetime import datetime
 
-from typing import Sequence, Optional, NamedTuple, Tuple, Mapping
+from typing import Callable, Sequence, Optional, NamedTuple, Tuple, Mapping
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import PersistableClassificationModel
+from slub_docsa.common.subject import SubjectHierarchy
+
+
+ModelTypeMapping = Mapping[str, Callable[[SubjectHierarchy, Sequence[str]], PersistableClassificationModel]]
 
 
 class PublishedClassificationModelStatistics(NamedTuple):

@@ -4,16 +4,16 @@
 
 import logging
 
-from typing import Sequence, Optional, Mapping, Tuple
+from typing import Callable, Sequence, Optional, Mapping, Tuple
 
 import numpy as np
 
 from slub_docsa.common.document import Document
 from slub_docsa.common.model import ClassificationModel
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, ClassificationModelsRestService
 from slub_docsa.serve.common import PublishedClassificationModel, PublishedClassificationModelInfo
-from slub_docsa.serve.common import ModelNotFoundException, SchemasRestService
-from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
+from slub_docsa.serve.common import ModelNotFoundException, SchemasRestService, ModelTypeMapping
 from slub_docsa.serve.store.models import find_stored_classification_model_infos, load_published_classification_model
 
 
@@ -127,11 +127,18 @@ class PartialModelInfosRestService(ClassificationModelsRestService):
 class SingleStoredModelRestService(PartialModelInfosRestService, PartialModelClassificationRestService):
     """REST implementation that only loads a single model at a time for classification."""
 
-    def __init__(self, directory: str, schemas_service: SchemasRestService):
+    def __init__(
+        self,
+        directory: str,
+        model_types: ModelTypeMapping,
+        schemas_service: SchemasRestService,
+        schema_generators: Mapping[str, Callable[[], SubjectHierarchy]],
+    ):
         """Init."""
         logger.info("load one model at a time")
         self.schemas_service = schemas_service
-        self.model_types = get_classic_classification_models_map()
+        self.schema_generators = schema_generators
+        self.model_types = model_types
         self.model_infos = find_stored_classification_model_infos(directory)
         self.loaded_model: Optional[PublishedClassificationModel] = None
         logger.info("discovered %d models %s", len(self.model_infos), str(list(self.model_infos.keys())))
@@ -148,7 +155,7 @@ class SingleStoredModelRestService(PartialModelInfosRestService, PartialModelCla
 
         if self.loaded_model is None or model_id != self.loaded_model.info.model_id:
             self.loaded_model = load_published_classification_model(
-                self.model_infos[model_id].directory, self.model_types
+                self.model_infos[model_id].directory, self.model_types, self.schema_generators
             )
         return self.loaded_model
 
@@ -156,14 +163,21 @@ class SingleStoredModelRestService(PartialModelInfosRestService, PartialModelCla
 class AllStoredModelRestService(PartialModelInfosRestService, PartialModelClassificationRestService):
     """A service implementation that pre-loads all stored models and serves them from memory."""
 
-    def __init__(self, directory: str, schemas_service: SchemasRestService):
+    def __init__(
+        self,
+        directory: str,
+        model_types: ModelTypeMapping,
+        schemas_service: SchemasRestService,
+        schema_generators: Mapping[str, Callable[[], SubjectHierarchy]],
+    ):
         """Init."""
         logger.info("load all stored models into memory")
         self.schemas_service = schemas_service
-        self.model_types = get_classic_classification_models_map()
+        self.schema_generators = schema_generators
+        self.model_types = model_types
         self.model_infos = find_stored_classification_model_infos(directory)
         self.models = {
-            model_id: load_published_classification_model(info.directory, self.model_types)
+            model_id: load_published_classification_model(info.directory, self.model_types, self.schema_generators)
             for model_id, info in self.model_infos.items()
         }
         logger.info("discovered %d models %s", len(self.model_infos), str(list(self.model_infos.keys())))

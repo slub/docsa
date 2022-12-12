@@ -100,11 +100,11 @@ class _CustomAnnifSubjectCorpus:
         self.subjects_by_uri = {s.uri: s for s in subjects}
         self.languages = languages
 
-    def get_concept_labels(self, concept, _label_types, _language):
+    def get_concept_labels(self, concept, _label_types):
         """Return a list of labels for each subject."""
         if concept in self.subjects_by_uri:
-            return [self.subjects_by_uri[concept].labels[_language]]
-        return []
+            return {lang: [label] for lang, label in self.subjects_by_uri[concept].labels.items()}
+        return {}
 
 
 class _CustomAnnifDocumentCorpus:
@@ -369,9 +369,6 @@ class AnnifModel(PersistableClassificationModel):
         """Save annif model to a directory."""
         if self.model is None or self.project is None or self.n_unique_subjects is None:
             raise RuntimeError("model has not been trained yet, call fit before saving!")
-
-        if self.model_type in ["yake", "stwfsa", "mllm"]:
-            raise ValueError(f"annif model '{self.model_type}' can not be saved (yet)")
 
         # save data directory contents
         copy_tree(self.data_dir, os.path.join(persist_dir, "annif"))

@@ -8,10 +8,12 @@ import waitress
 
 from slub_docsa.cli.common import add_logging_arguments, setup_logging_from_args
 from slub_docsa.common.paths import get_serve_dir
-from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sqlite
-from slub_docsa.data.load.subjects.jskos import load_jskos_subject_hierarchy_from_sqlite
+from slub_docsa.data.load.subjects.common import default_schema_generators
 from slub_docsa.serve.app import create_webapp
 from slub_docsa.serve.common import SimpleRestService
+from slub_docsa.serve.models.classification.ann import get_ann_classification_models_map
+from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
+from slub_docsa.serve.models.classification.natlibfi_annif import get_annif_classification_models_map
 from slub_docsa.serve.rest.service.languages import LangidLanguagesRestService
 from slub_docsa.serve.rest.service.models import AllStoredModelRestService, SingleStoredModelRestService
 from slub_docsa.serve.rest.service.schemas import SimpleSchemaRestService
@@ -72,15 +74,15 @@ def _run_rest_service(args):
     port = args.port
     threads = args.threads
 
-    schema_rest_service = SimpleSchemaRestService({
-        "rvk": load_rvk_subject_hierarchy_from_sqlite(),
-        "ddc": load_jskos_subject_hierarchy_from_sqlite("ddc"),
-        "bk": load_jskos_subject_hierarchy_from_sqlite("bk")
-    })
+    model_types = {}
+    model_types.update(get_classic_classification_models_map())
+    model_types.update(get_annif_classification_models_map())
+    model_types.update(get_ann_classification_models_map())
+    schema_generators = default_schema_generators()
+    schema_rest_service = SimpleSchemaRestService(schema_generators)
 
-    model_rest_service = AllStoredModelRestService(serve_directory, schema_rest_service) \
-        if load_all_models else SingleStoredModelRestService(serve_directory, schema_rest_service)
-
+    model_rest_service_cls = AllStoredModelRestService if load_all_models else SingleStoredModelRestService
+    model_rest_service = model_rest_service_cls(serve_directory, model_types, schema_rest_service, schema_generators)
     lang_rest_service = LangidLanguagesRestService()
 
     rest_service = SimpleRestService(model_rest_service, schema_rest_service, lang_rest_service)

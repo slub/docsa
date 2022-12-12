@@ -8,6 +8,7 @@ import logging
 from typing import Callable, Mapping, Sequence, NamedTuple
 
 from slub_docsa.common.model import PersistableClassificationModel
+from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.serve.common import PublishedClassificationModelInfo, PublishedClassificationModel
 from slub_docsa.serve.common import PublishedClassificationModelStatistics
 
@@ -95,18 +96,24 @@ def save_as_published_classification_model(
 
 def load_published_classification_model(
     directory: str,
-    model_types: Mapping[str, Callable[[], PersistableClassificationModel]]
+    model_types: Mapping[str, Callable[[SubjectHierarchy, Sequence[str]], PersistableClassificationModel]],
+    schema_generators: Mapping[str, Callable[[], SubjectHierarchy]],
 ):
     """Load a model and its information such that it can be used by the REST service."""
     model_info = load_published_classification_model_info(directory)
 
-    # instanciate model and load state
-    model = model_types[model_info.model_type]()
-    model.load(os.path.join(directory, "model_state"))
-
     logger.info("load subject order from disk at '%s'", directory)
     with open(os.path.join(directory, "subject_order.pickle"), "rb") as file:
         subject_order = pickle.load(file)  # nosec
+
+    if model_info.schema_id not in schema_generators:
+        raise ValueError(f"Cannot load model for unknown schema '{model_info.schema_id}'")
+    logger.info("load subject hierarchy '%s' for model", model_info.schema_id)
+    subject_hierarchy = schema_generators[model_info.schema_id]()
+
+    # instanciate model and load state
+    model = model_types[model_info.model_type](subject_hierarchy, subject_order)
+    model.load(os.path.join(directory, "model_state"))
 
     return PublishedClassificationModel(
         info=model_info,

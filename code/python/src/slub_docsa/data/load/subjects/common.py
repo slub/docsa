@@ -6,6 +6,15 @@ from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sq
 from slub_docsa.data.load.subjects.jskos import load_jskos_subject_hierarchy_from_sqlite
 
 
+def default_schema_generators():
+    """Return generator functions for common subject schema."""
+    return {
+        "rvk": load_rvk_subject_hierarchy_from_sqlite,
+        "ddc": lambda: load_jskos_subject_hierarchy_from_sqlite("ddc"),
+        "bk": lambda: load_jskos_subject_hierarchy_from_sqlite("bk"),
+    }
+
+
 def subject_hierarchy_by_subject_schema(
     schema: Union[Literal["rvk"], Literal["ddc"], Literal["bk"]],
 ) -> SubjectHierarchy:
@@ -23,8 +32,4 @@ def subject_hierarchy_by_subject_schema(
     SubjectHierarchy
         the corresponding subject hierarchy
     """
-    return {
-        "rvk": load_rvk_subject_hierarchy_from_sqlite,
-        "ddc": lambda: load_jskos_subject_hierarchy_from_sqlite("ddc"),
-        "bk": lambda: load_jskos_subject_hierarchy_from_sqlite("bk"),
-    }[schema]()
+    return default_schema_generators()[schema]()

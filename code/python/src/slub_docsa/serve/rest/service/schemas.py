@@ -1,6 +1,6 @@
 """Schema rest service implementations."""
 
-from typing import Sequence, Mapping
+from typing import Callable, Sequence, Mapping
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 from slub_docsa.serve.common import PublishedSubjectInfo, PublishedSubjectShortInfo, SchemaNotFoundException
@@ -10,9 +10,9 @@ from slub_docsa.serve.common import SubjectNotFoundException, SchemasRestService
 class SimpleSchemaRestService(SchemasRestService):
     """Schema REST service that provides access to a list of subject hierarchies."""
 
-    def __init__(self, subject_hierarchies: Mapping[str, SubjectHierarchy]):
+    def __init__(self, schema_generators: Mapping[str, Callable[[], SubjectHierarchy]]):
         """Init schema REST service."""
-        self.subject_hierarchies = subject_hierarchies
+        self.subject_hierarchies = {schema: generator() for schema, generator in schema_generators.items()}
 
     def find_schemas(self) -> Sequence[str]:
         """Return the list of avaialble schemas."""

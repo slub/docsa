@@ -77,7 +77,7 @@ def subject_hierarchy_to_skos_graph(
         subject_set = set()
         for subject_uri in mandatory_subject_list:
             if subject_uri in subject_hierarchy:
-                subject_set.update([n.uri for n in subject_ancestors_list(subject_uri, subject_hierarchy)])
+                subject_set.update(subject_ancestors_list(subject_uri, subject_hierarchy))
             else:
                 logger.warning("subject %s is mandatory, but can not be found in subject hierarchy", subject_uri)
         subject_iterator = iter(subject_set)
