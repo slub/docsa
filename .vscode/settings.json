@@ -2,6 +2,12 @@
     "files.exclude": {
         "**/__pycache__": true
     },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/code/python/build": true,
+    },
     "python.defaultInterpreterPath": "/home/slub/.venv/bin/python",
     "python.autoComplete.extraPaths": [
         "/home/slub/workspace/code/python/src",
