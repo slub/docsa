@@ -70,19 +70,29 @@ class PublishedClassificationModel(NamedTuple):
     """the subject order"""
 
 
-class PublishedSubjectInfo(NamedTuple):
-    """Information about a subject."""
+class PublishedSubjectShortInfo(NamedTuple):
+    """Reduced information about a subject (when describing ancestors and children)."""
+
+    subject_uri: str
+    """the URI of the subject"""
 
     labels: Mapping[str, str]
     """A map of labels for this subject indexed by the ISO 639-1 language code of the label language."""
 
-    ancestors: Sequence[str]
+
+class PublishedSubjectInfo(NamedTuple):
+    """Information about a subject."""
+
+    subject_uri: str
+    """the URI of the subject"""
+
+    labels: Mapping[str, str]
+    """A map of labels for this subject indexed by the ISO 639-1 language code of the label language."""
+
+    ancestors: Sequence[PublishedSubjectShortInfo]
     """The list URIs of the ancestors of this subject"""
 
-    breadcrumb: Sequence[Mapping[str, str]]
-    """A list of mappings from the ISO 639-1 language code to humand readable labels for each ancestor subject."""
-
-    children: Sequence[str]
+    children: Sequence[PublishedSubjectShortInfo]
     """The list of URIs of children subjects."""
 
 

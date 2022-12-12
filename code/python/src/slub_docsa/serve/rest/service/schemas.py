@@ -2,9 +2,9 @@
 
 from typing import Sequence, Mapping
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.preprocess.subject import subject_ancestors_list, subject_label_breadcrumb
-from slub_docsa.serve.common import PublishedSubjectInfo, SchemaNotFoundException, SchemasRestService
-from slub_docsa.serve.common import SubjectNotFoundException
+from slub_docsa.data.preprocess.subject import subject_ancestors_list
+from slub_docsa.serve.common import PublishedSubjectInfo, PublishedSubjectShortInfo, SchemaNotFoundException
+from slub_docsa.serve.common import SubjectNotFoundException, SchemasRestService
 
 
 class SimpleSchemaRestService(SchemasRestService):
@@ -38,8 +38,18 @@ class SimpleSchemaRestService(SchemasRestService):
             raise SubjectNotFoundException(schema_id, subject_uri)
         subject_hierarchy = self.subject_hierarchies[schema_id]
         return PublishedSubjectInfo(
+            subject_uri=subject_uri,
             labels=subject_hierarchy.subject_labels(subject_uri),
-            breadcrumb=subject_label_breadcrumb(subject_uri, subject_hierarchy)[:-1],
-            ancestors=subject_ancestors_list(subject_uri, subject_hierarchy)[:-1],
-            children=list(subject_hierarchy.subject_children(subject_uri))
+            ancestors=[
+                PublishedSubjectShortInfo(
+                    subject_uri=ancestor_uri,
+                    labels=subject_hierarchy.subject_labels(ancestor_uri),
+                ) for ancestor_uri in subject_ancestors_list(subject_uri, subject_hierarchy)[:-1]
+            ],
+            children=[
+                PublishedSubjectShortInfo(
+                    subject_uri=child_uri,
+                    labels=subject_hierarchy.subject_labels(child_uri),
+                ) for child_uri in subject_hierarchy.subject_children(subject_uri)
+            ],
         )

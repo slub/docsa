@@ -3,6 +3,7 @@
 import json
 
 from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, PublishedSubjectInfo
+from slub_docsa.serve.common import PublishedSubjectShortInfo
 
 
 def parse_subject_info_from_json(data):
@@ -10,10 +11,22 @@ def parse_subject_info_from_json(data):
     if data is None:
         return None
     return PublishedSubjectInfo(
+        subject_uri=data["subject_uri"],
         labels=data["labels"],
-        breadcrumb=data["breadcrumb"],
-        ancestors=data["ancestors"],
-        children=data["children"]
+        ancestors=[
+            PublishedSubjectShortInfo(
+                subject_uri=subject["subject_uri"],
+                labels=subject["labels"],
+            )
+            for subject in data["ancestors"]
+        ],
+        children=[
+            PublishedSubjectShortInfo(
+                subject_uri=subject["subject_uri"],
+                labels=subject["labels"],
+            )
+            for subject in data["children"]
+        ],
     )
 
 

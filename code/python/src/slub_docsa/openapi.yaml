@@ -278,7 +278,7 @@ paths:
                   $ref: "#/components/schemas/ClassificationResult"
               examples:
                 _default:
-                  summary: 3 documents, t=0.1, limit=3
+                  summary: 2 documents, multipe predictions
                   value: [
                     {
                       document_uri: "uri://document_1",
@@ -287,19 +287,27 @@ paths:
                           "subject_uri": "subject_1",
                           "score": 0.7,
                           "subject_info": {
+                            "subject_uri": "subject_1",
                             "labels": {"en": "some label"},
-                            "breadcrumb": [{"en": "label of parent subject"}, {"en": "label of grandparent subject"}],
-                            "ancestors": ["uri-of-parent-subject", "uri-of-grandparent-subject"],
-                            "children": ["uri-of-first-child-subject", "uri-of-second-child-subject"]
+                            "ancestors": [
+                              {"subject_uri": "uri-of-parent-subject", "labels": {"en": "label of parent subject"}},
+                              {"subject_uri": "uri-of-grandparent-subject", "labels": {"en": "label of grandparent subject"}}
+                            ],
+                            "children": [
+                              {"subject_uri": "uri-of-first-child-subject", "labels": {"en": "label of child subject"}},
+                              {"subject_uri": "uri-of-second-child-subject", "labels": {"en": "label of 2nd child subject"}},
+                            ]
                           }
                         },
                         {
                           "subject_uri": "subject_2",
                           "score": 0.5,
                           "subject_info": {
+                            "subject_uri": "subject_2",
                             "labels": {"en": "another label"},
-                            "breadcrumb": [{"en": "label of the parent subject"}],
-                            "ancestors": ["uri-of-the-parent-subject"],
+                            "ancestors": [
+                              {"subject_uri": "uri-of-the-parent-subject", "labels": {"en": "label of the parent subject"}}
+                            ],
                             "children": []
                           }
                         },
@@ -307,9 +315,11 @@ paths:
                           "subject_uri": "subject_3",
                           "score": 0.4,
                           "subject_info": {
+                            "subject_uri": "subject_3",
                             "labels": {"en": "third label"},
-                            "breadcrumb": [{"en": "label of the parent subject"}],
-                            "ancestors": ["uri-of-the-parent-subject"],
+                            "ancestors": [
+                              {"subject_uri": "uri-of-the-parent-subject", "labels": {"en": "label of the parent subject"}}
+                            ],
                             "children": []
                           }
                         },
@@ -322,9 +332,11 @@ paths:
                           "subject_uri": "subject_2",
                           "score": 0.9,
                           "subject_info": {
+                            "subject_uri": "subject_2",
                             "labels": {"en": "second subject label"},
-                            "breadcrumb": [{"en": "label of the parent subject"}],
-                            "ancestors": ["uri-of-the-parent-subject"],
+                            "ancestors": [
+                              {"subject_uri": "uri-of-the-parent-subject", "labels": {"en": "label of the parent subject"}}
+                            ],
                             "children": []
                           }
                         },
@@ -332,42 +344,17 @@ paths:
                           "subject_uri": "subject_4",
                           "score": 0.1,
                           "subject_info": {
+                            "subject_uri": "subject_4",
                             "labels": {"en": "fourth label"},
-                            "breadcrumb": [],
                             "ancestors": [],
                             "children": []
                           }
                         },
                       ],
-                    },
-                    {
-                      document_uri: "uri://document_3",
-                      predictions: [
-                        {
-                          "subject_uri": "subject_1",
-                          "score": 0.2,
-                          "subject_info": {
-                            "labels": {"en": "some label"},
-                            "breadcrumb": [{"en": "label of parent subject"}, {"en": "label of grandparent subject"}],
-                            "ancestors": ["uri-of-parent-subject", "uri-of-grandparent-subject"],
-                            "children": ["uri-of-first-child-subject", "uri-of-second-child-subject"]
-                          }
-                        },
-                        {
-                          "subject_uri": "subject_5",
-                          "score": 0.1,
-                          "subject_info": {
-                            "labels": {"en": "fiveth label"},
-                            "breadcrumb": [],
-                            "ancestors": [],
-                            "children": []
-                          }
-                        }
-                      ]
                     }
                   ]
                 no_results:
-                  summary: 3 documents, t=0.99, limit=3
+                  summary: 3 documents, no predictions
                   value: [
                     { document_uri: "uri://document_1", predictions: [] },
                     { document_uri: "uri://document_2", predictions: [] },
@@ -917,16 +904,40 @@ components:
               additionalProperties:
                 type: number
 
+    SubjectShortInfo:
+      type: object
+      description: |
+        short information about a child or ancestor subject
+      required:
+        - subject_uri
+        - labels
+      properties:
+        subject_uri:
+          type: string
+          description: |
+            the URI of the subject
+        labels:
+          type: object
+          description: |
+            human readable labels of this subject for various languages
+            indexed by the ISO 639-1 language code
+          additionalProperties:
+            type: string
+
     SubjectInfo:
       type: object
       description: |
         information about this subject
       required:
+        - subject_uri
         - labels
         - ancestors
         - children
-        - breadcrumb
       properties:
+        subject_uri:
+          type: string
+          description: |
+            the URI of the subject
         labels:
           type: object
           description: |
@@ -937,37 +948,37 @@ components:
         ancestors:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/SubjectShortInfo"
           description: |
-            a list of subject URIs referencing the ancestors of the subject
+            a list of information about each ancestor of the subject
             (e.g., an empty list if the subject is a root subject)
         children:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/SubjectShortInfo"
           description: |
-            the list of URIs of children subjects
-        breadcrumb:
-          type: array
-          description: |
-              a list of mappings from the ISO 639-1 language code to
-              human readable labels for each ancestor subject
-          items:
-            type: object
-            additionalProperties:
-              type: string
+            a list of information about each child of the subject
       example: {
+          "subject_uri": "uri://subject",
           "labels": {
             "en": "Human readable subject label",
             "de": "Lesbare Themenbeschriftung"
           },
-          "ancestors": ["uri://parent_subject"],
-          "children": [
-            "uri://children_subject1", "uri://children_subject2"
+          "ancestors": [
+            {
+              "subject_uri": "uri://grand_parent_subject",
+              "labels": {"en": "Grandparent subject label", "de": "Beschriftung des darüber übergeordneten Thema"},
+            },
+            {
+              "subject_uri": "uri://parent_subject",
+              "labels": {"en": "Parent subject label", "de": "Beschriftung des übergeordneten Thema"},
+            }
           ],
-          "breadcrumb": [
-            {"en": "Parent subject label", "de": "Beschriftung des übergeordneten Thema"},
-            {"en": "Grandparent subject label", "de": "Beschriftung des darüber übergeordneten Thema"}
+          "children": [
+            {
+              "subject_uri": "uri://children_subject1",
+              "labels": {"en": "label for the child subject"},
+            }
           ]
         }
 
