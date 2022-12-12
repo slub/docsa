@@ -102,15 +102,6 @@ paths:
                 none:
                   summary: no results
                   value: []
-    post:
-      summary: Add new model
-      deprecated: true
-      tags:
-        - Model Discovery and Classification
-      operationId: models.add
-      responses:
-        200:
-          $ref: "#/components/responses/DummyResponse"
 
   /models/{model_id}:
     get:
@@ -145,17 +136,6 @@ paths:
                 }
           404:
             $ref: "#/components/responses/ModelNotFoundResponse"
-    delete:
-      summary: Delete a model
-      deprecated: true
-      tags:
-        - Model Discovery and Classification
-      operationId: models.delete
-      responses:
-        200:
-          $ref: "#/components/responses/DummyResponse"
-        404:
-          description: model not found
 
   /models/{model_id}/classify:
     post:
@@ -434,19 +414,6 @@ paths:
                   summary: rvk and ddc
                   value: ["rvk", "ddc"]
 
-  /schemas/{schema_id}:
-    get:
-      summary: Get basic information about a schema
-      deprecated: true
-      tags:
-        - Classification Schemas and Subjects
-      operationId: schemas.get
-      parameters:
-        - $ref: "#/components/parameters/SchemaId"
-      responses:
-        200:
-          $ref: "#/components/responses/DummyResponse"
-
   /schemas/{schema_id}/subjects:
     get:
       summary: List all subjects
@@ -548,17 +515,6 @@ paths:
                   value: ["de", "en", "en"]
         400:
           $ref: "#/components/responses/BadRequestResponse"
-
-  /pdf/extract:
-    post:
-      summary: Extract document information from pdf
-      deprecated: true
-      tags:
-        - PDF Fulltext Extraction
-      operationId: pdf.extract
-      responses:
-        200:
-          $ref: "#/components/responses/DummyResponse"
 
 # -----------------------------------------------------------------------------
 
