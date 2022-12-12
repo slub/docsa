@@ -103,7 +103,7 @@ def absolute_confusion_from_incidence(
     return np.sum(true_positives), np.sum(true_negatives), np.sum(false_positives), np.sum(false_negatives)
 
 
-def subject_score_distribution_from_scores(scores) -> Sequence[int]:
-    """Extracts score distribution from array of scores with 10 bins."""
+def subject_score_distribution_from_scores(scores: Sequence[float]) -> Sequence[int]:
+    """Extract score distribution from array of scores with 10 bins."""
     distribution = np.histogram(scores, bins=np.arange(0, 1.1, 0.1))[0]
     return distribution.tolist()

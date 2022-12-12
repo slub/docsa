@@ -8,7 +8,7 @@ from typing import Callable, Optional, Sequence
 
 import numpy as np
 
-from slub_docsa.common.score import BatchedMultiClassIncidenceScore
+from slub_docsa.common.score import BatchedMultiClassIncidenceScore, MultiClassIncidenceScore
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 from slub_docsa.evaluation.classification.incidence import extend_incidence_list_to_ancestors
@@ -125,6 +125,35 @@ def cesa_bianchi_loss_for_sample_generator(
         return loss
 
     return _h_loss
+
+
+def cesa_bianchi_loss_generator(
+    subject_hierarchy: Optional[SubjectHierarchy],
+    subject_order: Optional[Sequence[str]],
+    log_factor: Optional[float] = None,
+) -> MultiClassIncidenceScore:
+    """Return Cesa-Bianchi score function comparing true and predicted incidence matrices.
+
+    See `cesa_bianchi_loss_for_sample_generator` for additional information.
+
+    Parameters
+    ----------
+    subject_hierarchy: Optional[SubjectHierarchy]
+        the subject hierarchy used to evaluate the serverness of prediction mistakes; if no subject hierarchy is
+        provided, a score of `numpy.nan` is returned
+    subject_order: Optional[Sequence[str]]
+        an subject list mapping subject URIs to the columns of the provided target / predicted incidence matrices;
+        if no subject order is provided, a score of `numpy.nan` is returned
+    log_factor: Optional[float] = None
+        factor used for logartihmic scaling, which helps to visualize the h-loss in plots
+    """
+    loss_per_sample = cesa_bianchi_loss_for_sample_generator(subject_hierarchy, subject_order, log_factor)
+
+    def _loss(true_incidences: np.ndarray, predicted_incidences: np.ndarray) -> float:
+        h_losses = list(map(loss_per_sample, true_incidences, predicted_incidences))
+        return np.average(h_losses)
+
+    return _loss
 
 
 class BatchedCesaBianchiIncidenceLoss(BatchedMultiClassIncidenceScore):

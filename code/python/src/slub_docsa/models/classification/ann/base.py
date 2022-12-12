@@ -1,7 +1,7 @@
 """Torch Models for Classification."""
 
 # pylint: disable=fixme, invalid-name, no-member, too-many-locals, too-many-statements, too-many-arguments
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-few-public-methods
 
 import logging
 import os
@@ -116,6 +116,7 @@ class ProgressLogger:
     """Helper class to print log message during training and testing."""
 
     def __init__(self, stage: str, batch_size: int, score: TorchF1Score):
+        """Initialize progress logger."""
         self.batch_size = batch_size
         self.last_log_time = time.time()
         self.last_log_batch = 0
