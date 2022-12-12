@@ -57,9 +57,12 @@ class TorchBertModel(AbstractTorchModel):
         vectorizer: AbstractSequenceVectorizer,
         epochs: int = 50,
         batch_size: int = 32,
-        lr: float = 0.001,
+        learning_rate: float = 0.001,
+        learning_rate_decay: float = 1.0,
         positive_class_weight: float = 1.0,
         positive_class_weight_decay: float = 1.0,
+        preload_vectorizations: bool = False,
+        dataloader_workers: int = 8,
         plot_training_history_filepath: Optional[str] = None,
         bert_config: Mapping[str, Any] = None,
     ):
@@ -68,9 +71,12 @@ class TorchBertModel(AbstractTorchModel):
             vectorizer=vectorizer,
             epochs=epochs,
             batch_size=batch_size,
-            lr=lr,
+            learning_rate=learning_rate,
+            learning_rate_decay=learning_rate_decay,
             positive_class_weight=positive_class_weight,
             positive_class_weight_decay=positive_class_weight_decay,
+            preload_vectorizations=preload_vectorizations,
+            dataloader_workers=dataloader_workers,
             plot_training_history_filepath=plot_training_history_filepath
         )
         self.bert_config = bert_config if bert_config is not None else {}
@@ -87,4 +93,4 @@ class TorchBertModel(AbstractTorchModel):
     def __str__(self):
         """Return representative string for model."""
         return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
-            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.lr} bert_config={self.bert_config}>"
+            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.learning_rate} bert_config={self.bert_config}>"

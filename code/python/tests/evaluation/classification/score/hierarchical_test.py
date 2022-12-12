@@ -4,7 +4,7 @@ import numpy as np
 
 from slub_docsa.common.subject import SubjectTuple
 from slub_docsa.data.preprocess.subject import build_subject_hierarchy_from_subject_tuples
-from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
+from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_loss_for_sample_generator
 
 
 def test_cesa_bianchi_h_loss():
@@ -51,7 +51,7 @@ def test_cesa_bianchi_h_loss():
         (0.125, [0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 1]),
     ]
 
-    h_loss = cesa_bianchi_h_loss(subject_hierarchy, subject_order)
+    h_loss = cesa_bianchi_loss_for_sample_generator(subject_hierarchy, subject_order)
 
     for target_score, true_incidence_list, predicted_incidence_list in test_cases:
-        assert target_score == h_loss(np.array([true_incidence_list]), np.array([predicted_incidence_list]))
+        assert target_score == h_loss(np.array(true_incidence_list), np.array(predicted_incidence_list))

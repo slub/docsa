@@ -26,6 +26,7 @@ from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizerMixin
+from slub_docsa.evaluation.classification.score.ann import TorchF1Score
 from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
 from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
 from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
@@ -82,16 +83,26 @@ class LazyIndexedDataset(TorchDataset):
         self,
         vectorizer: AbstractVectorizer,
         documents: Sequence[Document],
-        subject_targets: Optional[Sequence[np.ndarray]] = None
+        subject_targets: Optional[Sequence[np.ndarray]] = None,
+        preload: bool = False,
     ):
         """Initialize dataset with a sequence of features and subject incidences."""
         self.vectorizer = vectorizer
         self.documents = documents
         self.subject_targets = subject_targets
+        self.features = None
+        if preload:
+            logger.info("preload features by applying vectorizer to all documents")
+            text_iterator = (document_as_concatenated_string(d, max_length=1000) for d in self.documents)
+            self.features = list(self.vectorizer.transform(text_iterator))
 
     def __getitem__(self, idx):
         """Return a specific tuple of feature and subject incidence vector at index position."""
-        features = next(self.vectorizer.transform(iter([document_as_concatenated_string(self.documents[idx])])))
+        if self.features:
+            features = self.features[idx]
+        else:
+            text_iterator = iter([document_as_concatenated_string(self.documents[idx], max_length=1000)])
+            features = next(self.vectorizer.transform(text_iterator))
         if self.subject_targets is not None:
             return features, self.subject_targets[idx]
         return features
@@ -99,6 +110,37 @@ class LazyIndexedDataset(TorchDataset):
     def __len__(self):
         """Return the number of samples."""
         return len(self.documents)
+
+
+class ProgressLogger:
+    """Helper class to print log message during training and testing."""
+
+    def __init__(self, stage: str, batch_size: int, score: TorchF1Score):
+        self.batch_size = batch_size
+        self.last_log_time = time.time()
+        self.last_log_batch = 0
+        self.stage = stage
+        self.score = score
+
+    def log(self, current_batch, cumulative_epoch_loss, end_of_epoch):
+        """Print log messages."""
+        passed_time = time.time() - self.last_log_time
+        if passed_time > 5.0 or end_of_epoch:
+            samples_per_second = ((current_batch - self.last_log_batch) * self.batch_size) / passed_time
+            current_avg_loss = cumulative_epoch_loss / (current_batch + 1)
+            t01_f1, t05_f1 = self.score()
+
+            # print logs
+            logger.info(
+                "processed %s batch %d with %d samples/s, loss=%.7f",
+                self.stage, current_batch, samples_per_second, current_avg_loss
+            )
+            logger.info("f1_t=0.1 total %.4f, distriubution %s", t01_f1[0], t01_f1[1])
+            logger.info("f1_t=0.5 total %.4f, distriubution %s", t05_f1[0], t05_f1[1])
+
+            # update time
+            self.last_log_time = time.time()
+            self.last_log_batch = current_batch
 
 
 class AbstractTorchModel(PersistableClassificationModel):
@@ -112,9 +154,12 @@ class AbstractTorchModel(PersistableClassificationModel):
         vectorizer: AbstractVectorizer,
         epochs: int = 50,
         batch_size: int = 32,
-        lr: float = 0.001,
+        learning_rate: float = 0.001,
+        learning_rate_decay: float = 1.0,
         positive_class_weight: float = 1.0,
         positive_class_weight_decay: float = 1.0,
+        preload_vectorizations: bool = True,
+        dataloader_workers: int = 0,
         plot_training_history_filepath: Optional[str] = None,
     ):
         """Initialize model.
@@ -141,9 +186,12 @@ class AbstractTorchModel(PersistableClassificationModel):
         self.model = None
         self.model_shape = None
         self.batch_size = batch_size
-        self.lr = lr
+        self.learning_rate = learning_rate
+        self.learning_rate_decay = learning_rate_decay
         self.positive_class_weight = positive_class_weight
         self.positive_class_weight_decay = positive_class_weight_decay
+        self.preload_vectorizations = preload_vectorizations
+        self.dataloader_workers = dataloader_workers
         self.plot_training_history_filepath = plot_training_history_filepath
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -151,10 +199,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         """Return a torch network that will be trained and evaluated."""
         raise NotImplementedError()
 
-    def _fit_epoch(self, train_dataloader, criterion, optimizer, calculate_f1_scores: bool = False):
-        if self.model is None:
-            raise RuntimeError("can't fit a model that is not yet initialized")
-
+    def _update_positive_class_weight(self, criterion):
         if self.positive_class_weight != 1.0 or self.positive_class_weight_decay != 1.0:
             self.positive_class_weight = max(
                 1.0, self.positive_class_weight * self.positive_class_weight_decay
@@ -162,17 +207,16 @@ class AbstractTorchModel(PersistableClassificationModel):
             logger.info("set positive class weight to %f", self.positive_class_weight)
             criterion.pos_weight = (torch.ones([self.model_shape[1]]) * self.positive_class_weight).to(self.device)
 
-        # do training
-        loss: Any = None
-        batch = 0
-        epoch_loss = 0
-        epoch_best_threshold_f1_score = None
-        epoch_top3_f1_score = None
-        last_log_time = time.time()
-        last_log_batch = 0
+    def _fit_epoch(self, train_dataloader, criterion, optimizer):
+        if self.model is None:
+            raise RuntimeError("can't fit a model that is not yet initialized")
 
-        output_arrays = []
-        y_arrays = []
+        batch = 0
+        cumulative_epoch_loss = 0
+        epoch_score = TorchF1Score()
+        progress = ProgressLogger("training", self.batch_size, epoch_score)
+
+        self._update_positive_class_weight(criterion)
 
         for batch, (X, y) in enumerate(train_dataloader):
             # send features and targets to device
@@ -181,44 +225,30 @@ class AbstractTorchModel(PersistableClassificationModel):
             else:
                 X = X.to(device=self.device, dtype=torch.float32)
             y = y.to(self.device).to(torch.float32)
-            # calculate loss
+
+            # evaluate model
             output = self.model(X)
             loss = criterion(output, y)
+
+            # score predicted probabilities
+            predicted_probabilities = torch.special.expit(output)
+            epoch_score.add_batch(y, predicted_probabilities)
 
             # do backpropagation
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.item()
+            # remember binary cross entropy loss
+            cumulative_epoch_loss += loss.item()
 
-            if time.time() - last_log_time > 5.0:
-                samples_per_second = ((batch - last_log_batch) * self.batch_size) / (time.time() - last_log_time)
-                current_avg_loss = epoch_loss / (batch + 1)
-                logger.info(
-                    "processing batch %d with %d samples/s, loss=%.5f", batch, samples_per_second, current_avg_loss
-                )
-                last_log_time = time.time()
-                last_log_batch = batch
+            progress.log(batch, cumulative_epoch_loss, False)
 
-            if calculate_f1_scores:
-                output_arrays.append(output.cpu().detach().numpy())
-                y_arrays.append(y.cpu().detach().numpy())
+        progress.log(batch, cumulative_epoch_loss, True)
+        epoch_loss = cumulative_epoch_loss / (batch + 1)
 
-        if calculate_f1_scores:
-            predicted_probabilities = cast(Any, scipy).special.expit(np.vstack(output_arrays))
-            train_targets = cast(np.ndarray, np.vstack(y_arrays))
-
-            epoch_best_threshold_f1_score = scikit_metric_for_best_threshold_based_on_f1score(
-                f1_score, average="micro", zero_division=0
-            )(train_targets, predicted_probabilities)
-
-            epoch_top3_f1_score = scikit_incidence_metric(
-                PositiveTopkIncidenceDecision(3), f1_score, average="micro", zero_division=0
-            )(train_targets, predicted_probabilities)
-
-        epoch_loss = epoch_loss / (batch + 1)
-        return epoch_loss, epoch_best_threshold_f1_score, epoch_top3_f1_score
+        t01_f1, t05_f1 = epoch_score()
+        return epoch_loss, t01_f1[0], t05_f1[0]
 
     def _validate_epoch(self, validation_dataloader, criterion):
         if self.model is None:
@@ -273,12 +303,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         return epoch_loss, epoch_best_threshold_f1_score, epoch_top3_f1_score
 
     def _get_data_loader_from_documents(self, documents, targets, batch_size, shuffle):
-        # extract features from texts
-        # logger.info("extract features via vectorizer")
-        # features = list(self.vectorizer.transform(texts_iterator))
-        # wrap as torch data loader
-        dataset = LazyIndexedDataset(self.vectorizer, documents, targets)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+        dataset = LazyIndexedDataset(self.vectorizer, documents, targets, self.preload_vectorizations)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=self.dataloader_workers)
         return dataloader
 
     def fit(
@@ -292,7 +318,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         logger.info("train torch network with %d training examples", len(train_documents))
 
         logger.debug("fit vectorizer based on training documents")
-        self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)
+        self.vectorizer.fit(document_as_concatenated_string(d, max_length=1000) for d in train_documents)
 
         # compile training data as data loader (and transform documents to features according to vectorizer)
         logger.debug("transform training data into tensors")
@@ -329,8 +355,8 @@ class AbstractTorchModel(PersistableClassificationModel):
         # define loss and optimizer
         criterion = BCEWithLogitsLoss()
         # optimizer = Adam(self.model.parameters(), lr=self.lr, weight_decay=0.0000001)
-        optimizer = Adam(self.model.parameters(), lr=self.lr, weight_decay=0.0)
-        scheduler = ExponentialLR(optimizer, gamma=0.99)
+        optimizer = Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=0.0)
+        scheduler = ExponentialLR(optimizer, gamma=self.learning_rate_decay)
 
         epoch_train_loss_history = []
         epoch_vali_loss_history = []
@@ -345,7 +371,6 @@ class AbstractTorchModel(PersistableClassificationModel):
             # do fit for one epoch and calculate train loss and train f1_score
             epoch_train_loss, epoch_train_best_threshold_f1_score, epoch_train_top3_f1_score = self._fit_epoch(
                 train_dataloader, criterion, optimizer,
-                calculate_f1_scores=validation_documents is not None
             )
 
             # do validation and calculate loss and f1_score
@@ -367,8 +392,9 @@ class AbstractTorchModel(PersistableClassificationModel):
                 epoch_vali_top3_f1_score
             )
 
-            scheduler.step()
-            logger.debug("adapt learning rate to %s", optimizer.param_groups[0]["lr"])
+            if self.learning_rate_decay < 1.0:
+                scheduler.step()
+                logger.debug("adapt learning rate to %s", optimizer.param_groups[0]["lr"])
 
         if validation_documents is not None and self.plot_training_history_filepath:
             fig = ann_training_history_plot(
@@ -389,7 +415,9 @@ class AbstractTorchModel(PersistableClassificationModel):
             raise ValueError("no model trained yet")
 
         # transform documents to feature vectors
-        features = list(self.vectorizer.transform(document_as_concatenated_string(d) for d in test_documents))
+        features = list(self.vectorizer.transform(
+            document_as_concatenated_string(d, max_length=1000) for d in test_documents
+        ))
 
         # setup torch datatsets
         torch_dataset = SimpleIterableDataset(features)
@@ -461,4 +489,4 @@ class AbstractTorchModel(PersistableClassificationModel):
     def __str__(self):
         """Return representative string for model."""
         return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
-            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.lr}>"
+            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.learning_rate}>"

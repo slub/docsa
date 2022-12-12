@@ -90,10 +90,14 @@ def default_batch_predict_model(
     test_document_generator = iter(test_dataset.documents)
     test_subjects_generator = iter(test_dataset.subjects)
 
+    last_log_time = time.time()
+
     chunk_count = 0
     document_count = 0
     while True:
-        logger.debug("evaluate chunk %d of test documents (%d so far)", chunk_count, document_count)
+        if time.time() - last_log_time > 5.0:
+            logger.info("evaluate chunk %d of test documents (%d so far)", chunk_count, document_count)
+            last_log_time = time.time()
 
         loading_start = time.time()
         test_document_chunk = list(islice(test_document_generator, batch_size))

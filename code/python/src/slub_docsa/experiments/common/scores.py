@@ -11,14 +11,13 @@ from slub_docsa.common.score import BatchedMultiClassProbabilitiesScore, Batched
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer
 from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
 from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
-# from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_h_loss
-from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionScore, BatchedF1Score
-from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionPerClassScore
+from slub_docsa.evaluation.classification.score.batched import BatchedAccuracyScore, BatchedIncidenceDecisionScore
+from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionPerClassScore, BatchedF1Score
 from slub_docsa.evaluation.classification.score.batched import BatchedNumberOfTestExamplesPerClass
 from slub_docsa.evaluation.classification.score.batched import BatchedPerClassF1Score, BatchedPerClassPrecisionScore
-from slub_docsa.evaluation.classification.score.batched import BatchedPerClassRecallScore
+from slub_docsa.evaluation.classification.score.batched import BatchedPerClassRecallScore, BatchedRecallScore
 from slub_docsa.evaluation.classification.score.batched import BatchedBestThresholdScore, BatchedPrecisionScore
-from slub_docsa.evaluation.classification.score.batched import BatchedRecallScore
+from slub_docsa.evaluation.classification.score.batched import BatchedLogLossScore, BatchedMeanSquaredErrorScore
 from slub_docsa.evaluation.clustering.score import clustering_membership_score_function
 from slub_docsa.evaluation.clustering.score import scikit_clustering_label_score_function
 from slub_docsa.evaluation.clustering.similarity import indexed_document_distance_generator_from_vectorizer
@@ -84,24 +83,26 @@ def default_named_score_list(
             incidence_decision=PositiveTopkIncidenceDecision(3),
             incidence_score=BatchedRecallScore()
         )),
-        # ("t=0.5 accuracy", [0, 1], scikit_incidence_metric(
-        #     ThresholdIncidenceDecision(0.5),
-        #     accuracy_score
+        ("t=best accuracy", [0, 1], lambda: BatchedBestThresholdScore(
+            optimizer_generator=BatchedAccuracyScore,
+            score_generator=BatchedAccuracyScore
+        )),
+        ("top3 accuracy", [0, 1], lambda: BatchedIncidenceDecisionScore(
+            incidence_decision=PositiveTopkIncidenceDecision(3),
+            incidence_score=BatchedAccuracyScore()
+        )),
+        ("log loss", [0, None], BatchedLogLossScore),
+        ("mse", [0, None], BatchedMeanSquaredErrorScore),
+        # Hierarchical Loss to computational expensive for large number of test samples > 1000
+        # ("t=0.5 h_loss", [0, 1], lambda: BatchedIncidenceDecisionScore(
+        #     incidence_decision=ThresholdIncidenceDecision(0.5),
+        #     incidence_score=BatchedCesaBianchiIncidenceLoss(subject_hierarchy, subject_order, log_factor=1000),
         # )),
-        # ("top3 accuracy", [0, 1], scikit_incidence_metric(
-        #     PositiveTopkIncidenceDecision(3),
-        #     accuracy_score
-        # )),
-        # ("t=best h_loss", [0, 1], scikit_metric_for_best_threshold_based_on_f1score(
-        #     cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
-        # )),
-        # ("top3 h_loss", [0, 1], scikit_incidence_metric(
-        #     PositiveTopkIncidenceDecision(3),
-        #     cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
+        # ("top3 h_loss", [0, 1], lambda: BatchedIncidenceDecisionScore(
+        #     incidence_decision=PositiveTopkIncidenceDecision(3),
+        #     incidence_score=BatchedCesaBianchiIncidenceLoss(subject_hierarchy, subject_order, log_factor=1000),
         # )),
         # ("roc auc micro", [0, 1], lambda t, p: roc_auc_score(t, p, average="micro")),
-        # ("log loss", [0, None], log_loss),
-        # ("mean squared error", [0, None], mean_squared_error)
     ]
     return scores
 

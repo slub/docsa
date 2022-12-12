@@ -59,9 +59,10 @@ def default_k10plus_named_classification_model_list(language) -> NamedClassifica
         ("tiny_bert_torch_ann", lambda: TorchBertModel(
             vectorizer=wikipedia_wordpiece_vectorizer(),
             batch_size=64,
-            epochs=64,
-            lr=0.0001,
-            positive_class_weight=200.0,
+            epochs=16,
+            learning_rate=0.0001,
+            learning_rate_decay=1.0,
+            positive_class_weight=100.0,
             positive_class_weight_decay=0.95,
             bert_config={
                 "hidden_size": 256,

@@ -20,16 +20,18 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     random_state = 123
     language = "de"
     variant = "public"
-    limit = None
+    limit = 100000
     min_samples = 50
     wordpiece_vocabulary_size = 40000
-    dataset_name = f"k10plus_{variant}_{language}_rvk_ms={min_samples}"
+    dataset_name = f"k10plus_{variant}_{language}_rvk_ms={min_samples}_limit={limit}"
     model_name = "tiny_bert_torch_ann"
+    # model_name = "tfidf_10k_knn_k=1"
+    # model_name = "dbmdz_bert_sts1_torch_ann"
 
     plot_training_history_filepath = os.path.join(get_figures_dir(), "k10plus/classify_one_ann_history")
     stemming_cache_filepath = os.path.join(get_cache_dir(), "stemming/k10plus_cache.sqlite")

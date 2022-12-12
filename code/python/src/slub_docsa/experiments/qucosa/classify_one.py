@@ -47,7 +47,7 @@ if __name__ == "__main__":
         vectorizer=vectorizer,
         batch_size=16,
         epochs=50,
-        lr=0.0001,
+        learning_rate=0.0001,
         plot_training_history_filepath=plot_training_history_filepath
     )
 

@@ -1,6 +1,6 @@
 """Common methods used to score the performance of classification models."""
 
-from typing import Tuple, Union
+from typing import Sequence, Tuple, Union
 
 import numpy as np
 
@@ -101,3 +101,9 @@ def absolute_confusion_from_incidence(
     false_negatives = (bool_true_incidence & ~bool_predicted_incidence)
 
     return np.sum(true_positives), np.sum(true_negatives), np.sum(false_positives), np.sum(false_negatives)
+
+
+def subject_score_distribution_from_scores(scores) -> Sequence[int]:
+    """Extracts score distribution from array of scores with 10 bins."""
+    distribution = np.histogram(scores, bins=np.arange(0, 1.1, 0.1))[0]
+    return distribution.tolist()
