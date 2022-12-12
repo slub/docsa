@@ -4,11 +4,11 @@
 
 import logging
 import math
-from typing import Any, Optional, Sequence, cast
+from typing import Callable, Optional, Sequence
 
 import numpy as np
 
-from slub_docsa.common.score import MultiClassIncidenceScore
+from slub_docsa.common.score import BatchedMultiClassIncidenceScore
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.preprocess.subject import subject_ancestors_list
 from slub_docsa.evaluation.classification.incidence import extend_incidence_list_to_ancestors
@@ -16,12 +16,12 @@ from slub_docsa.evaluation.classification.incidence import extend_incidence_list
 logger = logging.getLogger(__name__)
 
 
-def cesa_bianchi_h_loss(
+def cesa_bianchi_loss_for_sample_generator(
     subject_hierarchy: Optional[SubjectHierarchy],
     subject_order: Optional[Sequence[str]],
     log_factor: Optional[float] = None,
-) -> MultiClassIncidenceScore:
-    """Return function that calculates the h-loss according to cesa-bianchi et al.
+) -> Callable[[np.ndarray, np.ndarray], float]:
+    """Return function that calculates the h-loss according to cesa-bianchi et al. for a single sample.
 
     The h-loss is a hierarchical score that considers not only whether subjects are predicted correctly, but also uses
     the subject hierarchy to weigh mistakes based on their severness. Mistakes near the root of the hierarchy are
@@ -47,8 +47,8 @@ def cesa_bianchi_h_loss(
     Returns
     -------
     Callable[[np.ndarray, np.ndarray], float]
-        a function that scores two incidence matrices (target incidence, predicted incidence) using the cesa-bianchi
-        h-loss given the provided subject hierarchy and subject order
+        a function that scores two incidence arrays for a single sample (target incidence, predicted incidence) using
+        the cesa-bianchi h-loss given the provided subject hierarchy and subject order
     """
 
     def _nan_results(_true_incidence: np.ndarray, _predicted_incidence: np.ndarray) -> float:
@@ -120,17 +120,54 @@ def cesa_bianchi_h_loss(
                     max_level_loss *= 1.0 / number_of_siblings
             loss += max_level_loss
 
+        if log_factor is not None:
+            return math.log(1 + loss * log_factor, 2) / math.log(log_factor + 1, 2)
         return loss
 
-    def _apply_log_factor(h_loss):
-        if log_factor is None:
-            raise ValueError("can not apply log factor that is None")
-        return math.log(1 + h_loss * log_factor, 2) / math.log(log_factor + 1, 2)
+    return _h_loss
 
-    def _h_loss_array(true_incidence: np.ndarray, predicted_incidence: np.ndarray) -> float:
-        h_losses = list(map(_h_loss, cast(Any, true_incidence), cast(Any, predicted_incidence)))
-        if log_factor is not None:
-            h_losses = list(map(_apply_log_factor, h_losses))
-        return cast(float, np.average(h_losses))
 
-    return _h_loss_array
+class BatchedCesaBianchiIncidenceLoss(BatchedMultiClassIncidenceScore):
+    """Batched Cesa-Bianchi incidence score calculation.
+
+    See `cesa_bianchi_loss_for_sample_generator` for additional information.
+    """
+
+    def __init__(
+        self,
+        subject_hierarchy: Optional[SubjectHierarchy],
+        subject_order: Optional[Sequence[str]],
+        log_factor: Optional[float] = None,
+    ):
+        """Initialize a Cesa-Bianchi incidence loss.
+
+        Parameters
+        ----------
+        subject_hierarchy: Optional[SubjectHierarchy]
+            the subject hierarchy used to evaluate the serverness of prediction mistakes; if no subject hierarchy is
+            provided, a score of `numpy.nan` is returned
+        subject_order: Optional[Sequence[str]]
+            an subject list mapping subject URIs to the columns of the provided target / predicted incidence matrices;
+            if no subject order is provided, a score of `numpy.nan` is returned
+        log_factor: Optional[float] = None
+            factor used for logartihmic scaling, which helps to visualize the h-loss in plots
+        """
+        self.loss_function = cesa_bianchi_loss_for_sample_generator(subject_hierarchy, subject_order, log_factor)
+        self.losses = []
+
+    def add_batch(self, true_incidences: np.ndarray, predicted_incidences: np.ndarray):
+        """Add multi-class subject incidence matrices for a batch of documents to be processed for scoring.
+
+        Parameters
+        ----------
+        true_incidences: np.ndarray
+            the matrix containing the true subject incidences in shape (document_batch, subjects).
+        predicted_incidences: np.ndarray
+            the matrix containing predicted subject incidences in shape (document_batch, subjects).
+        """
+        self.losses.extend([self.loss_function(ti, pi) for ti, pi in zip(true_incidences, predicted_incidences)])
+        print(self.losses)
+
+    def __call__(self) -> float:
+        """Return current score comparing multi-class subject incidences that were added in batches."""
+        return np.average(self.losses)

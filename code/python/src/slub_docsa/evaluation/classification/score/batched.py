@@ -5,6 +5,7 @@ import logging
 from typing import Callable, Optional, Sequence
 
 import numpy as np
+from sklearn.metrics import log_loss
 
 from slub_docsa.common.score import BatchedMultiClassIncidenceScore, BatchedMultiClassProbabilitiesScore
 from slub_docsa.common.score import IncidenceDecisionFunction, BatchedPerClassIncidenceScore
@@ -34,9 +35,9 @@ class BatchedConfusionScore(BatchedMultiClassIncidenceScore):
         predicted_incidences: np.ndarray
             the matrix containing predicted subject incidences in shape (document_batch, subjects).
         """
-        self.true_positive += (predicted_incidences * true_incidences).sum()
-        self.false_positive += ((1 - true_incidences) * predicted_incidences).sum()
-        self.false_negative += (true_incidences * (1 - predicted_incidences)).sum()
+        self.true_positive += (predicted_incidences * true_incidences).sum(dtype=int)
+        self.false_positive += ((1 - true_incidences) * predicted_incidences).sum(dtype=int)
+        self.false_negative += (true_incidences * (1 - predicted_incidences)).sum(dtype=int)
 
     def __call__(self) -> float:
         """Abstract method that will calculate a score based on the collected confusion counts."""
@@ -69,6 +70,84 @@ class BatchedRecallScore(BatchedConfusionScore):
     def __call__(self) -> float:
         """Return the recall score."""
         return recall_score(self.true_positive, self.false_negative)
+
+
+class BatchedAccuracyScore(BatchedMultiClassIncidenceScore):
+    """Batched accuracy score."""
+
+    def __init__(self):
+        """Initialize accuracy score."""
+        self.exact_hits = 0
+        self.total_samples = 0
+
+    def add_batch(self, true_incidences: np.ndarray, predicted_incidences: np.ndarray):
+        """Add multi-class subject incidence matrices for a batch of documents to be processed for scoring.
+
+        Parameters
+        ----------
+        true_incidences: np.ndarray
+            the matrix containing the true subject incidences in shape (document_batch, subjects).
+        predicted_incidences: np.ndarray
+            the matrix containing predicted subject incidences in shape (document_batch, subjects).
+        """
+        self.exact_hits += (true_incidences == predicted_incidences).all(axis=1).sum()
+        self.total_samples += true_incidences.shape[0]
+
+    def __call__(self) -> float:
+        """Return current score comparing multi-class subject incidences that were added in batches."""
+        return self.exact_hits / self.total_samples
+
+
+class BatchedLogLossScore(BatchedMultiClassProbabilitiesScore):
+    """Batched log loss (cross-entropy) score function comparing true and predicted subject probabilities."""
+
+    def __init__(self):
+        """Initialize log loss score."""
+        self.loss_sum = 0
+        self.total_samples = 0
+
+    def add_batch(self, true_probabilities: np.ndarray, predicted_probabilities: np.ndarray):
+        """Add multi-class subject probability matrices for a batch of documents to be processed for scoring.
+
+        Parameters
+        ----------
+        true_probabilities: np.ndarray
+            the matrix containing the true subject probabilities in shape (document_batch, subjects).
+        predicted_probabilities: np.ndarray
+            the matrix containing predicted subject probabilities in shape (document_batch, subjects).
+        """
+        self.loss_sum += log_loss(true_probabilities, predicted_probabilities, normalize=False)
+        self.total_samples += true_probabilities.shape[0]
+
+    def __call__(self) -> float:
+        """Return current score comparing multi-class subject probabilities that were added in batches."""
+        return self.loss_sum / self.total_samples
+
+
+class BatchedMeanSquaredErrorScore(BatchedMultiClassProbabilitiesScore):
+    """Batched mean squared error score function comparing true and predicted subject probabilities."""
+
+    def __init__(self):
+        """Initialize mean squared error score."""
+        self.error_sum = 0
+        self.total_samples = 0
+
+    def add_batch(self, true_probabilities: np.ndarray, predicted_probabilities: np.ndarray):
+        """Add multi-class subject probability matrices for a batch of documents to be processed for scoring.
+
+        Parameters
+        ----------
+        true_probabilities: np.ndarray
+            the matrix containing the true subject probabilities in shape (document_batch, subjects).
+        predicted_probabilities: np.ndarray
+            the matrix containing predicted subject probabilities in shape (document_batch, subjects).
+        """
+        self.error_sum += ((true_probabilities - predicted_probabilities)**2).sum()
+        self.total_samples += true_probabilities.shape[0]
+
+    def __call__(self) -> float:
+        """Return current score comparing multi-class subject probabilities that were added in batches."""
+        return self.error_sum / self.total_samples
 
 
 class BatchedIncidenceDecisionScore(BatchedMultiClassProbabilitiesScore):
