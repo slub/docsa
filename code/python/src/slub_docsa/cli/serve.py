@@ -42,13 +42,13 @@ def serve_subparser(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--host",
-        default="0.0.0.0",  # nosec
+        default=os.environ.get("SLUB_DOCSA_SERVE_HOST", "0.0.0.0"),  # nosec
         help="the host address that is used to start the REST service (default 0.0.0.0)"
     )
     parser.add_argument(
         "--port", "-p",
         type=int,
-        default=5000,
+        default=int(os.environ.get("SLUB_DOCSA_SERVE_PORT", 5000)),
         help="the port number that is used to start the REST service (default 5000)"
     )
     parser.add_argument(
