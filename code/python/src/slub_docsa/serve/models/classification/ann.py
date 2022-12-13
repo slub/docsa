@@ -1,6 +1,10 @@
 """Setup models based on artificial neural networks."""
 
+import os
+
 from functools import partial
+
+from slub_docsa.common.paths import get_figures_dir
 from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
 from slub_docsa.experiments.common.vectorizer import get_static_wikipedia_wordpiece_vectorizer
 from slub_docsa.models.classification.ann.bert import TorchBertModel
@@ -16,13 +20,18 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
 
     return {
         "tfidf_snowball_de_10k_torch_ann": lambda subject_hierarchy, subject_order: TorchSingleLayerDenseReluModel(
-            epochs=50,
+            max_epochs=32,
+            max_training_time=60,
             vectorizer=TfidfStemmingVectorizer(lang_code="de", max_features=10000),
+            plot_training_history_filepath=os.path.join(
+                get_figures_dir(), "ann_history/tfidf_snowball_de_10k_torch_ann"
+            )
         ),
-        "tiny_bert_torch_ann": lambda subject_hierarchy, subject_order: TorchBertModel(
+        "tiny_bert_torch_ann_de": lambda subject_hierarchy, subject_order: TorchBertModel(
             vectorizer=wikipedia_wordpiece_vectorizer(),
             batch_size=64,
-            epochs=32,
+            max_epochs=None,
+            max_training_time=120,
             learning_rate=0.0001,
             learning_rate_decay=1.0,
             positive_class_weight=100.0,
@@ -35,6 +44,7 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
                 "num_attention_heads": 4,
                 "attention_dropout_prob": 0.1,
                 "classifier_dropout": 0.1,
-            }
+            },
+            plot_training_history_filepath=os.path.join(get_figures_dir(), "ann_history/tiny_bert_torch_ann")
         )
     }

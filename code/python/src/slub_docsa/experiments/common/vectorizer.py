@@ -6,24 +6,9 @@ import os
 
 from typing import Optional
 
-from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer, CachedVectorizer, PersistedCachedVectorizer
-from slub_docsa.data.preprocess.vectorizer import HuggingfaceBertVectorizer, TfidfVectorizer, WordpieceVectorizer
+from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer, CachedVectorizer
+from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer, WordpieceVectorizer
 from slub_docsa.common.paths import get_cache_dir
-
-
-def get_cached_dbmdz_bert_vectorizer(
-        cache_dir: Optional[str] = None,
-        subtext_samples: int = 1,
-        hidden_states: int = 1,
-):
-    """Load persisted dbmdz bert vectorizer."""
-    if cache_dir is None:
-        cache_dir = os.path.join(get_cache_dir(), "vectorizer")
-    print(cache_dir)
-    os.makedirs(cache_dir, exist_ok=True)
-    filename = f"dbmdz_bert_qucosa_sts={subtext_samples}_hs={hidden_states}.sqlite"
-    dbmdz_bert_cache_fp = os.path.join(cache_dir, filename)
-    return PersistedCachedVectorizer(dbmdz_bert_cache_fp, HuggingfaceBertVectorizer(subtext_samples=subtext_samples))
 
 
 def get_cached_tfidf_vectorizer(

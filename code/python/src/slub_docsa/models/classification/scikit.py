@@ -59,9 +59,9 @@ class ScikitClassifier(PersistableClassificationModel):
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Fit model with training documents and subjects."""
         self.vectorizer.fit(document_as_concatenated_string(d) for d in train_documents)

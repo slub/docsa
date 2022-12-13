@@ -47,7 +47,7 @@ if __name__ == "__main__":
     model = TorchSingleLayerDenseReluModel(
         vectorizer=vectorizer,
         batch_size=16,
-        epochs=50,
+        max_epochs=50,
         learning_rate=0.0001,
         plot_training_history_filepath=plot_training_history_filepath
     )

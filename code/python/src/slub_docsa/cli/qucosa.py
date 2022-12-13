@@ -17,7 +17,7 @@ def available_qucosa_classification_model_names(only_persistable: bool = False):
     if only_persistable:
         return [
             name for name, generator in model_types.items()
-            if isinstance(generator(), PersistableClassificationModel)
+            if isinstance(generator(None, None), PersistableClassificationModel)
         ]
 
     return list(model_types.keys())
@@ -31,7 +31,7 @@ def available_qucosa_clustering_model_names():
 
 def available_qucosa_dataset_names():
     """Return all dataset variants for qucosa."""
-    return [n for n, _, _ in qucosa_named_sample_generators()]
+    return [named_sample_generator.name for named_sample_generator in qucosa_named_sample_generators()]
 
 
 def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool):

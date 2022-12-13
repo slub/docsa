@@ -55,7 +55,8 @@ class TorchBertModel(AbstractTorchModel):
     def __init__(
         self,
         vectorizer: AbstractSequenceVectorizer,
-        epochs: int = 50,
+        max_epochs: Optional[int] = None,
+        max_training_time: Optional[int] = None,
         batch_size: int = 32,
         learning_rate: float = 0.001,
         learning_rate_decay: float = 1.0,
@@ -69,7 +70,8 @@ class TorchBertModel(AbstractTorchModel):
         """Initialize BERT model."""
         super().__init__(
             vectorizer=vectorizer,
-            epochs=epochs,
+            max_epochs=max_epochs,
+            max_training_time=max_training_time,
             batch_size=batch_size,
             learning_rate=learning_rate,
             learning_rate_decay=learning_rate_decay,
@@ -93,4 +95,5 @@ class TorchBertModel(AbstractTorchModel):
     def __str__(self):
         """Return representative string for model."""
         return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
-            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.learning_rate} bert_config={self.bert_config}>"
+            f"epochs={self.max_epochs} batch_size={self.batch_size} lr={self.learning_rate} " + \
+            f"bert_config={self.bert_config}>"

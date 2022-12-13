@@ -3,6 +3,8 @@
 # pylint: disable=dangerous-default-value, too-many-arguments, too-many-locals
 
 import math
+import os
+
 from typing import Optional, Sequence, cast, Any, Tuple
 
 import numpy as np
@@ -343,29 +345,17 @@ def per_subject_score_histograms_plot(
 
 
 def ann_training_history_plot(
-    training_loss: Sequence[float],
-    test_loss: Sequence[float],
-    train_best_threshold_f1_score: Sequence[float],
-    test_best_threshold_f1_score: Sequence[float],
-    train_top3_f1_score: Sequence[float],
-    test_top3_f1_score: Sequence[float],
+    training_scores: Sequence[Tuple[float, float, float]],
+    test_scores: Sequence[Tuple[float, float, float]],
 ) -> Any:
     """Return a illustration of scores that were recorded for each epoch while training a neural network.
 
     Parameters
     ----------
-    training_loss: List[float]
-        the training loss over all epochs
-    test_loss: List[float]
-        the test loss over all epochs
-    train_best_threshold_f1_score: List[float]
-        the best-threshold f1 score for training data over all epochs
-    test_best_threshold_f1_score: List[float]
-        the best-threshold f1 score for test data over all epochs
-    train_top3_f1_score: List[float]
-        the top3 f1 score for training data over all epochs
-    test_top3_f1_score: List[float]
-        the top3 f1 score for test data over all epochs
+    training_loss: Sequence[Tuple[float, float, float]]
+        the training loss, t=0.1 f1 score and t=0.5 f1 score over all epochs
+    test_loss: Sequence[Tuple[float, float, float]]
+        the test loss, t=0.1 f1 score and t=0.5 f1 score over all epochs
 
     Returns
     -------
@@ -378,74 +368,35 @@ def ann_training_history_plot(
         subplot_titles=["loss", "f1 scores"],
     ))
 
-    epochs = list(range(len(training_loss)))
+    epochs = list(range(len(training_scores)))
 
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=training_loss,
-            mode="lines",
-            name="training loss",
-            line=dict(color=_get_marker_color(0), width=3),
-        ), row=1, col=1,
-    )
+    for i, name in enumerate(["loss", "t=0.1 f1", "t=0.5 f1"]):
+        fig.add_trace(
+            cast(Any, go.Scatter)(
+                x=epochs,
+                y=[score[i] for score in training_scores],
+                mode="lines",
+                name="training " + name,
+                line=dict(color=_get_marker_color(0), width=3, dash='dot' if i == 2 else None),
+            ), row=1, col=1 if i == 0 else 2,
+        )
 
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=test_loss,
-            mode="lines",
-            name="test loss",
-            line=dict(color=_get_marker_color(1), width=3),
-        ), row=1, col=1,
-    )
+        fig.add_trace(
+            cast(Any, go.Scatter)(
+                x=epochs,
+                y=[score[i] for score in test_scores],
+                mode="lines",
+                name="test " + name,
+                line=dict(color=_get_marker_color(1), width=3, dash='dot' if i == 2 else None),
+            ), row=1, col=1 if i == 0 else 2,
+        )
 
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=train_best_threshold_f1_score,
-            mode="lines",
-            name="train t=best f1_score",
-            line=dict(color=_get_marker_color(0), width=3),
-        ), row=1, col=2,
-    )
-
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=test_best_threshold_f1_score,
-            mode="lines",
-            name="test t=best f1_score",
-            line=dict(color=_get_marker_color(1), width=3),
-        ), row=1, col=2,
-    )
-
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=train_top3_f1_score,
-            mode="lines",
-            name="train top3 f1_score",
-            line=dict(color=_get_marker_color(0), width=3, dash='dot'),
-        ), row=1, col=2,
-    )
-
-    fig.add_trace(
-        cast(Any, go.Scatter)(
-            x=epochs,
-            y=test_top3_f1_score,
-            mode="lines",
-            name="test top3 f1_score",
-            line=dict(color=_get_marker_color(1), width=3, dash='dot'),
-        ), row=1, col=2,
-    )
-
-    max_loss = np.max([np.max(training_loss), np.max(test_loss)])
+    max_loss = np.max([np.max([score[0] for score in training_scores]), np.max([score[0] for score in test_scores])])
 
     fig.update_layout({"yaxis1": {"range": [0.0, max_loss], "title": "loss"}})
-    fig.update_layout({"xaxis1": {"range": [0.0, len(training_loss) - 1], "title": "epoch"}})
+    fig.update_layout({"xaxis1": {"range": [0.0, len(training_scores) - 1], "title": "epoch"}})
     fig.update_layout({"yaxis2": {"range": [0.0, 1.0], "title": "f1 score (micro)"}})
-    fig.update_layout({"xaxis2": {"range": [0.0, len(training_loss) - 1], "title": "epoch"}})
+    fig.update_layout({"xaxis2": {"range": [0.0, len(training_scores) - 1], "title": "epoch"}})
 
     return fig
 
@@ -471,6 +422,7 @@ def write_multiple_figure_formats(
     -------
     None
     """
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
     figure.write_html(
         f"{filepath}.html",
         include_plotlyjs="cdn",

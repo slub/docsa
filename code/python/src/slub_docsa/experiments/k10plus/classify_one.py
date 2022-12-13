@@ -4,9 +4,7 @@
 
 from functools import partial
 import logging
-import os
 
-from slub_docsa.common.paths import get_cache_dir, get_figures_dir
 from slub_docsa.data.store.subject import cached_unique_subject_order
 from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset_with_splits
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
@@ -33,9 +31,6 @@ if __name__ == "__main__":
     # model_name = "tfidf_10k_knn_k=1"
     # model_name = "dbmdz_bert_sts1_torch_ann"
 
-    plot_training_history_filepath = os.path.join(get_figures_dir(), "k10plus/classify_one_ann_history")
-    stemming_cache_filepath = os.path.join(get_cache_dir(), "stemming/k10plus_cache.sqlite")
-
     logger.debug("load k10plus dataset from samples")
     named_dataset = next(filter_and_cache_named_datasets(
         k10plus_named_sample_generators(variants=[(variant, limit)], min_samples=min_samples),
@@ -59,7 +54,7 @@ if __name__ == "__main__":
         10, scikit_kfold_splitter(10, random_state=123),
         subject_order, named_dataset.dataset, [model_generator], scores.generators, per_class_scores.generators,
         stop_after_evaluating_split=0,
-        use_test_data_as_validation_data=False,
+        use_test_data_as_validation_data=True,
         check_minimum_samples=False,
         check_split_distribution=False
     )

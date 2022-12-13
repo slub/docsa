@@ -8,14 +8,11 @@ import os
 import pickle  # nosec
 import time
 
-from typing import Any, Optional, Sequence, cast
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import torch
-import scipy
 import transformers
-
-from sklearn.metrics import f1_score
 
 from torch.utils.data import DataLoader, IterableDataset, Dataset as TorchDataset
 from torch.nn import BCEWithLogitsLoss
@@ -27,9 +24,6 @@ from slub_docsa.common.document import Document
 from slub_docsa.data.preprocess.document import document_as_concatenated_string
 from slub_docsa.data.preprocess.vectorizer import AbstractVectorizer, PersistableVectorizerMixin
 from slub_docsa.evaluation.classification.score.ann import TorchF1Score
-from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
-from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
-from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
 from slub_docsa.evaluation.classification.plotting import ann_training_history_plot, write_multiple_figure_formats
 
 logger = logging.getLogger(__name__)
@@ -132,10 +126,18 @@ class ProgressLogger:
             t01_f1, t05_f1 = self.score()
 
             # print logs
-            logger.info(
-                "processed %s batch %d with %d samples/s, loss=%.7f",
-                self.stage, current_batch, samples_per_second, current_avg_loss
-            )
+            if end_of_epoch:
+                logger.info("-----------------------------------------------------")
+                logger.info(
+                    "processed all %s %s batches with %d samples/s, loss=%.7f",
+                    current_batch, self.stage, samples_per_second, current_avg_loss
+                )
+            else:
+                logger.info(
+                    "processed %s batch %s with %d samples/s, loss=%.7f",
+                    self.stage, current_batch, samples_per_second, current_avg_loss
+                )
+
             logger.info("f1_t=0.1 total %.4f, distriubution %s", t01_f1[0], t01_f1[1])
             logger.info("f1_t=0.5 total %.4f, distriubution %s", t05_f1[0], t05_f1[1])
 
@@ -153,7 +155,8 @@ class AbstractTorchModel(PersistableClassificationModel):
     def __init__(
         self,
         vectorizer: AbstractVectorizer,
-        epochs: int = 50,
+        max_epochs: Optional[int] = None,
+        max_training_time: Optional[int] = None,
         batch_size: int = 32,
         learning_rate: float = 0.001,
         learning_rate_decay: float = 1.0,
@@ -183,7 +186,8 @@ class AbstractTorchModel(PersistableClassificationModel):
             the path to the training history plot
         """
         self.vectorizer = vectorizer
-        self.epochs = epochs
+        self.max_epochs = max_epochs
+        self.max_training_time = max_training_time
         self.model = None
         self.model_shape = None
         self.batch_size = batch_size
@@ -256,64 +260,66 @@ class AbstractTorchModel(PersistableClassificationModel):
             raise RuntimeError("can't validate a model that is not yet initialized")
 
         # calculate test error on validation data
-        epoch_loss = np.nan
-        epoch_best_threshold_f1_score = np.nan
-        epoch_top3_f1_score = np.nan
-        if validation_dataloader is not None:
-            # set model to evalution mode (not doing dropouts, etc.)
-            self.model.eval()
+        cumulative_epoch_loss = np.nan
+        epoch_score = TorchF1Score()
+        progress = ProgressLogger("validation", self.batch_size, epoch_score)
 
-            # get loss for validation data
-            output_arrays = []
-            y_arrays = []
-            with torch.no_grad():
-                epoch_loss = 0
-                batch = 0
-                for batch, (X, y) in enumerate(validation_dataloader):
-                    # send features and targets to device
-                    if isinstance(X, transformers.BatchEncoding):
-                        X = X.to(self.device)
-                    else:
-                        X = X.to(device=self.device, dtype=torch.float32)
-                    y = y.to(self.device).to(torch.float32)
-                    # evaluate model
-                    output = self.model(X)
-                    loss = criterion(output, y)
-                    epoch_loss += loss.item()
+        # set model to evalution mode (not doing dropouts, etc.)
+        self.model.eval()
 
-                    output_arrays.append(output.cpu().detach().numpy())
-                    y_arrays.append(y.cpu().detach().numpy())
+        # get loss for validation data
+        with torch.no_grad():
+            cumulative_epoch_loss = 0
+            batch = 0
+            for batch, (X, y) in enumerate(validation_dataloader):
+                # send features and targets to device
+                if isinstance(X, transformers.BatchEncoding):
+                    X = X.to(self.device)
+                else:
+                    X = X.to(device=self.device, dtype=torch.float32)
+                y = y.to(self.device).to(torch.float32)
 
-                epoch_loss = epoch_loss / (batch + 1)
+                # evaluate model
+                output = self.model(X)
+                loss = criterion(output, y)
+                cumulative_epoch_loss += loss.item()
 
-            # compare validation outputs with true targets, and calculate f1 score
-            validation_probabilities = cast(Any, scipy).special.expit(np.vstack(output_arrays))
-            validation_targets = cast(np.ndarray, np.vstack(y_arrays))
+                # score predicted probabilities
+                predicted_probabilities = torch.special.expit(output)
+                epoch_score.add_batch(y, predicted_probabilities)
 
-            epoch_best_threshold_f1_score = scikit_metric_for_best_threshold_based_on_f1score(
-                f1_score, average="micro", zero_division=0
-            )(validation_targets, validation_probabilities)
+                progress.log(batch, cumulative_epoch_loss, False)
 
-            epoch_top3_f1_score = scikit_incidence_metric(
-                PositiveTopkIncidenceDecision(3), f1_score, average="micro", zero_division=0
-            )(validation_targets, validation_probabilities)
+        progress.log(batch, cumulative_epoch_loss, True)
+        epoch_loss = cumulative_epoch_loss / (batch + 1)
 
-            # reset model to training mode
-            self.model.train()
+        # reset model to training mode
+        self.model.train()
 
-        return epoch_loss, epoch_best_threshold_f1_score, epoch_top3_f1_score
+        t01_f1, t05_f1 = epoch_score()
+        return epoch_loss, t01_f1[0], t05_f1[0]
 
     def _get_data_loader_from_documents(self, documents, targets, batch_size, shuffle):
         dataset = LazyIndexedDataset(self.vectorizer, documents, targets, self.preload_vectorizations)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=self.dataloader_workers)
         return dataloader
 
+    def _plot_score_history(self, epoch_train_score_history, epoch_validation_score_history):
+        if self.plot_training_history_filepath:
+            fig = ann_training_history_plot(
+                epoch_train_score_history,
+                epoch_validation_score_history,
+            )
+            write_multiple_figure_formats(
+                fig, self.plot_training_history_filepath
+            )
+
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: Sequence[np.ndarray],
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Train the fully connected network for all training documents."""
         logger.info("train torch network with %d training examples", len(train_documents))
@@ -359,56 +365,52 @@ class AbstractTorchModel(PersistableClassificationModel):
         optimizer = Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=0.0)
         scheduler = ExponentialLR(optimizer, gamma=self.learning_rate_decay)
 
-        epoch_train_loss_history = []
-        epoch_vali_loss_history = []
-        epoch_train_best_threshold_f1_score_history = []
-        epoch_vali_best_threshold_f1_score_history = []
-        epoch_train_top3_f1_score_history = []
-        epoch_vali_top3_f1_score_history = []
+        epoch_train_score_history = []
+        epoch_validation_score_history = []
+        last_plot_time = time.time()
 
         # iterate over epochs and batches
-        for epoch in range(self.epochs):
+        epoch = 0
+        training_started = time.time()
+        while True:
+            if self.max_epochs is not None and epoch >= self.max_epochs:
+                logger.info("stop training because of maximum epochs")
+                break
+
+            if self.max_training_time is not None and time.time() - training_started > self.max_training_time:
+                logger.info("stop training after max training time reached")
+                break
 
             # do fit for one epoch and calculate train loss and train f1_score
-            epoch_train_loss, epoch_train_best_threshold_f1_score, epoch_train_top3_f1_score = self._fit_epoch(
+            epoch_train_score_history.append(self._fit_epoch(
                 train_dataloader, criterion, optimizer,
-            )
+            ))
 
             # do validation and calculate loss and f1_score
-            epoch_validation_loss, epoch_vali_best_threshold_f1_score, epoch_vali_top3_f1_score = self._validate_epoch(
-                validation_dataloader, criterion
-            )
-
-            # remember loss and score for each epoch
-            epoch_train_loss_history.append(epoch_train_loss)
-            epoch_vali_loss_history.append(epoch_validation_loss)
-            epoch_train_best_threshold_f1_score_history.append(epoch_train_best_threshold_f1_score)
-            epoch_vali_best_threshold_f1_score_history.append(epoch_vali_best_threshold_f1_score)
-            epoch_train_top3_f1_score_history.append(epoch_train_top3_f1_score)
-            epoch_vali_top3_f1_score_history.append(epoch_vali_top3_f1_score)
+            if validation_dataloader is not None:
+                epoch_validation_score_history.append(self._validate_epoch(
+                    validation_dataloader, criterion
+                ))
+            else:
+                epoch_validation_score_history.append((np.nan, np.nan, np.nan))
 
             logger.info(
-                "trained epoch %d, train loss %.5f, test loss %.5f, test t=best f1 %.3f, test top3 f1 %.3f",
-                epoch, epoch_train_loss, epoch_validation_loss, epoch_vali_best_threshold_f1_score,
-                epoch_vali_top3_f1_score
+                "trained epoch %d, train loss %.5f, validation loss %.5f, t=0.1 f1 %.3f, t=0.5 f1 %.3f",
+                epoch, epoch_train_score_history[-1][0], *epoch_validation_score_history[-1]
             )
 
             if self.learning_rate_decay < 1.0:
                 scheduler.step()
                 logger.debug("adapt learning rate to %s", optimizer.param_groups[0]["lr"])
 
-        if validation_documents is not None and self.plot_training_history_filepath:
-            fig = ann_training_history_plot(
-                epoch_train_loss_history,
-                epoch_vali_loss_history,
-                epoch_train_best_threshold_f1_score_history,
-                epoch_vali_best_threshold_f1_score_history,
-                epoch_train_top3_f1_score_history,
-                epoch_vali_top3_f1_score_history,
-            )
-            write_multiple_figure_formats(
-                fig, self.plot_training_history_filepath
-            )
+            if time.time() - last_plot_time > 10:
+                # plot score history sometimes during training
+                self._plot_score_history(epoch_train_score_history, epoch_validation_score_history)
+                last_plot_time = time.time()
+
+            epoch += 1
+        # definitely plot score history after training has finished
+        self._plot_score_history(epoch_train_score_history, epoch_validation_score_history)
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
         """Predict class probabilities for all test documents."""
@@ -490,4 +492,4 @@ class AbstractTorchModel(PersistableClassificationModel):
     def __str__(self):
         """Return representative string for model."""
         return f"<{self.__class__.__name__} vectorizer={str(self.vectorizer)} " + \
-            f"epochs={self.epochs} batch_size={self.batch_size} lr={self.learning_rate}>"
+            f"max_epochs={self.max_epochs} batch_size={self.batch_size} lr={self.learning_rate}>"

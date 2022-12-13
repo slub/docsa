@@ -77,19 +77,19 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
             vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_2k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=2000),
         )),
         ("tfidf_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=10000),
         )),
         ("tfidf_no_stem_10k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_tfidf_vectorizer(max_features=10000),
         )),
         ("tfidf_40k_torch_ann", lambda: TorchSingleLayerDenseReluModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_tfidf_stemming_vectorizer(max_features=40000),
         )),
         ("dbmdz_bert_sts1_scikit_mlp", lambda: ScikitClassifier(
@@ -97,11 +97,11 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
             vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts1_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts8_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
-            epochs=50,
+            max_epochs=50,
             vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
         )),
         ("tfidf_10k_log_reg", lambda: ScikitClassifier(
