@@ -190,7 +190,7 @@ class AnnifModel(PersistableClassificationModel):
                 mandatory_subject_list=self.subject_order,
             )
         elif self.model_type in ["yake", "stwfsa", "mllm"]:
-            logger.warning(f"annif model '%s' requires that subject hierarchy is provided", self.model_type)
+            logger.warning("annif model '%s' requires that subject hierarchy is provided", self.model_type)
 
     def _init_subject_vocab(self):
         if self.subject_order is None:

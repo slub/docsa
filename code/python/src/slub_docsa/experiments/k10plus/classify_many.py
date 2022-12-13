@@ -76,8 +76,8 @@ if __name__ == "__main__":
             "annif_svc_de",
             "annif_omikuji_de",
             "annif_mllm_de",
-            "annif_fasttext_de"
-            "annif_yake_de",
+            "annif_fasttext_de",
+            # "annif_yake_de",
         ],
         dataset_schemas=["rvk"],
         dataset_variants=[("public", 100000), ("slub_raw", 20000), ("slub_clean", 20000)],

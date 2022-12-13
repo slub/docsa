@@ -19,10 +19,10 @@ from slub_docsa.models.classification.ann.pretrained import TorchBertSequenceCla
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer, get_cached_tfidf_vectorizer
-from slub_docsa.experiments.common.vectorizer import get_cached_dbmdz_bert_vectorizer
 from slub_docsa.experiments.common.models import NamedClassificationModelTupleList, NamedClusteringModelTupleList
 from slub_docsa.models.clustering.scikit import ScikitClusteringModel
 from slub_docsa.models.clustering.dummy import RandomClusteringModel
+from slub_docsa.serve.models.classification.dbmdz import _get_cached_dbmdz_bert_vectorizer
 
 
 def default_qucosa_named_classification_model_list() -> NamedClassificationModelTupleList:
@@ -46,11 +46,11 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         )),
         ("dbmdz_bert_sts1_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts8_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
         )),
         ("random_vectorizer_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
@@ -70,7 +70,7 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         )),
         ("dbmdz_bert_sts1_rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("tfidf_10k_scikit_mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
@@ -94,15 +94,15 @@ def default_qucosa_named_classification_model_list() -> NamedClassificationModel
         )),
         ("dbmdz_bert_sts1_scikit_mlp", lambda: ScikitClassifier(
             predictor=MLPClassifier(max_iter=10),
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts1_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
             max_epochs=50,
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=1),
         )),
         ("dbmdz_bert_sts8_torch_ann", lambda: TorchBertSequenceClassificationHeadModel(
             max_epochs=50,
-            vectorizer=get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
+            vectorizer=_get_cached_dbmdz_bert_vectorizer(subtext_samples=8),
         )),
         ("tfidf_10k_log_reg", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=LogisticRegression()),
@@ -128,7 +128,7 @@ def default_qucosa_named_clustering_models_tuple_list(
 ) -> NamedClusteringModelTupleList:
     """Return default qucosa clustering models."""
     tfidf_vectorizer_10k = get_cached_tfidf_stemming_vectorizer(max_features=10000)
-    dbmdz_bert_vectorizer_sts_1 = get_cached_dbmdz_bert_vectorizer(subtext_samples=1)
+    dbmdz_bert_vectorizer_sts_1 = _get_cached_dbmdz_bert_vectorizer(subtext_samples=1)
 
     models = [
         ("random_c=20", lambda: RandomClusteringModel(n_clusters=20)),
