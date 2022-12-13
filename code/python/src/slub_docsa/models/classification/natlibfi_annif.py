@@ -266,9 +266,9 @@ class AnnifModel(PersistableClassificationModel):
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Train an Annif model with a sequence of documents and a subject incidence matrix.
 
@@ -285,12 +285,6 @@ class AnnifModel(PersistableClassificationModel):
         Model
             self
         """
-        if len(train_documents) != train_targets.shape[0]:
-            raise ValueError(
-                f"train documents size {len(train_documents)} does not match "
-                + f"incidence matrix shape {str(train_targets.shape)}"
-            )
-
         train_idxs_targets = subject_idx_from_incidence_matrix(train_targets)
 
         # define corpus
@@ -303,7 +297,7 @@ class AnnifModel(PersistableClassificationModel):
         ]
         document_corpus = _CustomAnnifDocumentCorpus(annif_document_list)
 
-        self.n_unique_subjects = int(train_targets.shape[1])
+        self.n_unique_subjects = len(train_targets[0])
         logger.debug("there are %d unique subjects", self.n_unique_subjects)
 
         subject_vocab, annif_subject_list = self._init_subject_vocab()

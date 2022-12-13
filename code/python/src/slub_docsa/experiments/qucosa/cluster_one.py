@@ -16,7 +16,7 @@ from slub_docsa.evaluation.clustering.plotting import cluster_distribution_by_su
 from slub_docsa.evaluation.clustering.plotting import subject_distribution_by_cluster_plot
 from slub_docsa.evaluation.classification.plotting import write_multiple_figure_formats
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 
 
@@ -39,7 +39,7 @@ def qucosa_experiments_cluster_one(
 ):
     """Run clustering experiment evaluating single dataset."""
     named_datasets = filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), [dataset_name]
+        qucosa_named_sample_generators(check_qucosa_download), [dataset_name]
     )
     _, dataset, subject_hierarchy = list(named_datasets)[0]
     lang_code = "de"

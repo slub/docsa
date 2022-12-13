@@ -21,7 +21,7 @@ from slub_docsa.evaluation.classification.score.common import absolute_confusion
 from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     logger.info("load dataset")
     _, dataset, _ = next(filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(CHECK_QUCOSA_DOWNLOAD), ["qucosa_de_titles_rvk"]
+        qucosa_named_sample_generators(CHECK_QUCOSA_DOWNLOAD), ["qucosa_de_titles_rvk"]
     ))
 
     logger.info("load rvk subjects")

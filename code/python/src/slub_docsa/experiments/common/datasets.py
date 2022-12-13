@@ -3,7 +3,7 @@
 import os
 import logging
 
-from typing import Callable, Iterator, List, Optional, Sequence, Tuple
+from typing import Callable, Iterator, NamedTuple, Optional, Sequence
 
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
@@ -16,25 +16,42 @@ from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sampl
 logger = logging.getLogger(__name__)
 
 
-DatasetTupleList = List[Tuple[str, Callable[[], Iterator[Sample]], Callable[[], SubjectHierarchy]]]
+class NamedSamplesGenerator(NamedTuple):
+    """Combines a sample generator and subject hierarchy with their names."""
+
+    name: str
+    samples_generator: Callable[[], Iterator[Sample]]
+    schema_id: str
+    schema_generator: Callable[[], SubjectHierarchy]
+    languages: Sequence[str]
+
+
+class NamedDataset(NamedTuple):
+    """Combines a dataset and subject hierarchy with their names."""
+
+    name: str
+    dataset: Dataset
+    schema_id: str
+    schema_generator: Callable[[], SubjectHierarchy]
+    languages: Sequence[str]
 
 
 def filter_and_cache_named_datasets(
-    dataset_list: DatasetTupleList,
+    named_sample_generators: Sequence[NamedSamplesGenerator],
     name_subset: Optional[Sequence[str]] = None,
-) -> Iterator[Tuple[str, Dataset, Callable[[], SubjectHierarchy]]]:
+) -> Iterator[NamedDataset]:
     """Filter and cache named datasets to an sqlite database.
 
     Parameters
     ----------
-    dataset_list : DatasetTupleList
+    dataset_list : Sequence[NamedDataset]
         the dataset list as list of tuples
     name_subset : Optional[Sequence[str]], optional
         optional name subset that is used to filter the full dataset list
 
     Yields
     ------
-    Tuple[str, Dataset, Callable[[], SubjectHierarchy]]
+    NamedDataset
         tuples of dataset name, the dataset loaded as sqlite database, and a generator to load the corresponding
         subject hierarchy
     """
@@ -42,14 +59,21 @@ def filter_and_cache_named_datasets(
 
     # filter data sets based on name subset parameter
     if name_subset is not None:
-        dataset_list = list(filter(lambda i: i[0] in name_subset, dataset_list))
+        named_sample_generators = list(filter(lambda i: i.name in name_subset, named_sample_generators))
 
-    for dataset_name, lazy_sample_iterator, lazy_subject_hierarchy in dataset_list:
+    for named_sample_generator in named_sample_generators:
         # load and persist each dataset
+        dataset_name = named_sample_generator.name
         logger.debug("load and save persisted dataset %s", dataset_name)
         filepath = os.path.join(cache_dir, f"{dataset_name}.sqlite")
-        dataset = load_persisted_dataset_from_lazy_sample_iterator(lazy_sample_iterator, filepath)
-        yield dataset_name, dataset, lazy_subject_hierarchy
+        dataset = load_persisted_dataset_from_lazy_sample_iterator(named_sample_generator.samples_generator, filepath)
+        yield NamedDataset(
+            dataset_name,
+            dataset,
+            named_sample_generator.schema_id,
+            named_sample_generator.schema_generator,
+            named_sample_generator.languages
+        )
 
 
 def filter_min_samples(samples_iterator, min_samples):

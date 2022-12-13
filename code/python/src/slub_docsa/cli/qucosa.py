@@ -3,26 +3,24 @@
 import argparse
 
 from slub_docsa.common.model import PersistableClassificationModel
-from slub_docsa.experiments.annif.models import default_annif_named_model_list
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
-from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
+from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 
 def available_qucosa_classification_model_names(only_persistable: bool = False):
     """Return all classificaation models for the qucosa dataset."""
+    model_types = get_all_classification_model_types()
+
     if only_persistable:
         return [
-            n for n, m in default_qucosa_named_classification_model_list()
-            if isinstance(m(), PersistableClassificationModel)
+            name for name, generator in model_types.items()
+            if isinstance(generator(), PersistableClassificationModel)
         ]
 
-    all_models = default_dummy_named_model_list() \
-        + default_qucosa_named_classification_model_list() \
-        + default_annif_named_model_list("de")
-    return [n for n, _ in all_models]
+    return list(model_types.keys())
 
 
 def available_qucosa_clustering_model_names():
@@ -33,17 +31,16 @@ def available_qucosa_clustering_model_names():
 
 def available_qucosa_dataset_names():
     """Return all dataset variants for qucosa."""
-    return [n for n, _, _ in qucosa_named_datasets_tuple_list()]
+    return [n for n, _, _ in qucosa_named_sample_generators()]
 
 
 def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool):
     """Return a single dataset retrieving it by its name."""
-    named_datasets = named_datasets = filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), [dataset_name]
-    )
-    dataset_tuple = next(named_datasets)
-    if dataset_tuple is not None:
-        return dataset_tuple[1], dataset_tuple[2]
+    named_dataset = next(filter_and_cache_named_datasets(
+        qucosa_named_sample_generators(check_qucosa_download), [dataset_name]
+    ))
+    if named_dataset is not None:
+        return named_dataset.dataset, named_dataset.schema_generator()
     raise ValueError(f"dataset with name '{dataset_name}' not known")
 
 

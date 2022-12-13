@@ -1,5 +1,7 @@
 """Serve command."""
 
+# pylint: disable=too-many-locals
+
 import argparse
 import logging
 import os
@@ -11,9 +13,7 @@ from slub_docsa.common.paths import get_serve_dir
 from slub_docsa.data.load.subjects.common import default_schema_generators
 from slub_docsa.serve.app import create_webapp
 from slub_docsa.serve.common import SimpleRestService
-from slub_docsa.serve.models.classification.ann import get_ann_classification_models_map
-from slub_docsa.serve.models.classification.classic import get_classic_classification_models_map
-from slub_docsa.serve.models.classification.natlibfi_annif import get_annif_classification_models_map
+from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 from slub_docsa.serve.rest.service.languages import LangidLanguagesRestService
 from slub_docsa.serve.rest.service.models import AllStoredModelRestService, SingleStoredModelRestService
 from slub_docsa.serve.rest.service.schemas import SimpleSchemaRestService
@@ -74,10 +74,7 @@ def _run_rest_service(args):
     port = args.port
     threads = args.threads
 
-    model_types = {}
-    model_types.update(get_classic_classification_models_map())
-    model_types.update(get_annif_classification_models_map())
-    model_types.update(get_ann_classification_models_map())
+    model_types = get_all_classification_model_types()
     schema_generators = default_schema_generators()
     schema_rest_service = SimpleSchemaRestService(schema_generators)
 

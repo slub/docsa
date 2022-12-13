@@ -21,6 +21,7 @@ from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, load_ddc_subject_hierarchy
 from slub_docsa.data.load.subjects.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
+from slub_docsa.data.load.subjects.jskos import load_jskos_subject_hierarchy_from_sqlite
 from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 
@@ -690,7 +691,7 @@ def read_qucosa_samples(
 
     _subject_store_func_map = {
         "rvk": lambda: load_rvk_subject_hierarchy_from_sqlite(),
-        "ddc": lambda: get_qucosa_ddc_subject_store(),
+        "ddc": lambda: load_jskos_subject_hierarchy_from_sqlite("ddc"),
     }
 
     return _read_qucosa_generic_samples(

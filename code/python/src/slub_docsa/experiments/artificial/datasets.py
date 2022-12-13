@@ -14,6 +14,7 @@ from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
 from slub_docsa.data.store.dataset import load_persisted_dataset_from_lazy_sample_iterator
 from slub_docsa.data.store.subject import load_persisted_subject_hierarchy_from_lazy_subject_generator
+from slub_docsa.experiments.common.datasets import NamedDataset
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ def default_named_artificial_datasets(
                 subject_hierarchy_fp
             )
 
-        yield dataset_name, dataset, subject_hierarchy
+        yield NamedDataset(dataset_name, dataset, "custom", subject_hierarchy, ["en"])
 
 
 if __name__ == "__main__":

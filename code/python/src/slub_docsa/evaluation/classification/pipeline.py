@@ -52,13 +52,12 @@ def default_train_model(
     logger.info("train model %s", str(model))
     # calcuate incidences
     train_incidence = LazySubjectIncidenceTargets(train_dataset.subjects, subject_order)
-    # train_incidence = subject_incidence_matrix_from_targets(train_dataset.subjects, subject_order)
 
     validation_documents = None
     validation_incidence = None
     if validation_dataset:
         validation_documents = validation_dataset.documents
-        validation_incidence = subject_incidence_matrix_from_targets(validation_dataset.subjects, subject_order)
+        validation_incidence = LazySubjectIncidenceTargets(validation_dataset.subjects, subject_order)
 
     model.fit(train_dataset.documents, train_incidence, validation_documents, validation_incidence)
 
@@ -185,7 +184,7 @@ class TrainAndEvaluateModelFunction:
 
     def __call__(
         self,
-        model: ClassificationModel,
+        model_generator: Callable[[], ClassificationModel],
         subject_order: Sequence[str],
         train_dataset: Dataset,
         test_dataset: Dataset,
@@ -240,7 +239,7 @@ class DefaultTrainAndEvaluateFunction(TrainAndEvaluateModelFunction):
 
     def __call__(
         self,
-        model: ClassificationModel,
+        model_generator: Callable[[], ClassificationModel],
         subject_order: Sequence[str],
         train_dataset: Dataset,
         test_dataset: Dataset,
@@ -273,6 +272,8 @@ class DefaultTrainAndEvaluateFunction(TrainAndEvaluateModelFunction):
             both the overall score results, and the score matrices when measuring the classification performance
             for each subject
         """
+        model = model_generator()
+        logger.info("train and evaluate model %s", str(model))
         default_train_model(model, subject_order, train_dataset, validation_dataset)
         return default_batch_evaluate_model(
             model, subject_order, test_dataset, score_generators, per_class_score_generators, self.batch_size
@@ -396,7 +397,7 @@ def score_classification_models_for_dataset(
     train_and_evaluate: Optional[TrainAndEvaluateModelFunction] = None,
     batch_size: int = 100,
 ) -> Tuple[MultiModelScores, MultiModelPerClassScores]:
-    """Train, evaluate and score multiple models for the same dataset.
+    """Train, evaluate and score multiple models for the same training and test dataset.
 
     Parameters
     ----------
@@ -492,13 +493,9 @@ def score_classification_model_for_dataset(
     if train_and_evaluate is None:
         train_and_evaluate = DefaultTrainAndEvaluateFunction(batch_size)
 
-    # create new instance of model
-    model = model_generator()
-    logger.info("train and evaluate model %s", str(model))
-
     # do training
     scores, per_class_scores = train_and_evaluate(
-        model,
+        model_generator,
         subject_order,
         training_dataset,
         test_dataset,

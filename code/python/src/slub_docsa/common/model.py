@@ -17,9 +17,9 @@ class ClassificationModel:
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Train a model to fit the training data.
 
@@ -27,13 +27,13 @@ class ClassificationModel:
         ----------
         train_documents: Sequence[Document]
             The sequence of documents that is used for training a model.
-        train_targets: numpy.ndarray
+        train_targets: Sequence[Sequence[int]]
             The incidence matrix describing which document of `train_documents` belongs to which subjects. The matrix
             has to have a shape of (n_docs, n_subjects).
         validation_documents: Optional[Sequence[Document]]
             A sequence of documents that can be used to validate the trained model during training, e.g., for each
             epoch when training an artificial neural network
-        validation_targets: Optional[numpy.ndarray]
+        validation_targets: Optional[Sequence[Sequence[int]]]
             The incidence matrix for `validation_documents`
 
         Returns

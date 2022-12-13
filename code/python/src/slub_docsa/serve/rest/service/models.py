@@ -14,7 +14,7 @@ from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.serve.common import ClassificationPrediction, ClassificationResult, ClassificationModelsRestService
 from slub_docsa.serve.common import PublishedClassificationModel, PublishedClassificationModelInfo
 from slub_docsa.serve.common import ModelNotFoundException, SchemasRestService, ModelTypeMapping
-from slub_docsa.serve.store.models import find_stored_classification_model_infos, load_published_classification_model
+from slub_docsa.data.store.model import find_stored_classification_model_infos, load_published_classification_model
 
 
 logger = logging.getLogger(__name__)

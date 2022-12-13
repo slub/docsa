@@ -1,4 +1,4 @@
-"""Methods to save and load models such that they can be served by the REST service."""
+"""Methods to save and load models including meta information."""
 
 import os
 import pickle  # nosec
@@ -7,6 +7,7 @@ import logging
 
 from typing import Callable, Mapping, Sequence, NamedTuple
 
+from slub_docsa.common.paths import get_serve_dir
 from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.subject import SubjectHierarchy
 from slub_docsa.serve.common import PublishedClassificationModelInfo, PublishedClassificationModel
@@ -14,6 +15,11 @@ from slub_docsa.serve.common import PublishedClassificationModelStatistics
 
 
 logger = logging.getLogger(__name__)
+
+
+def default_published_classification_models_directory():
+    """Return default directory where to store a model."""
+    return os.path.join(get_serve_dir(), "classification_models")
 
 
 class StoredClassificationModelInfo(NamedTuple):
@@ -82,7 +88,9 @@ def save_as_published_classification_model(
 ):
     """Store a model such that it can be loaded by the REST service."""
     # save internal model state
-    model.save(os.path.join(directory, "model_state"))
+    model_state_directory = os.path.join(directory, "model_state")
+    os.makedirs(model_state_directory, exist_ok=True)
+    model.save(model_state_directory)
 
     # save subject order
     with open(os.path.join(directory, "subject_order.pickle"), "wb") as file:

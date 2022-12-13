@@ -21,16 +21,16 @@ class OracleModel(ClassificationModel):
         """Initialize model."""
         self.test_targets = None
 
-    def set_test_targets(self, test_targets: np.ndarray):
+    def set_test_targets(self, test_targets: Sequence[np.ndarray]):
         """Provide test targets that will be returned when `OracleModel.predict_proba()` is called."""
         self.test_targets = test_targets
 
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Do not fit an oracle."""
         # do not learn anything
@@ -57,12 +57,12 @@ class NihilisticModel(ClassificationModel):
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Do not learn anything."""
-        self.n_subjects = train_targets.shape[1]
+        self.n_subjects = len(train_targets[0])
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
@@ -86,12 +86,12 @@ class OptimisticModel(ClassificationModel):
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Do not learn anything, just remember how many different classes there are."""
-        self.n_subjects = train_targets.shape[1]
+        self.n_subjects = len(train_targets[0])
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:
@@ -115,12 +115,12 @@ class RandomModel(ClassificationModel):
     def fit(
         self,
         train_documents: Sequence[Document],
-        train_targets: np.ndarray,
+        train_targets: Sequence[Sequence[int]],
         validation_documents: Optional[Sequence[Document]] = None,
-        validation_targets: Optional[np.ndarray] = None,
+        validation_targets: Optional[Sequence[Sequence[int]]] = None,
     ):
         """Do not learn anything."""
-        self.n_subjects = train_targets.shape[1]
+        self.n_subjects = len(train_targets[0])
         return self
 
     def predict_proba(self, test_documents: Sequence[Document]) -> np.ndarray:

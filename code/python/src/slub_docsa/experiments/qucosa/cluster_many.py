@@ -13,7 +13,7 @@ from slub_docsa.experiments.common.pipeline import do_default_score_matrix_clust
 from slub_docsa.experiments.common.plots import write_default_clustering_plots
 from slub_docsa.experiments.common.scores import default_named_clustering_score_list, initialize_named_score_tuple_list
 
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 
@@ -41,7 +41,7 @@ def qucosa_experiments_cluster_many(
         )
 
     named_datasets = filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), dataset_subset
+        qucosa_named_sample_generators(check_qucosa_download), dataset_subset
     )
 
     evaluation_result = do_default_score_matrix_clustering_evaluation(

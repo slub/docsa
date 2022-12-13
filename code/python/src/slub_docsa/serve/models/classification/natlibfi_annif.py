@@ -14,10 +14,10 @@ def get_annif_classification_models_map() -> ModelTypeMapping:
         "annif_yake_de": lambda subject_hierarchy, subject_order: AnnifModel(
             model_type="yake", lang_code="de", subject_hierarchy=subject_hierarchy, subject_order=subject_order
         ),
-        # "annif_stwfsa_de": lambda subject_hierarchy, subject_order: AnnifModel(
-        #     model_type="stwfsa", lang_code="de", subject_hierarchy=subject_hierarchy, subject_order=subject_order
-        # ),
         "annif_mllm_de": lambda subject_hierarchy, subject_order: AnnifModel(
             model_type="mllm", lang_code="de", subject_hierarchy=subject_hierarchy, subject_order=subject_order
         ),
+        # "annif_stwfsa_de": lambda subject_hierarchy, subject_order: AnnifModel(
+        #     model_type="stwfsa", lang_code="de", subject_hierarchy=subject_hierarchy, subject_order=subject_order
+        # ),
     }

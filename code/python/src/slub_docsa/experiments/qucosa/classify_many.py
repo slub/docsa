@@ -8,16 +8,14 @@ from typing import List, Optional, Union
 from typing_extensions import Literal
 
 from slub_docsa.common.paths import get_figures_dir
-from slub_docsa.experiments.annif.models import default_annif_named_model_list
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
-from slub_docsa.experiments.common.models import initialize_classification_models_from_tuple_list
+from slub_docsa.experiments.common.models import filter_model_type_mapping
 
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_classification_evaluation
-from slub_docsa.experiments.common.pipeline import get_split_function_by_name
 from slub_docsa.experiments.common.plots import write_default_classification_plots
-from slub_docsa.experiments.dummy.models import default_dummy_named_model_list
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets_tuple_list
-from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
+from slub_docsa.experiments.dummy.models import default_dummy_model_types
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
+from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 logger = logging.getLogger(__name__)
 
@@ -35,23 +33,22 @@ def qucosa_experiments_classify_many(
     """Perform qucosa experiments comparing many classification models for many dataset variants."""
     filename_suffix = f"split={split_function_name}"
 
-    def _model_list_generator(subject_order, subject_hierarchy):
-        model_list = default_dummy_named_model_list() \
-            + default_qucosa_named_classification_model_list() \
-            + default_annif_named_model_list("de", subject_order, subject_hierarchy)
-        return initialize_classification_models_from_tuple_list(model_list, model_subset)
+    model_types = default_dummy_model_types()
+    model_types.update(get_all_classification_model_types())
+    model_types = filter_model_type_mapping(model_types, model_subset)
 
     named_datasets = filter_and_cache_named_datasets(
-        qucosa_named_datasets_tuple_list(check_qucosa_download), dataset_subset
+        qucosa_named_sample_generators(check_qucosa_download), dataset_subset
     )
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
         named_datasets=named_datasets,
-        split_function=get_split_function_by_name(split_function_name, n_splits, random_state),
-        named_models_generator=_model_list_generator,
-        n_splits=n_splits,
+        model_types=model_types,
+        split_function_name=split_function_name,
+        split_number=n_splits,
         load_cached_scores=load_cached_scores,
         stop_after_evaluating_split=stop_after_evaluating_split,
+        random_state=random_state,
     )
 
     write_default_classification_plots(evaluation_result, os.path.join(get_figures_dir(), "qucosa"), filename_suffix)
@@ -93,7 +90,7 @@ if __name__ == "__main__":
             # "dbmdz_bert_sts8_torch_ann",
             # "annif_tfidf",
             # "annif_svc",
-            "annif_omikuji",
+            "annif_omikuji_de",
             # "annif_vw_multi",
             # "annif_mllm",
             # "annif_fasttext"
@@ -104,5 +101,5 @@ if __name__ == "__main__":
         load_cached_scores=True,
         random_state=123,
         split_function_name="random",
-        stop_after_evaluating_split=1
+        stop_after_evaluating_split=0
     )
