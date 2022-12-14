@@ -78,16 +78,20 @@ class LazyIndexedDataset(TorchDataset):
         vectorizer: AbstractVectorizer,
         documents: Sequence[Document],
         subject_targets: Optional[Sequence[np.ndarray]] = None,
+        max_document_length: Optional[int] = 10000,
         preload: bool = False,
     ):
         """Initialize dataset with a sequence of features and subject incidences."""
         self.vectorizer = vectorizer
         self.documents = documents
         self.subject_targets = subject_targets
+        self.max_document_length = max_document_length
         self.features = None
         if preload:
             logger.info("preload features by applying vectorizer to all documents")
-            text_iterator = (document_as_concatenated_string(d, max_length=1000) for d in self.documents)
+            text_iterator = (
+                document_as_concatenated_string(d, max_length=self.max_document_length) for d in self.documents
+            )
             self.features = list(self.vectorizer.transform(text_iterator))
 
     def __getitem__(self, idx):
@@ -95,7 +99,9 @@ class LazyIndexedDataset(TorchDataset):
         if self.features:
             features = self.features[idx]
         else:
-            text_iterator = iter([document_as_concatenated_string(self.documents[idx], max_length=1000)])
+            text_iterator = iter([
+                document_as_concatenated_string(self.documents[idx], max_length=self.max_document_length)
+            ])
             features = next(self.vectorizer.transform(text_iterator))
         if self.subject_targets is not None:
             return features, self.subject_targets[idx]
@@ -157,11 +163,14 @@ class AbstractTorchModel(PersistableClassificationModel):
         vectorizer: AbstractVectorizer,
         max_epochs: Optional[int] = None,
         max_training_time: Optional[int] = None,
+        max_training_t05_f1: Optional[float] = None,
         batch_size: int = 32,
         learning_rate: float = 0.001,
         learning_rate_decay: float = 1.0,
         positive_class_weight: float = 1.0,
+        positive_class_weight_min: float = 1.0,
         positive_class_weight_decay: float = 1.0,
+        max_document_length: Optional[int] = 10000,
         preload_vectorizations: bool = True,
         dataloader_workers: int = 0,
         plot_training_history_filepath: Optional[str] = None,
@@ -188,13 +197,16 @@ class AbstractTorchModel(PersistableClassificationModel):
         self.vectorizer = vectorizer
         self.max_epochs = max_epochs
         self.max_training_time = max_training_time
+        self.max_training_t05_f1 = max_training_t05_f1
         self.model = None
         self.model_shape = None
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.learning_rate_decay = learning_rate_decay
         self.positive_class_weight = positive_class_weight
+        self.positive_class_weight_min = positive_class_weight_min
         self.positive_class_weight_decay = positive_class_weight_decay
+        self.max_document_length = max_document_length
         self.preload_vectorizations = preload_vectorizations
         self.dataloader_workers = dataloader_workers
         self.plot_training_history_filepath = plot_training_history_filepath
@@ -204,15 +216,16 @@ class AbstractTorchModel(PersistableClassificationModel):
         """Return a torch network that will be trained and evaluated."""
         raise NotImplementedError()
 
-    def _update_positive_class_weight(self, criterion):
+    def _update_positive_class_weight(self, epoch, criterion):
         if self.positive_class_weight != 1.0 or self.positive_class_weight_decay != 1.0:
-            self.positive_class_weight = max(
-                1.0, self.positive_class_weight * self.positive_class_weight_decay
+            current_weight = max(
+                self.positive_class_weight_min,
+                self.positive_class_weight * np.power(self.positive_class_weight_decay, epoch)
             )
-            logger.info("set positive class weight to %f", self.positive_class_weight)
-            criterion.pos_weight = (torch.ones([self.model_shape[1]]) * self.positive_class_weight).to(self.device)
+            logger.info("set positive class weight to %f", current_weight)
+            criterion.pos_weight = (torch.ones([self.model_shape[1]]) * current_weight).to(self.device)
 
-    def _fit_epoch(self, train_dataloader, criterion, optimizer):
+    def _fit_epoch(self, epoch, train_dataloader, criterion, optimizer):
         if self.model is None:
             raise RuntimeError("can't fit a model that is not yet initialized")
 
@@ -221,7 +234,7 @@ class AbstractTorchModel(PersistableClassificationModel):
         epoch_score = TorchF1Score()
         progress = ProgressLogger("training", self.batch_size, epoch_score)
 
-        self._update_positive_class_weight(criterion)
+        self._update_positive_class_weight(epoch, criterion)
 
         for batch, (X, y) in enumerate(train_dataloader):
             # send features and targets to device
@@ -300,7 +313,9 @@ class AbstractTorchModel(PersistableClassificationModel):
         return epoch_loss, t01_f1[0], t05_f1[0]
 
     def _get_data_loader_from_documents(self, documents, targets, batch_size, shuffle):
-        dataset = LazyIndexedDataset(self.vectorizer, documents, targets, self.preload_vectorizations)
+        dataset = LazyIndexedDataset(
+            self.vectorizer, documents, targets, self.max_document_length, self.preload_vectorizations
+        )
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=self.dataloader_workers)
         return dataloader
 
@@ -325,7 +340,9 @@ class AbstractTorchModel(PersistableClassificationModel):
         logger.info("train torch network with %d training examples", len(train_documents))
 
         logger.debug("fit vectorizer based on training documents")
-        self.vectorizer.fit(document_as_concatenated_string(d, max_length=1000) for d in train_documents)
+        self.vectorizer.fit(
+            document_as_concatenated_string(d, max_length=self.max_document_length) for d in train_documents
+        )
 
         # compile training data as data loader (and transform documents to features according to vectorizer)
         logger.debug("transform training data into tensors")
@@ -381,9 +398,14 @@ class AbstractTorchModel(PersistableClassificationModel):
                 logger.info("stop training after max training time reached")
                 break
 
+            if self.max_training_t05_f1 is not None and epoch_train_score_history and \
+                    epoch_train_score_history[-1][2] >= self.max_training_t05_f1:
+                logger.info("stop training due to overfitting on training data")
+                break
+
             # do fit for one epoch and calculate train loss and train f1_score
             epoch_train_score_history.append(self._fit_epoch(
-                train_dataloader, criterion, optimizer,
+                epoch, train_dataloader, criterion, optimizer,
             ))
 
             # do validation and calculate loss and f1_score
@@ -419,7 +441,7 @@ class AbstractTorchModel(PersistableClassificationModel):
 
         # transform documents to feature vectors
         features = list(self.vectorizer.transform(
-            document_as_concatenated_string(d, max_length=1000) for d in test_documents
+            document_as_concatenated_string(d, max_length=self.max_document_length) for d in test_documents
         ))
 
         # setup torch datatsets
