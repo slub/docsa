@@ -32,6 +32,9 @@ from slub_docsa.data.store.document import sha1_hash_from_text
 
 logger = logging.getLogger(__name__)
 
+# disable warning message about parallelism
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 class AbstractVectorizer:
     """Represents a vectorizer model that can be fitted to a corpus."""

@@ -58,29 +58,29 @@ def k10plus_experiments_classify_many(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("sqlitedict").setLevel(logging.WARNING)
 
     k10plus_experiments_classify_many(
         language="de",
         model_subset=[
             # ### "random", ####
-            "oracle",
-            "nihilistic",
-            "tfidf_10k_knn_k=1",
-            "dbmdz_bert_sts1_knn_k=1",
-            "tfidf_snowball_de_10k_torch_ann",
+            # "oracle",
+            # "nihilistic",
+            # "tfidf_10k_knn_k=1",
+            # "dbmdz_bert_sts1_knn_k=1",
+            # "tfidf_snowball_de_10k_torch_ann",
             "dbmdz_bert_sts1_torch_ann",
-            "tiny_bert_torch_ann_de",
-            "annif_tfidf_de",
-            "annif_svc_de",
-            "annif_omikuji_de",
-            "annif_mllm_de",
-            "annif_fasttext_de",
+            # "tiny_bert_torch_ann_de",
+            # "annif_tfidf_de",
+            # "annif_svc_de",
+            # "annif_omikuji_de",
+            # "annif_mllm_de",
+            # "annif_fasttext_de",
             # "annif_yake_de",
         ],
         dataset_schemas=["rvk"],
-        dataset_variants=[("public", 100000), ("slub_raw", 20000), ("slub_clean", 20000)],
+        dataset_variants=[("public", None), ("slub_titles", None), ("slub_raw", None), ("slub_clean", None)],
         n_splits=10,
         load_cached_scores=True,
         random_state=123,
