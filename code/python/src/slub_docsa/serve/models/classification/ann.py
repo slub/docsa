@@ -15,13 +15,13 @@ from slub_docsa.serve.common import ModelTypeMapping
 def get_ann_classification_models_map() -> ModelTypeMapping:
     """Return a map of classification model types and their generator functions."""
     wikipedia_wordpiece_vectorizer = partial(
-        get_static_wikipedia_wordpiece_vectorizer, lang_code="de", vocabulary_size=40000, max_length=48, uncased=True
+        get_static_wikipedia_wordpiece_vectorizer, lang_code="de", vocabulary_size=30000, max_length=64, uncased=True
     )
 
     return {
         "tfidf_snowball_de_10k_torch_ann": lambda subject_hierarchy, subject_order: TorchSingleLayerDenseReluModel(
-            max_epochs=32,
-            max_training_time=60,
+            max_training_t05_f1=0.95,
+            max_training_time=600,
             vectorizer=TfidfStemmingVectorizer(lang_code="de", max_features=10000),
             plot_training_history_filepath=os.path.join(
                 get_figures_dir(), "ann_history/tfidf_snowball_de_10k_torch_ann"
@@ -31,16 +31,18 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
             vectorizer=wikipedia_wordpiece_vectorizer(),
             batch_size=64,
             max_epochs=None,
-            max_training_time=120,
+            max_training_time=3600,
+            max_training_t05_f1=0.85,
             learning_rate=0.0001,
             learning_rate_decay=1.0,
             positive_class_weight=100.0,
-            positive_class_weight_decay=0.95,
+            positive_class_weight_min=5.0,
+            positive_class_weight_decay=0.9,
             bert_config={
-                "hidden_size": 256,
+                "hidden_size": 384,
                 "num_hidden_layers": 2,
                 "hidden_dropout_prob": 0.1,
-                "intermediate_size": 512,
+                "intermediate_size": 768,
                 "num_attention_heads": 4,
                 "attention_dropout_prob": 0.1,
                 "classifier_dropout": 0.1,
