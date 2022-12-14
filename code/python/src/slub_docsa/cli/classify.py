@@ -57,7 +57,7 @@ def _classify_qucosa_train_action(args):
 
     # load dataset and model
     logger.info("load dataset '%s'", dataset_name)
-    dataset, _ = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
+    dataset, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
 
     if max_documents is not None:
         logger.info("use only the first %d examples for training", int(max_documents))
@@ -70,7 +70,7 @@ def _classify_qucosa_train_action(args):
     logger.info("dataset '%s' has %d unique subjects", dataset_name, len(subject_order))
 
     logger.info("load model '%s'", model_name)
-    model = load_qucosa_classification_model_by_name(model_name)
+    model = load_qucosa_classification_model_by_name(model_name, subject_hierarchy, subject_order)
 
     if not isinstance(model, PersistableClassificationModel):
         logger.error("model '%s' is not persistable, abort", model_name)
@@ -140,7 +140,7 @@ def _classify_qucosa_predict_action(args):
         subject_order = pickle.load(file)  # nosec
 
     logger.info("load model '%s'", model_name)
-    model = load_qucosa_classification_model_by_name(model_name)
+    model = load_qucosa_classification_model_by_name(model_name, subject_hierarchy, subject_order)
 
     if not isinstance(model, PersistableClassificationModel):
         logger.error("model '%s' is not persistable, abort", model_name)

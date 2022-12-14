@@ -5,7 +5,6 @@ import argparse
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
-from slub_docsa.experiments.qucosa.models import default_qucosa_named_classification_model_list
 from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 
@@ -36,12 +35,12 @@ def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool):
     raise ValueError(f"dataset with name '{dataset_name}' not known")
 
 
-def load_qucosa_classification_model_by_name(model_name: str):
+def load_qucosa_classification_model_by_name(model_name: str, subject_hierarchy, subject_order):
     """Return a single model retrieving it by its name."""
-    for name, model in default_qucosa_named_classification_model_list():
-        if name == model_name:
-            return model()
-    raise ValueError(f"model with name '{model_name}' not known")
+    model_types = get_all_classification_model_types()
+    if model_name not in model_types:
+        raise ValueError(f"model with name '{model_name}' not known")
+    return model_types[model_name](subject_hierarchy, subject_order)
 
 
 def add_common_qucosa_arguments(parser: argparse.ArgumentParser):
