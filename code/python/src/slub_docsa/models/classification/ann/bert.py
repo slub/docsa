@@ -1,6 +1,6 @@
 """Bert model."""
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-locals
 
 from typing import Any, Mapping, Optional
 import torch
