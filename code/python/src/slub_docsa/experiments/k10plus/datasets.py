@@ -53,6 +53,14 @@ def k10plus_named_sample_generators(
                         limit=variant[1],
                         clean_toc=True
                     )
+                elif variant[0] == "slub_titles":
+                    samples_generator = partial(
+                        k10plus_slub_samples_generator,
+                        languages=[language],
+                        schemas=[schema],
+                        limit=variant[1],
+                        titles_only=True,
+                    )
                 else:
                     raise ValueError(f"unknown variant '{variant}'")
                 subject_hierarchy_generator = partial(subject_hierarchy_by_subject_schema, schema=schema)
@@ -77,11 +85,11 @@ if __name__ == "__main__":
 
     # loads all data sets and generates persistent storage for them
     dataset_list = k10plus_named_sample_generators(
-        languages=["en"], variants=[("public", None), ("slub_raw", None), ("slub_clean", None)]
+        languages=["de"], variants=[("public", None), ("slub_titles", None), ("slub_raw", None), ("slub_clean", None)]
     )
     for named_dataset in filter_and_cache_named_datasets(dataset_list):
         n_unique_subjects = len(unique_subject_order(named_dataset.dataset.subjects))
         logger.info(
             "dataset %s has %d documents and %d unique subjects",
-            named_dataset.dataset_name, len(named_dataset.dataset.documents), n_unique_subjects
+            named_dataset.name, len(named_dataset.dataset.documents), n_unique_subjects
         )

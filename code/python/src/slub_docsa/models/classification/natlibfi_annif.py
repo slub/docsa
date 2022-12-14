@@ -285,9 +285,11 @@ class AnnifModel(PersistableClassificationModel):
         Model
             self
         """
+        logger.debug("calculate train target indexes")
         train_idxs_targets = subject_idx_from_incidence_matrix(train_targets)
 
         # define corpus
+        logger.debug("build annif document list and corpus")
         annif_document_list = [
             AnnifDocument(
                 text=document_as_concatenated_string(d, max_length=self.max_document_length),
@@ -300,6 +302,7 @@ class AnnifModel(PersistableClassificationModel):
         self.n_unique_subjects = len(train_targets[0])
         logger.debug("there are %d unique subjects", self.n_unique_subjects)
 
+        logger.debug("init annif vocab, project and model")
         subject_vocab, annif_subject_list = self._init_subject_vocab()
         self._init_project(subject_vocab)
         self._init_model(annif_subject_list)
