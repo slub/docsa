@@ -32,6 +32,7 @@ experiments qucosa cluster_one
 
 import argparse
 import logging
+
 from slub_docsa.cli.classify import classify_subparser
 from slub_docsa.cli.experiments import experiments_subparser
 from slub_docsa.cli.serve import serve_subparser

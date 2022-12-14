@@ -178,7 +178,7 @@ def _add_classify_qucosa_common_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--model",
         "-m",
-        help="which model variant to use for training: " + ", ".join(available_qucosa_classification_model_names(True)),
+        help="which model variant to use for training: " + ", ".join(available_qucosa_classification_model_names()),
         default="tfidf_10k_torch_ann",
     )
 

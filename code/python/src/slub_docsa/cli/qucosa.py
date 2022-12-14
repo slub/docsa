@@ -2,7 +2,6 @@
 
 import argparse
 
-from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
@@ -10,16 +9,9 @@ from slub_docsa.experiments.qucosa.models import default_qucosa_named_classifica
 from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 
-def available_qucosa_classification_model_names(only_persistable: bool = False):
+def available_qucosa_classification_model_names():
     """Return all classificaation models for the qucosa dataset."""
     model_types = get_all_classification_model_types()
-
-    if only_persistable:
-        return [
-            name for name, generator in model_types.items()
-            if isinstance(generator(None, None), PersistableClassificationModel)
-        ]
-
     return list(model_types.keys())
 
 

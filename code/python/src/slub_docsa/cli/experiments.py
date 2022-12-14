@@ -78,7 +78,7 @@ def _experiments_qucosa_classify_many_subparser(parser: argparse.ArgumentParser)
     add_common_qucosa_arguments(parser)
     _add_experiments_qucosa_common_arguments(parser)
 
-    model_names = available_qucosa_classification_model_names(False)
+    model_names = available_qucosa_classification_model_names()
     parser.add_argument(
         "--models",
         "-m",
