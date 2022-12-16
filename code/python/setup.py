@@ -32,7 +32,7 @@ setup(
         "langid==1.1.6",
         "kaleido==0.2.1",
         "elasticsearch>=7.0.0,<8.0.0",
-        "scikit-learn=1.1.1",
+        "scikit-learn==1.1.1",
         "scikit-multilearn==0.2.0",
         "torch==1.13.0",
         "transformers==4.24.0",
