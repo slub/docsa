@@ -9,15 +9,16 @@ import gzip
 import re
 import time
 
-from typing import Iterator, Optional, Any, Sequence, Union, cast
+from typing import Iterable, Iterator, Optional, Any, Sequence, Union, cast
 from itertools import chain, islice
 
 import torch
 import numpy as np
 import tokenizers
+import gensim
 
 from sqlitedict import SqliteDict
-from sklearn.feature_extraction.text import TfidfVectorizer as ScikitTfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer as NativeScikitTfidfVectorizer
 from torch.nn.modules.module import Module
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
@@ -104,7 +105,51 @@ class PersistableVectorizerMixin:
         raise NotImplementedError()
 
 
-class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
+class GensimTfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
+    """Tfidf Vectorization via Gensim."""
+
+    def __init__(self, max_features=10000):
+        """Initialize the vectorizer."""
+        self.max_features = max_features
+        self.dictionary = None
+        self.vectorizer = None
+        self.num_terms = None
+        self.num_docs = None
+
+    def fit(self, texts: Iterable[str]):
+        """Train the gensim tfidf vectorizer."""
+        self.dictionary = gensim.corpora.HashDictionary(id_range=self.max_features)
+        bow_iterator = (self.dictionary.doc2bow(text.split(" "), allow_update=True) for text in texts)
+        self.vectorizer = gensim.models.TfidfModel(bow_iterator, id2word=self.dictionary, normalize=True)
+        self.num_docs = self.dictionary.num_docs
+        self.num_terms = len(self.dictionary.keys())
+
+    def _doc_to_dense(self, doc):
+        return gensim.matutils.corpus2dense([doc], num_terms=self.num_terms, num_docs=1).T[0]
+
+    def transform(self, texts: Iterable[str]) -> Union[Iterator[np.ndarray], Iterator[BatchEncoding]]:
+        """Return vectorized texts."""
+        bow_iterator = (self.dictionary.doc2bow(text.split(" ")) for text in texts)
+        return (self._doc_to_dense(doc) for doc in self.vectorizer[bow_iterator])
+
+    def output_shape(self) -> Sequence[int]:
+        """Return the size of the matrices returned by transform, typically `(max_features,)`."""
+        return (self.num_terms,)
+
+    def save(self, persist_dir: str):
+        """Save gensim tfidf model to directory."""
+        self.dictionary.save(os.path.join(persist_dir, "dictionary"))
+        self.vectorizer.save(os.path.join(persist_dir, "tfidf_model"))
+
+    def load(self, persist_dir: str):
+        """Load gensim tfidf model from directory."""
+        self.dictionary = gensim.corpora.HashDictionary.load(os.path.join(persist_dir, "dictionary"))
+        self.vectorizer = gensim.models.TfidfModel.load(os.path.join(persist_dir, "tfidf_model"))
+        self.num_docs = self.dictionary.num_docs
+        self.num_terms = len(self.dictionary.keys())
+
+
+class ScikitTfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Vectorizer using Scikit TfidfVectorizer."""
 
     PERSIST_FILENAME = "tfidf_vectorizer.pickle.gz"
@@ -122,7 +167,7 @@ class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
         self.max_features = max_features
         self.fitted_once = False
         self.size = None
-        self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
+        self.vectorizer = NativeScikitTfidfVectorizer(max_features=max_features, **kwargs)
 
     def fit(self, texts: Iterator[str]):
         """Apply the scikit tfidf vectorizer."""
@@ -170,36 +215,35 @@ class TfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
 
     def __str__(self):
         """Return representative string of vectorizer."""
-        return f"<TfidfVectorizer max_features={self.max_features}>"
+        return f"<ScikitTfidfVectorizer max_features={self.max_features}>"
 
 
-class TfidfStemmingVectorizer(TfidfVectorizer):
-    """Apply nltk stemming and stopword removal before vectorizing with Scikit TfidfVectorizer."""
+class StemmingVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
+    """Apply nltk stemming and stopword removal before vectorizing."""
 
     def __init__(
         self,
+        vectorizer: AbstractVectorizer,
         lang_code: str,
         remove_stopwords: bool = True,
-        max_features=10000,
         stemming_cache_filepath: Optional[str] = None,
-        **kwargs
     ):
         """Initialize vectorizer.
 
         Parameters
         ----------
+        vectorizer
+            the vectorizer that is used after stemming
         lang_code: str
             Language code of the text (e.g. "en", "de")
         remove_stopwords: bool
             Whether to remove stopwords
-        max_features: int = 10000
-            The maximum number of unique tokens to extract from text during fit.
         stemming_cache_filepath: str = None
             Optional file path to a file that is used to persist stemmed text for caching
         kwargs: Any
             additional arguments that are passed to the scikit tfidf vectorizer
         """
-        super().__init__(max_features=max_features, **kwargs)
+        self.vectorizer = vectorizer
         self.lang_code = lang_code
         self.remove_stopwords = remove_stopwords
         if stemming_cache_filepath is not None:
@@ -214,18 +258,34 @@ class TfidfStemmingVectorizer(TfidfVectorizer):
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
         # logger.debug("do stemming for fitting of tfidf vectorizer")
-        stemmed_texts = [self.stemming(t) for t in texts]
-        super().fit(iter(stemmed_texts))
+        stemmed_texts_iterator = (self.stemming(t) for t in texts)
+        self.vectorizer.fit(stemmed_texts_iterator)
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
         # logger.debug("do stemming for transforming with tfidf vectorizer")
-        stemmed_texts = [self.stemming(t) for t in texts]
-        yield from super().transform(iter(stemmed_texts))
+        stemmed_texts_iterator = (self.stemming(t) for t in texts)
+        yield from self.vectorizer.transform(stemmed_texts_iterator)
+
+    def save(self, persist_dir):
+        """Relay save call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
+            raise ValueError("can not persist vectorizer that is not persistable")
+        self.vectorizer.save(persist_dir)
+
+    def load(self, persist_dir):
+        """Relay load call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
+            raise ValueError("can not load vectorizer that is not persistable")
+        self.vectorizer.load(persist_dir)
+
+    def output_shape(self) -> Sequence[int]:
+        """Output shape is defined by provided vectorizer."""
+        return self.vectorizer.output_shape()
 
     def __str__(self):
         """Return representative string of vectorizer."""
-        return f"<TfidfStemmingVectorizer max_features={self.max_features} lang_code={self.lang_code} " + \
+        return f"<ScikitTfidfStemmingVectorizer vectorizer={str(self.vectorizer)} lang_code={self.lang_code} " + \
             f"remove_stopwords={self.remove_stopwords}>"
 
 
@@ -709,3 +769,14 @@ class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer
         """Return representative string of vectorizer."""
         return f"<WordpieceVectorizer language=\"{self.language}\" vocabulary_size={self.vocabulary_size} " \
             + f"max_length={self.max_length} uncased={self.uncased} use_wikipedia_texts={self.use_wikipedia_texts}>"
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
+    _texts = ["This is a test", "A test indeed", "Another sentence without common words"]
+
+    _vectorizer = StemmingVectorizer(vectorizer=GensimTfidfVectorizer(), lang_code="en", remove_stopwords=True)
+    _vectorizer.fit(iter(_texts))
+    for vector in _vectorizer.transform(iter(_texts)):
+        print(vector)
