@@ -146,29 +146,29 @@ def do_default_score_matrix_clustering_evaluation(
     """Run clustering algorithms on each dataset and calculate multiple scores."""
     results: DefaultScoreMatrixResult = []
 
-    for dataset_name, dataset, _ in named_datasets:
+    for named_dataset in named_datasets:
 
         # define subject ordering
-        subject_order = list(sorted(unique_subject_order(dataset.subjects)))
+        subject_order = list(sorted(unique_subject_order(named_dataset.dataset.subjects)))
 
         model_lists = named_models_generator(subject_order)
         score_lists = named_scores_generator()
 
         score_matrix = score_clustering_models_for_documents(
-            dataset.documents,
-            dataset.subjects,
+            named_dataset.dataset.documents,
+            named_dataset.dataset.subjects,
             model_lists.classes,
-            score_lists.functions,
+            score_lists.generators,
             repeats,
             max_documents,
         )
 
         results.append(DefaultScoreMatrixDatasetResult(
-            dataset_name,
+            named_dataset.name,
             model_lists.names,
-            overall_score_matrix=score_matrix,
+            score_matrix=score_matrix,
             per_class_score_matrix=None,
-            overall_score_lists=score_lists,
+            score_lists=score_lists,
             per_class_score_lists=None,
         ))
 

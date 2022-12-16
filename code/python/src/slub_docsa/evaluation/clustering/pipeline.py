@@ -4,7 +4,7 @@
 
 import logging
 
-from typing import Sequence, Optional
+from typing import Callable, Sequence, Optional
 
 import numpy as np
 
@@ -20,7 +20,7 @@ def score_clustering_models_for_documents(
     documents: Sequence[Document],
     subject_targets: Optional[SubjectTargets],
     models: Sequence[ClusteringModel],
-    scores: Sequence[ClusteringScore],
+    score_generators: Sequence[Callable[[], ClusteringScore]],
     repeats: int = 10,
     max_documents: Optional[int] = None,
 ) -> np.ndarray:
@@ -49,7 +49,7 @@ def score_clustering_models_for_documents(
         a score matrix of shape `(len(models), len(scores), repeats)`, which contains every score for every evaluated
         clustering model
     """
-    score_matrix = np.empty((len(models), len(scores), repeats))
+    score_matrix = np.empty((repeats, len(models), len(score_generators)))
     score_matrix[:, :, :] = np.NaN
 
     for i in range(repeats):
@@ -72,8 +72,9 @@ def score_clustering_models_for_documents(
             membership = model.predict(sampled_documents)
 
             logger.info("score clustering result from model %s for repetition %d", str(model), i + 1)
-            for k, score_function in enumerate(scores):
+            for k, score_generator in enumerate(score_generators):
+                score_function = score_generator()
                 score = score_function(sampled_documents, membership, sampled_subject_targets)
-                score_matrix[j, k, i] = score
+                score_matrix[i, j, k] = score
 
     return score_matrix

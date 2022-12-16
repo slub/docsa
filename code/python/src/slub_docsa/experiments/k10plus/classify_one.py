@@ -22,11 +22,11 @@ if __name__ == "__main__":
 
     random_state = 123
     language = "de"
-    variant = "slub_clean"
-    limit = None
+    variant = "public"
+    limit = 100000
     min_samples = 50
 
-    dataset_name = f"k10plus_{variant}_{language}_rvk_ms={min_samples}"
+    dataset_name = f"k10plus_{variant}_{language}_rvk_ms={min_samples}_limit={100000}"
     model_name = "tiny_bert_torch_ann_de"
     # model_name = "tfidf_10k_knn_k=1"
     # model_name = "dbmdz_bert_sts1_torch_ann"

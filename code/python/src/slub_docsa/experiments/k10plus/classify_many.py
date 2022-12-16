@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 from typing_extensions import Literal
 
 from slub_docsa.common.paths import get_figures_dir
@@ -20,10 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 def k10plus_experiments_classify_many(
-    language: str,
     model_subset: List[str],
-    dataset_schemas: List[str],
-    dataset_variants: List[Tuple[str, int]],
+    dataset_subset: List[str],
     n_splits: int = 10,
     load_cached_scores: bool = False,
     random_state: Optional[int] = None,
@@ -38,10 +36,7 @@ def k10plus_experiments_classify_many(
     model_types = filter_model_type_mapping(model_types, model_subset)
 
     named_datasets = filter_and_cache_named_datasets(
-        k10plus_named_sample_generators(
-            schemas=dataset_schemas, languages=[language], variants=dataset_variants
-        ),
-        None
+        k10plus_named_sample_generators(), dataset_subset
     )
 
     evaluation_result = do_default_score_matrix_classification_evaluation(
@@ -62,15 +57,14 @@ if __name__ == "__main__":
     logging.getLogger("sqlitedict").setLevel(logging.WARNING)
 
     k10plus_experiments_classify_many(
-        language="de",
         model_subset=[
             # ### "random", ####
             # "oracle",
             # "nihilistic",
             # "tfidf_10k_knn_k=1",
             # "dbmdz_bert_sts1_knn_k=1",
-            # "tfidf_snowball_de_10k_torch_ann",
-            "dbmdz_bert_sts1_torch_ann",
+            "tfidf_snowball_de_10k_torch_ann",
+            # "dbmdz_bert_sts1_torch_ann",
             # "tiny_bert_torch_ann_de",
             # "annif_tfidf_de",
             # "annif_svc_de",
@@ -79,8 +73,7 @@ if __name__ == "__main__":
             # "annif_fasttext_de",
             # "annif_yake_de",
         ],
-        dataset_schemas=["rvk"],
-        dataset_variants=[("public", None), ("slub_titles", None), ("slub_raw", None), ("slub_clean", None)],
+        dataset_subset=[""],
         n_splits=10,
         load_cached_scores=True,
         random_state=123,

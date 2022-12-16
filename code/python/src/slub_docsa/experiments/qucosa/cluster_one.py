@@ -41,7 +41,9 @@ def qucosa_experiments_cluster_one(
     named_datasets = filter_and_cache_named_datasets(
         qucosa_named_sample_generators(check_qucosa_download), [dataset_name]
     )
-    _, dataset, subject_hierarchy = list(named_datasets)[0]
+    named_dataset = list(named_datasets)[0]
+    dataset = named_dataset.dataset
+    subject_hierarchy = named_dataset.schema_generator()
     lang_code = "de"
 
     if max_documents is not None:

@@ -126,14 +126,14 @@ dataset = SimpleDataset(documents=documents, subjects=subjects)
 Many machine learning algorithms operate based on a vector representation instead of text. In this case, a
 vectorization method needs to be selected. Various implementations can be found in
 `slub_docsa.data.preprocess.vectorizer`.
-In this example, we choose the `slub_docsa.data.preprocess.vectorizer.TfidfVectorizer`, which is based on the scikit
-implementation of the same name, see [sklearn.feature_extraction.text.TfidfVectorizer](
+In this example, we choose the `slub_docsa.data.preprocess.vectorizer.ScikitTfidfVectorizer`, which is based on the
+scikit implementation of the same name, see [sklearn.feature_extraction.text.TfidfVectorizer](
 https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html).
 
 ```python
-from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer
 
-vectorizer = TfidfVectorizer()
+vectorizer = ScikitTfidfVectorizer()
 ```
 
 As a classification model we can choose from a number of existing implementations, see

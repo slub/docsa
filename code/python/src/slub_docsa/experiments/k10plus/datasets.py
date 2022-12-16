@@ -13,6 +13,13 @@ from slub_docsa.experiments.common.datasets import filter_and_cache_named_datase
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_VARIANTS = (
+    ("public", 100000), ("public", None),
+    ("slub_titles", 20000), ("slub_titles", None),
+    ("slub_raw", 20000), ("slub_raw", None),
+    ("slub_clean", 20000), ("slub_clean", None),
+)
+
 
 def _filter_k10plus_samples(samples_generator, min_samples, subject_hierarchy_generator):
     return prune_min_samples(samples_generator(), min_samples, subject_hierarchy_generator())
@@ -21,7 +28,7 @@ def _filter_k10plus_samples(samples_generator, min_samples, subject_hierarchy_ge
 def k10plus_named_sample_generators(
     languages: Sequence[str] = ("de", "en"),
     schemas: Sequence[str] = ("rvk", "ddc", "bk"),
-    variants: Sequence[Tuple[str, int]] = (("public", 100000), ("slub_raw", 20000), ("slub_clean", 20000)),
+    variants: Sequence[Tuple[str, int]] = DEFAULT_VARIANTS,
     min_samples: int = 50,
 ) -> Sequence[NamedSamplesGenerator]:
     """Return list of k10plus datasets as tuples."""

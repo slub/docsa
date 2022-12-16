@@ -1,6 +1,6 @@
 """Tests for ANN models based on torch."""
 
-from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer, WordpieceVectorizer
+from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer, WordpieceVectorizer
 from slub_docsa.models.classification.ann.bert import TorchBertModel
 from slub_docsa.models.classification.ann.dense import TorchSingleLayerDenseTanhModel
 
@@ -10,14 +10,14 @@ from .common import check_model_persistence_equal_predictions, check_model_predi
 def test_simple_ann_torch_model():
     """Test fitting and predicting with a basic torch model."""
     check_model_predicts_non_zero_probabilities(
-        TorchSingleLayerDenseTanhModel(vectorizer=TfidfVectorizer(max_features=100), max_epochs=5)
+        TorchSingleLayerDenseTanhModel(vectorizer=ScikitTfidfVectorizer(max_features=100), max_epochs=5)
     )
 
 
 def test_simple_ann_torch_persistence():
     """Check that predictions for Annif Omikuji model are the same after persistence."""
     check_model_persistence_equal_predictions(
-        lambda: TorchSingleLayerDenseTanhModel(vectorizer=TfidfVectorizer(max_features=100), max_epochs=5)
+        lambda: TorchSingleLayerDenseTanhModel(vectorizer=ScikitTfidfVectorizer(max_features=100), max_epochs=5)
     )
 
 

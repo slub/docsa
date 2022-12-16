@@ -11,7 +11,7 @@ from sklearn.multioutput import MultiOutputClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.svm import LinearSVC
 
-from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
 from slub_docsa.experiments.common.models import NamedClassificationModelTupleList
@@ -22,33 +22,33 @@ def default_artificial_named_classification_model_list() -> NamedClassificationM
     models = [
         ("tfidf_10k_knn_k=1", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_knn_k=3", lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=3),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_dtree", lambda: ScikitClassifier(
             predictor=DecisionTreeClassifier(max_leaf_nodes=1000),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_rforest", lambda: ScikitClassifier(
             predictor=RandomForestClassifier(n_jobs=-1, max_leaf_nodes=1000),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_log_reg", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=LogisticRegression()),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_nbayes", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(estimator=GaussianNB()),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
         ("tfidf_10k_svc", lambda: ScikitClassifier(
             predictor=MultiOutputClassifier(
                 estimator=CalibratedClassifierCV(base_estimator=LinearSVC(), cv=3)
             ),
-            vectorizer=TfidfVectorizer(max_features=10000),
+            vectorizer=ScikitTfidfVectorizer(max_features=10000),
         )),
     ]
 

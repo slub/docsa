@@ -78,7 +78,7 @@ def write_default_clustering_plots(
 
         write_score_matrix_box_plot(
             dataset_result,
-            os.path.join(plot_directory, f"{prefix}_score_plot_{filename_suffix}"),
+            os.path.join(plot_directory, f"{prefix}_clustering_score_plot_{filename_suffix}"),
         )
 
 

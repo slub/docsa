@@ -1,6 +1,7 @@
 """Common scores that are used to evaluate results of an experiment."""
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Any, Callable, Generic, Iterable, List, Optional, Tuple, TypeVar
 
 from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score
@@ -137,13 +138,13 @@ def default_named_clustering_score_list(
 ) -> Any:
     """Return named clustering scoring functions."""
     scores: Any = [
-        # ("mutual info", (None, None), scikit_clustering_label_score_function(mutual_info_score)),
-        ("mutual info", (0, None), scikit_clustering_label_score_function(adjusted_mutual_info_score)),
-        # ("rand", (None, None), scikit_clustering_label_score_function(rand_score)),
-        ("rand", (0, None), scikit_clustering_label_score_function(adjusted_rand_score)),
-        ("homogeneity", (0, 1), scikit_clustering_label_score_function(homogeneity_score)),
-        ("completeness", (0, 1), scikit_clustering_label_score_function(completeness_score)),
-        ("intra cluster tfidf cosine", (0, None), clustering_membership_score_function(
+        # ("mutual info", (None, None), partial(scikit_clustering_label_score_function, mutual_info_score)),
+        ("mutual info", (0, None), partial(scikit_clustering_label_score_function, adjusted_mutual_info_score)),
+        # ("rand", (None, None), partial(scikit_clustering_label_score_function, rand_score)),
+        ("rand", (0, None), partial(scikit_clustering_label_score_function, adjusted_rand_score)),
+        ("homogeneity", (0, 1), partial(scikit_clustering_label_score_function, homogeneity_score)),
+        ("completeness", (0, 1), partial(scikit_clustering_label_score_function, completeness_score)),
+        ("intra cluster tfidf cosine", (0, None), lambda: clustering_membership_score_function(
             indexed_document_distance_generator_from_vectorizer(vectorizer, cosine),  # type: ignore
             intra_cluster_distance
         )),

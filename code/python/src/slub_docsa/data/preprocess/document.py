@@ -134,7 +134,7 @@ def nltk_snowball_text_stemming_function(
         return token in stopword_set
 
     def stem_text(text: str) -> str:
-        logger.debug("stemming text of size %d", len(text))
+        # logger.debug("stemming text of size %d", len(text))
         filtered_tokens = [token for token in tokenize(text) if not remove_stopwords or not is_stopword(token)]
         return " ".join([stem_func(token) for token in filtered_tokens])
 

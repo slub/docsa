@@ -6,8 +6,8 @@ import os
 
 from typing import Optional
 
-from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer, CachedVectorizer
-from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer, WordpieceVectorizer
+from slub_docsa.data.preprocess.vectorizer import GensimTfidfVectorizer, StemmingVectorizer, CachedVectorizer
+from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer, WordpieceVectorizer
 from slub_docsa.common.paths import get_cache_dir
 
 
@@ -16,7 +16,7 @@ def get_cached_tfidf_vectorizer(
     fit_only_once: bool = False
 ):
     """Load the tfidf vectorizer without stemming that caches vectorizations."""
-    tfidf_vectorizer = TfidfVectorizer(
+    tfidf_vectorizer = ScikitTfidfVectorizer(
         max_features=max_features,
         ngram_range=(1, 1),
     )
@@ -35,11 +35,10 @@ def get_cached_tfidf_stemming_vectorizer(
     if cache_filepath is None:
         cache_filepath = os.path.join(get_cache_dir(), f"stemming/{cache_prefix}_features={max_features}.sqlite")
 
-    tfidf_vectorizer = TfidfStemmingVectorizer(
+    tfidf_vectorizer = StemmingVectorizer(
+        vectorizer=GensimTfidfVectorizer(max_features),
         lang_code=lang_code,
-        max_features=max_features,
         stemming_cache_filepath=cache_filepath,
-        ngram_range=(1, 1),
     )
 
     return CachedVectorizer(tfidf_vectorizer, fit_only_once=fit_only_once)

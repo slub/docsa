@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel
     from slub_docsa.models.classification.scikit import ScikitClassifier
-    from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
+    from slub_docsa.data.preprocess.vectorizer import StemmingVectorizer, GensimTfidfVectorizer
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.metrics import f1_score
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         NihilisticModel(),
         ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
-            vectorizer=TfidfStemmingVectorizer("en", max_features=2000),
+            vectorizer=StemmingVectorizer(GensimTfidfVectorizer(max_features=2000), "en"),
         )
     ]
 

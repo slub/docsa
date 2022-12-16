@@ -5,7 +5,7 @@ import os
 from functools import partial
 
 from slub_docsa.common.paths import get_figures_dir
-from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
+from slub_docsa.data.preprocess.vectorizer import GensimTfidfVectorizer, StemmingVectorizer
 from slub_docsa.experiments.common.vectorizer import get_static_wikipedia_wordpiece_vectorizer
 from slub_docsa.models.classification.ann.bert import TorchBertModel
 from slub_docsa.models.classification.ann.dense import TorchSingleLayerDenseReluModel
@@ -20,9 +20,15 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
 
     return {
         "tfidf_snowball_de_10k_torch_ann": lambda subject_hierarchy, subject_order: TorchSingleLayerDenseReluModel(
-            max_training_t05_f1=0.95,
+            batch_size=64,
+            max_training_t05_f1=0.85,
             max_training_time=600,
-            vectorizer=TfidfStemmingVectorizer(lang_code="de", max_features=10000),
+            positive_class_weight=20.0,
+            positive_class_weight_min=5.0,
+            positive_class_weight_decay=0.8,
+            vectorizer=StemmingVectorizer(vectorizer=GensimTfidfVectorizer(max_features=10000), lang_code="de"),
+            preload_vectorizations=False,
+            dataloader_workers=4,
             plot_training_history_filepath=os.path.join(
                 get_figures_dir(), "ann_history/tfidf_snowball_de_10k_torch_ann"
             )

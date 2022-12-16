@@ -28,9 +28,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
+    from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer
 
-    vectorizer = TfidfVectorizer()
+    vectorizer = ScikitTfidfVectorizer()
 
     # ------------
 
