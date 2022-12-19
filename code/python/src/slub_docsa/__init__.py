@@ -13,9 +13,10 @@ Some important features include:
 - a concise API for training and evaluating multi-label multi-class classification models, see `slub_docsa.common`
 - support for many different classification approaches, see `slub_docsa.models`
 - artificial hierarchical random datasets, see `slub_docsa.data.artificial`
-- a performance score that considers hierarchical relations, see `slub_docsa.evaluation.score`
+- a performance score that considers hierarchical relations, see
+  `slub_docsa.evaluation.classification.score.hierarchical`
 
-## Installation
+# Installation
 
 This project requires [Python](https://www.python.org/) v3.8 or above and uses [pip](https://pypi.org/project/pip/)
 for dependency management. Besides, this package uses [pyTorch](https://pytorch.org/) to train
@@ -23,13 +24,7 @@ for dependency management. Besides, this package uses [pyTorch](https://pytorch.
 Make sure to install the latest Nvidia graphics drivers and check
 [further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites).
 
-### Via Python Package Installer (not available yet)
-
-Once published to PyPI (*not available yet*), install via:
-
-- `python3 -m pip install slub_docsa`
-
-### From Source
+## From Source
 
 Download the source code by checking out the repository:
 
@@ -44,7 +39,7 @@ Use *make* to install python dependencies by executing the following commands:
 - `make docs`
   (generate API documentation, requires test dependencies)
 
-### From Source using Ubuntu 20.04
+## From Source using Ubuntu 20.04
 
 Install essentials like *python3*, *pip* and *make*:
 
@@ -64,16 +59,16 @@ Run *make* commands as provided above:
 - `make install-test`
 - `make test`
 
-## First Steps
+# First Steps
 
 In order to get started, there are two possible approaches: the command line interface, or the Python API.
 
-### Command Line Interface (CLI)
+## Command Line Interface (CLI)
 
 This library provides a single command `slub_docsa`, which supports to both train and evaluate classification and
 clustering algorithms. A detailed description can be found in `slub_docsa.cli`.
 
-### Python API
+## Python API
 
 Besides the CLI, this library is follows a modular design such that new processing pipelines can be designed via the
 Python API. A list of sub-modules can be found below. The most relevant classes and methods are:
@@ -88,7 +83,7 @@ Python API. A list of sub-modules can be found below. The most relevant classes 
   found in `slub_docsa.models.clustering`
 - `slub_docsa.common.paths` - Storage configuration methods, which handle where various data is stored
 
-### Example: Train a Model and Predict
+## Example: Train a Model and Predict
 
 Let's look at a simple example. The task is to train a classification model for the following documents:
 
@@ -274,7 +269,7 @@ The output will be:
 f1 score is 0.8571428571428571
 ```
 
-### Example: Compare Models and Plot
+## Example: Compare Models and Plot
 
 The following example describes how a single dataset can be evaluate by comparing multiple different models based on
 multiple scores via cross-validation. Similar to before, we first have to define the dataset that is being used.
