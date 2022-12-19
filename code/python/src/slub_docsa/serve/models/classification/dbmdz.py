@@ -42,9 +42,15 @@ def get_dbmdz_classification_models_map() -> ModelTypeMapping:
             vectorizer=_get_cached_dbmdz_bert_vectorizer(),
         ),
         "dbmdz_bert_sts1_torch_ann": lambda subject_hierarchy, subject_order: TorchBertSequenceClassificationHeadModel(
-            max_training_t05_f1=0.95,
+            max_training_t05_f1=0.85,
             max_training_time=600,
+            batch_size=64,
+            positive_class_weight=20.0,
+            positive_class_weight_min=5.0,
+            positive_class_weight_decay=0.8,
             vectorizer=_get_cached_dbmdz_bert_vectorizer(),
+            preload_vectorizations=True,
+            dataloader_workers=0,
             plot_training_history_filepath=os.path.join(
                 get_figures_dir(), "ann_history/dbmdz_bert_sts1_torch_ann"
             )

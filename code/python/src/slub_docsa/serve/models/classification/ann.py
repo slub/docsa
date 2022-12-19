@@ -18,6 +18,12 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
         get_static_wikipedia_wordpiece_vectorizer, lang_code="de", vocabulary_size=30000, max_length=64, uncased=True
     )
 
+    def _get_tfidf_stemming_vectorizer_de(lang_code, max_features):
+        return StemmingVectorizer(
+            vectorizer=GensimTfidfVectorizer(max_features=max_features),
+            lang_code=lang_code,
+        )
+
     return {
         "tfidf_snowball_de_10k_torch_ann": lambda subject_hierarchy, subject_order: TorchSingleLayerDenseReluModel(
             batch_size=64,
@@ -26,9 +32,9 @@ def get_ann_classification_models_map() -> ModelTypeMapping:
             positive_class_weight=20.0,
             positive_class_weight_min=5.0,
             positive_class_weight_decay=0.8,
-            vectorizer=StemmingVectorizer(vectorizer=GensimTfidfVectorizer(max_features=10000), lang_code="de"),
+            vectorizer=_get_tfidf_stemming_vectorizer_de("de", 10000),
             preload_vectorizations=False,
-            dataloader_workers=4,
+            dataloader_workers=8,
             plot_training_history_filepath=os.path.join(
                 get_figures_dir(), "ann_history/tfidf_snowball_de_10k_torch_ann"
             )
