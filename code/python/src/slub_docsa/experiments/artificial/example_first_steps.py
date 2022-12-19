@@ -2,22 +2,23 @@
 
 # pylint: disable=ungrouped-imports
 
+
 if __name__ == "__main__":
 
     from slub_docsa.common.document import Document
 
     documents = [
         Document(uri="uri://document1", title="This is a document title"),
-        Document(uri="uri://document2", title="Document with interesting topics"),
-        Document(uri="uri://document3", title="A boring title"),
+        Document(uri="uri://document2", title="Document with interesting topic"),
+        Document(uri="uri://document3", title="A boring topic"),
     ]
 
     # ------------
 
     subjects = [
-        ["uri://subject1", "uri://subject2"],                    # document 1
-        ["uri://subject1", "uri://subject3", "uri://subject4"],  # document 2
-        ["uri://subject2"],                                      # document 3
+        ["uri://subject1", "uri://subject2"],    # document 1
+        ["uri://subject3"],                      # document 2
+        ["uri://subject3", "uri://subject4"],    # document 3
     ]
 
     # ------------
@@ -64,7 +65,7 @@ if __name__ == "__main__":
 
     new_documents = [
         Document(uri="uri://new_document1", title="Title of the new document"),
-        Document(uri="uri://new_document2", title="Boring subject"),
+        Document(uri="uri://new_document2", title="Another boring topic"),
     ]
 
     predicted_probabilities = model.predict_proba(new_documents)
@@ -72,9 +73,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.incidence import TopkIncidenceDecision
+    from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 
-    incidence_decision_function = TopkIncidenceDecision(k=2)
+    incidence_decision_function = ThresholdIncidenceDecision(threshold=0.5)
     predicted_incidence = incidence_decision_function(predicted_probabilities)
     print(predicted_incidence)
 

@@ -195,7 +195,6 @@ class BatchedCesaBianchiIncidenceLoss(BatchedMultiClassIncidenceScore):
             the matrix containing predicted subject incidences in shape (document_batch, subjects).
         """
         self.losses.extend([self.loss_function(ti, pi) for ti, pi in zip(true_incidences, predicted_incidences)])
-        print(self.losses)
 
     def __call__(self) -> float:
         """Return current score comparing multi-class subject incidences that were added in batches."""

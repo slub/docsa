@@ -49,6 +49,7 @@ def score_matrix_box_plot(
     plotly.Figure
         the plotly figure that can be save to a file, etc.
     """
+    score_matrix = np.array(score_matrix)
     _, _, n_scores = score_matrix.shape
 
     fig = cast(Any, make_subplots(
@@ -422,7 +423,9 @@ def write_multiple_figure_formats(
     -------
     None
     """
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    if os.path.dirname(filepath):
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
     figure.write_html(
         f"{filepath}.html",
         include_plotlyjs="cdn",

@@ -55,12 +55,11 @@ if __name__ == "__main__":
     from slub_docsa.models.classification.scikit import ScikitClassifier
     from slub_docsa.data.preprocess.vectorizer import StemmingVectorizer, GensimTfidfVectorizer
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.metrics import f1_score
 
-    models = [
-        OracleModel(),
-        NihilisticModel(),
-        ScikitClassifier(
+    model_generators = [
+        OracleModel,
+        NihilisticModel,
+        lambda: ScikitClassifier(
             predictor=KNeighborsClassifier(n_neighbors=1),
             vectorizer=StemmingVectorizer(GensimTfidfVectorizer(max_features=2000), "en"),
         )
@@ -68,26 +67,26 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.score.scikit import scikit_metric_for_best_threshold_based_on_f1score
-    from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
-    from slub_docsa.evaluation.classification.score.hierarchical import cesa_bianchi_loss_generator
     from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
+    from slub_docsa.evaluation.classification.score.batched import BatchedBestThresholdScore, BatchedF1Score
+    from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionScore
+    from slub_docsa.evaluation.classification.score.hierarchical import BatchedCesaBianchiIncidenceLoss
 
-    scores = [
+    score_generators = [
         # f1 score for best threshold
-        scikit_metric_for_best_threshold_based_on_f1score(
-            f1_score, average="micro", zero_division=0
+        lambda: BatchedBestThresholdScore(
+            score_generator=BatchedF1Score
         ),
         # f1 score for top-3 selection
-        scikit_incidence_metric(
-            PositiveTopkIncidenceDecision(3),
-            f1_score,
-            average="micro",
-            zero_division=0
+        lambda: BatchedIncidenceDecisionScore(
+            incidence_decision=PositiveTopkIncidenceDecision(3),
+            incidence_score=BatchedF1Score()
         ),
         # hierarchical loss
-        scikit_metric_for_best_threshold_based_on_f1score(
-            cesa_bianchi_loss_generator(subject_hierarchy, subject_order, log_factor=1000),
+        lambda: BatchedBestThresholdScore(
+            score_generator=lambda: BatchedCesaBianchiIncidenceLoss(
+                subject_hierarchy, subject_order, log_factor=1000
+            ),
         )
     ]
 
@@ -98,19 +97,19 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset
+    from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset_with_splits
     from slub_docsa.evaluation.classification.split import scikit_kfold_splitter
 
     n_splits = 10
     split_function = scikit_kfold_splitter(n_splits)
 
-    score_matrix, _ = score_classification_models_for_dataset(
+    score_matrix, _ = score_classification_models_for_dataset_with_splits(
         n_splits,
-        dataset,
-        subject_order,
-        models,
         split_function,
-        scores,
+        subject_order,
+        dataset,
+        model_generators,
+        score_generators,
         [],
     )
 
