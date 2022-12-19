@@ -2,7 +2,7 @@
 
 import argparse
 
-from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
+from slub_docsa.experiments.common.datasets import NamedDataset, filter_and_cache_named_datasets
 from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
 
@@ -18,13 +18,13 @@ def available_qucosa_dataset_names():
     return [named_sample_generator.name for named_sample_generator in qucosa_named_sample_generators()]
 
 
-def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool):
+def load_qucosa_dataset_by_name(dataset_name: str, check_qucosa_download: bool) -> NamedDataset:
     """Return a single dataset retrieving it by its name."""
     named_dataset = next(filter_and_cache_named_datasets(
         qucosa_named_sample_generators(check_qucosa_download), [dataset_name]
     ))
     if named_dataset is not None:
-        return named_dataset.dataset, named_dataset.schema_generator()
+        return named_dataset
     raise ValueError(f"dataset with name '{dataset_name}' not known")
 
 

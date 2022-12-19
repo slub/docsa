@@ -8,7 +8,8 @@ Allows to train a classification model, persist it, and later classify new docum
 import argparse
 import logging
 import os
-import pickle  # nosec
+
+import slub_docsa
 
 from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments
 from slub_docsa.cli.common import available_classification_model_names, read_uft8_from_stdin
@@ -22,7 +23,12 @@ from slub_docsa.common.model import PersistableClassificationModel
 from slub_docsa.common.paths import get_cache_dir
 from slub_docsa.data.load.qucosa import read_qucosa_metadata_from_elasticsearch, _make_title_and_abstract_doc
 from slub_docsa.data.load.qucosa import _make_title_only_doc, _make_title_and_fulltext_doc
+from slub_docsa.data.load.subjects.common import default_schema_generators
+from slub_docsa.data.store.model import load_published_classification_model, save_as_published_classification_model
 from slub_docsa.evaluation.classification.incidence import LazySubjectIncidenceTargets, unique_subject_order
+from slub_docsa.experiments.common.datasets import NamedDataset
+from slub_docsa.serve.common import PublishedClassificationModelInfo, PublishedClassificationModelStatistics
+from slub_docsa.serve.common import current_date_as_model_creation_date
 from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 logger = logging.getLogger(__name__)
@@ -60,54 +66,80 @@ def _classify_train_action_generator(datasource: str):
         setup_storage_directories(args)
 
         dataset_name = args.dataset
-        model_name = args.model
+        model_type = args.model
         persist_dir = args.persist_dir
         max_documents = args.limit
         check_qucosa_download = args.check_qucosa_download if datasource == "qucosa" else None
 
+        model_id = f"{dataset_name}__{model_type}"
         if persist_dir is None:
-            persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
+            persist_dir = os.path.join(get_cache_dir(), "models", model_id)
 
         # load dataset and model
         logger.info("load dataset '%s'", dataset_name)
         if datasource == "qucosa":
-            dataset, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
+            named_dataset = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
         elif datasource == "k10plus":
-            dataset, subject_hierarchy = load_k10plus_dataset_by_name(dataset_name)
+            named_dataset = load_k10plus_dataset_by_name(dataset_name)
         else:
             raise ValueError(f"datasource '{datasource}' not supported")
 
         if max_documents is not None:
             logger.info("use only the first %d examples for training", int(max_documents))
-            documents = [dataset.documents[i] for i in range(int(max_documents))]
-            subjects = [dataset.subjects[i] for i in range(int(max_documents))]
-            dataset = SimpleDataset(documents, subjects)
+            documents = [named_dataset.dataset.documents[i] for i in range(int(max_documents))]
+            subjects = [named_dataset.dataset.subjects[i] for i in range(int(max_documents))]
+            named_dataset = NamedDataset(
+                dataset=SimpleDataset(documents, subjects),
+                schema_id=named_dataset.schema_id,
+                languages=named_dataset.languages,
+                schema_generator=named_dataset.schema_generator
+            )
 
-        subject_order = unique_subject_order(dataset.subjects)
-        subject_incidence = LazySubjectIncidenceTargets(dataset.subjects, subject_order)
+        subject_order = unique_subject_order(named_dataset.dataset.subjects)
+        subject_incidence = LazySubjectIncidenceTargets(named_dataset.dataset.subjects, subject_order)
         logger.info("dataset '%s' has %d unique subjects", dataset_name, len(subject_order))
 
-        logger.info("load model '%s'", model_name)
-        model = _load_classification_model_by_name(model_name, subject_hierarchy, subject_order)
+        logger.info("load subject hierarchy")
+        subject_hierarchy = named_dataset.schema_generator()
+
+        logger.info("load model '%s'", model_type)
+        model = _load_classification_model_by_name(model_type, subject_hierarchy, subject_order)
 
         if not isinstance(model, PersistableClassificationModel):
-            logger.error("model '%s' is not persistable, abort", model_name)
-            raise ValueError(f"model '{model_name}' is not persistable")
+            logger.error("model '%s' is not persistable, abort", model_type)
+            raise ValueError(f"model '{model_type}' is not persistable")
 
-        logger.info("fit model '%s'", model_name)
-        model.fit(dataset.documents, subject_incidence)
+        logger.info("fit model '%s'", model_type)
+        model.fit(named_dataset.dataset.documents, subject_incidence)
 
-        logger.info("persist model '%s' to disk at '%s'", model_name, persist_dir)
-        model.save(persist_dir)
-
-        logger.info("persist subject order to disk at '%s'", persist_dir)
-        with open(os.path.join(persist_dir, "subject_order.pickle"), "wb") as file:
-            pickle.dump(subject_order, file)
+        logger.info("persist model '%s' to disk at '%s'", model_type, persist_dir)
+        save_as_published_classification_model(
+            directory=persist_dir,
+            model=model,
+            subject_order=subject_order,
+            model_info=PublishedClassificationModelInfo(
+                model_id=model_id,
+                model_type=model_type,
+                model_version="0.0.0",
+                schema_id=named_dataset.schema_id,
+                creation_date=current_date_as_model_creation_date(),
+                supported_languages=[named_dataset.languages],
+                description=f"model trained for dataset variant '{dataset_name}' "
+                            + f"with classifiation model '{model_type}'",
+                tags=[],
+                slub_docsa_version=slub_docsa.__version__,
+                statistics=PublishedClassificationModelStatistics(
+                    number_of_training_samples=len(named_dataset.dataset.subjects),
+                    number_of_test_samples=0,
+                    scores={}
+                )
+            )
+        )
 
     return action
 
 
-def _classify_predict_action_generator(datasource: str):
+def _classify_predict_action_generator():
     """Return action that performs prediction for single dataset variant and model."""
 
     def action(args):
@@ -115,14 +147,14 @@ def _classify_predict_action_generator(datasource: str):
         setup_storage_directories(args)
 
         dataset_name = args.dataset
-        model_name = args.model
+        model_type = args.model
         persist_dir = args.persist_dir
         max_results = int(args.results)
         qucosa_id = args.id
-        check_qucosa_download = args.check_qucosa_download if datasource == "qucosa" else None
 
+        model_id = f"{dataset_name}__{model_type}"
         if persist_dir is None:
-            persist_dir = os.path.join(get_cache_dir(), "models", dataset_name, model_name)
+            persist_dir = os.path.join(get_cache_dir(), "models", model_id)
 
         document = None
         if qucosa_id is not None:
@@ -153,32 +185,19 @@ def _classify_predict_action_generator(datasource: str):
                 raise ValueError("you need to provide some text as input via stdin")
             document = Document(uri="stdin", title=None, fulltext=text)
 
-        # load dataset and model
-        logger.info("load dataset '%s'", dataset_name)
-        if datasource == "qucosa":
-            _, subject_hierarchy = load_qucosa_dataset_by_name(dataset_name, check_qucosa_download)
-        elif datasource == "k10plus":
-            _, subject_hierarchy = load_k10plus_dataset_by_name(dataset_name)
-        else:
-            raise ValueError(f"datasource '{datasource}' not supported")
+        logger.info("load model '%s'", model_type)
+        model_types = get_all_classification_model_types()
+        schema_generators = default_schema_generators()
+        published_model = load_published_classification_model(persist_dir, model_types, schema_generators)
 
-        logger.info("load subject order from disk at '%s'", persist_dir)
-        with open(os.path.join(persist_dir, "subject_order.pickle"), "rb") as file:
-            subject_order = pickle.load(file)  # nosec
+        logger.info("load subject hieararchy")
+        subject_hierarchy = schema_generators[published_model.info.schema_id]()
 
-        logger.info("load model '%s'", model_name)
-        model = _load_classification_model_by_name(model_name, subject_hierarchy, subject_order)
-
-        if not isinstance(model, PersistableClassificationModel):
-            logger.error("model '%s' is not persistable, abort", model_name)
-            raise ValueError(f"model '{model_name}' is not persistable")
-
-        # load persisted model and predict single document
-        model.load(persist_dir)
-        probabilities = model.predict_proba([document])[0]
+        logger.info("do prediction")
+        probabilities = published_model.model.predict_proba([document])[0]
 
         # prepare predictions for output
-        predictions = list(reversed(sorted(zip(probabilities, subject_order))))
+        predictions = list(reversed(sorted(zip(probabilities, published_model.subject_order))))
         if max_results > 0:
             predictions = predictions[:max_results]
 
@@ -241,10 +260,8 @@ def _classify_train_subparser(parser: argparse.ArgumentParser, datasource: str):
 
 def _classify_predict_subparser(parser: argparse.ArgumentParser, datasource: str):
     """Return sub-parser for classify qucosa predict command."""
-    parser.set_defaults(func=_classify_predict_action_generator(datasource))
+    parser.set_defaults(func=_classify_predict_action_generator())
     add_logging_arguments(parser)
-    if datasource == "qucosa":
-        add_common_qucosa_arguments(parser)
     _add_classify_common_arguments(parser, datasource)
 
     parser.add_argument(
