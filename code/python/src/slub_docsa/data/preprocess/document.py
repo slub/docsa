@@ -5,6 +5,7 @@
 import logging
 import os
 import functools
+import time
 
 from typing import Callable, Iterator, List, Optional
 
@@ -125,6 +126,8 @@ def nltk_snowball_text_stemming_function(
     stemmer = SnowballStemmer(nltk_language)
     tokenize = nltk_word_tokenize_text_function(lang_code)
     stopword_set = set(stopwords.words(nltk_language))
+    last_log_time = time.time()
+    text_count = 0
 
     @functools.lru_cache(maxsize=1000000)
     def stem_func(word):
@@ -134,7 +137,12 @@ def nltk_snowball_text_stemming_function(
         return token in stopword_set
 
     def stem_text(text: str) -> str:
-        # logger.debug("stemming text of size %d", len(text))
+        nonlocal last_log_time
+        nonlocal text_count
+        if time.time() - last_log_time > 5.0:
+            logger.debug("stemming text, so far %d", text_count)
+            last_log_time = time.time()
+        text_count += 1
         filtered_tokens = [token for token in tokenize(text) if not remove_stopwords or not is_stopword(token)]
         return " ".join([stem_func(token) for token in filtered_tokens])
 

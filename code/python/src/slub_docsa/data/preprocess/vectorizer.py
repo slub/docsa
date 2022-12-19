@@ -349,6 +349,7 @@ class CachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts from cache or by calling parent vectorizer."""
         total = 0
+        last_log_time = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -370,7 +371,9 @@ class CachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
                 yield self.store[text_hash]
 
             total += len(texts_chunk)
-            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+            if time.time() - last_log_time > 5.0:
+                logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+                last_log_time = time.time()
 
     def output_shape(self):
         """Return the output shape of the cached vectorizer."""
@@ -421,6 +424,7 @@ class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
         """Return vectorized texts from cache or by calling parent vectorizer."""
         vectorizer_str = str(self.vectorizer)
         total = 0
+        last_log_time = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -443,7 +447,9 @@ class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
                 yield bytes_to_numpy_array(self.store[text_hash])
 
             total += len(texts_chunk)
-            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+            if time.time() - last_log_time > 5.0:
+                logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+                last_log_time = time.time()
 
     def output_shape(self):
         """Return the output shape of the cached vectorizer."""
