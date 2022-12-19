@@ -26,11 +26,6 @@ def serve_subparser(parser: argparse.ArgumentParser):
     parser.set_defaults(func=_run_rest_service)
     add_logging_arguments(parser)
     parser.add_argument(
-        "--directory", "-d",
-        help="""directory to load models from, default is <data_dir>/runtime/serve/classification_models or
-            environment variable SLUB_DOCSA_SERVE_DIR/classification_models"""
-    )
-    parser.add_argument(
         "--all", "-a",
         action="store_true",
         default=False,
@@ -66,20 +61,20 @@ def _run_rest_service(args):
     """Start rest service when serve command is executed via cli."""
     setup_logging_from_args(args)
 
-    default_directory = os.path.join(get_serve_dir(), "classification_models")
-    serve_directory = args.directory if args.directory is not None else default_directory
+    serve_directory = args.serve_dir if args.serve_dir is not None else get_serve_dir()
     load_all_models = args.all
     debug_mode = args.debug
     host = args.host
     port = args.port
     threads = args.threads
 
+    models_dir = os.path.join(serve_directory, "classification_models")
     model_types = get_all_classification_model_types()
     schema_generators = default_schema_generators()
     schema_rest_service = SimpleSchemaRestService(schema_generators)
 
     model_rest_service_cls = AllStoredModelRestService if load_all_models else SingleStoredModelRestService
-    model_rest_service = model_rest_service_cls(serve_directory, model_types, schema_rest_service, schema_generators)
+    model_rest_service = model_rest_service_cls(models_dir, model_types, schema_rest_service, schema_generators)
     lang_rest_service = LangidLanguagesRestService()
 
     rest_service = SimpleRestService(model_rest_service, schema_rest_service, lang_rest_service)

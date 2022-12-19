@@ -73,6 +73,12 @@ def add_storage_directory_arguments(parser: argparse.ArgumentParser):
             environment variable SLUB_DOCSA_FIGURES_DIR""",
     )
 
+    parser.add_argument(
+        "--serve_dir",
+        help="""directory to load models for the REST service, default is <data_dir>/runtime/serve
+            or environment variable SLUB_DOCSA_SERVE_DIR"""
+    )
+
 
 def setup_storage_directories(args):
     """Modify storage directories based on provided command line arguments."""
@@ -105,6 +111,15 @@ def setup_storage_directories(args):
             os.path.join(paths.get_data_dir(), "runtime/figures/")
         )
     logger.debug("use figures directory: %s", paths.get_figures_dir())
+
+    if args.serve_dir is not None:
+        paths.DIRECTORIES["serve"] = args.serve_dir
+    else:
+        paths.DIRECTORIES["serve"] = os.environ.get(
+            "SLUB_DOCSA_SERVE_DIR",
+            os.path.join(paths.get_data_dir(), "runtime/serve/")
+        )
+    logger.debug("use serve directory: %s", paths.get_serve_dir())
 
 
 def available_classification_model_names():
