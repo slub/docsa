@@ -8,7 +8,7 @@ import os
 
 import waitress
 
-from slub_docsa.cli.common import add_logging_arguments, setup_logging_from_args
+from slub_docsa.cli.common import add_logging_arguments, add_storage_directory_arguments, setup_logging_from_args
 from slub_docsa.common.paths import get_serve_dir
 from slub_docsa.data.load.subjects.common import default_schema_generators
 from slub_docsa.serve.app import create_webapp
@@ -25,6 +25,7 @@ def serve_subparser(parser: argparse.ArgumentParser):
     """Return sub-parser for serve command."""
     parser.set_defaults(func=_run_rest_service)
     add_logging_arguments(parser)
+    add_storage_directory_arguments(parser)
     parser.add_argument(
         "--all", "-a",
         action="store_true",
