@@ -1,8 +1,4 @@
-"""Base classes modeling a subject and subject hierarchy.
-
-Note: Type aliases `SubjectHierarchy`, `SubjectTargets` and `SubjectUriList`
-are not correctly described in API documentation due to [issue in pdoc](https://github.com/pdoc3/pdoc/issues/229).
-"""
+"""Base classes modeling a subject and subject hierarchy."""
 
 # pylint: disable=too-few-public-methods, too-many-arguments
 

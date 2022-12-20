@@ -1,7 +1,9 @@
 """
-This python package is a library for bibliographic document classification and similarity analysis.
+A python package for bibliographic document classification and similarity analysis.
 
-It provides a selection of methods that support:
+This python package is a library for bibliographic document classification and similarity analysis developed by the
+[Saxon State and University Library Dresden (SLUB)](https://www.slub-dresden.de/). It provides a selection of methods
+that support:
 
 - pre-processing of bibliographic meta data and full-text documents,
 - training of multi-label multi-class classification models,
