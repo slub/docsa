@@ -29,6 +29,10 @@ install-dev:
 package:
 	(cd code/python && bash package_build.sh)
 
+.PHONY: serve
+serve:
+	slub_docsa serve
+
 .PHONY: lint
 lint:
 	(cd code/python && bash lint.sh)

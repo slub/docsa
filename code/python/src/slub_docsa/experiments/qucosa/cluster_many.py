@@ -4,26 +4,27 @@
 
 import logging
 import os
-from typing import List
+from typing import Sequence, Optional
 
 from slub_docsa.common.paths import get_figures_dir
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
 from slub_docsa.experiments.common.models import initialize_clustering_models_from_tuple_list
 from slub_docsa.experiments.common.pipeline import do_default_score_matrix_clustering_evaluation
 from slub_docsa.experiments.common.plots import write_default_clustering_plots
 from slub_docsa.experiments.common.scores import default_named_clustering_score_list, initialize_named_score_tuple_list
 
-from slub_docsa.experiments.qucosa.datasets import qucosa_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 from slub_docsa.experiments.qucosa.models import default_qucosa_named_clustering_models_tuple_list
-from slub_docsa.experiments.qucosa.vectorizer import get_qucosa_tfidf_stemming_vectorizer
+from slub_docsa.experiments.common.vectorizer import get_cached_tfidf_stemming_vectorizer
 
 logger = logging.getLogger(__name__)
 
 
 def qucosa_experiments_cluster_many(
-    dataset_subset: List[str],
-    model_subset: List[str],
+    dataset_subset: Sequence[str],
+    model_subset: Sequence[str],
     repeats: int = 10,
-    max_documents: int = None,
+    max_documents: Optional[int] = None,
     check_qucosa_download: bool = False,
 ):
     """Perform qucosa clustering experiment comparing multiple models and dataset variants."""
@@ -34,13 +35,17 @@ def qucosa_experiments_cluster_many(
         )
 
     def _score_generator():
-        vectorizer = get_qucosa_tfidf_stemming_vectorizer(max_features=10000, cache_vectors=True, fit_only_once=True)
+        vectorizer = get_cached_tfidf_stemming_vectorizer(max_features=10000, fit_only_once=True)
         return initialize_named_score_tuple_list(
             default_named_clustering_score_list(vectorizer)
         )
 
+    named_datasets = filter_and_cache_named_datasets(
+        qucosa_named_sample_generators(check_qucosa_download), dataset_subset
+    )
+
     evaluation_result = do_default_score_matrix_clustering_evaluation(
-        named_datasets=qucosa_named_datasets(dataset_subset, check_qucosa_download),
+        named_datasets=named_datasets,
         named_models_generator=_model_generator,
         named_scores_generator=_score_generator,
         repeats=repeats,

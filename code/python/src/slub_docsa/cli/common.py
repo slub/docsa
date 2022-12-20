@@ -6,8 +6,12 @@ import io
 import argparse
 import select
 import os
+from slub_docsa.cli.k10plus import available_k10plus_dataset_names
+from slub_docsa.cli.qucosa import available_qucosa_dataset_names
 
 from slub_docsa.common import paths
+from slub_docsa.experiments.dummy.models import default_dummy_model_types
+from slub_docsa.serve.models.classification.common import get_all_classification_model_types
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +39,7 @@ def setup_logging_from_args(args):
 
 def read_uft8_from_stdin():
     """Return utf-8 encoded text that is read from stdin."""
-    rlist, _, _ = select.select([sys.stdin], [], [], 1.0)
+    rlist, _, _ = select.select([sys.stdin], [], [], 10.0)
     if rlist:
         input_stream = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
         return input_stream.read()
@@ -67,6 +71,12 @@ def add_storage_directory_arguments(parser: argparse.ArgumentParser):
         "--figures_dir",
         help="""path to the figures directory, where plots are saved, default is <data_dir>/runtime/figures or
             environment variable SLUB_DOCSA_FIGURES_DIR""",
+    )
+
+    parser.add_argument(
+        "--serve_dir",
+        help="""directory to load models for the REST service, default is <data_dir>/runtime/serve
+            or environment variable SLUB_DOCSA_SERVE_DIR"""
     )
 
 
@@ -101,3 +111,26 @@ def setup_storage_directories(args):
             os.path.join(paths.get_data_dir(), "runtime/figures/")
         )
     logger.debug("use figures directory: %s", paths.get_figures_dir())
+
+    if args.serve_dir is not None:
+        paths.DIRECTORIES["serve"] = args.serve_dir
+    else:
+        paths.DIRECTORIES["serve"] = os.environ.get(
+            "SLUB_DOCSA_SERVE_DIR",
+            os.path.join(paths.get_data_dir(), "runtime/serve/")
+        )
+    logger.debug("use serve directory: %s", paths.get_serve_dir())
+
+
+def available_classification_model_names():
+    """Return all classificaation models for any dataset."""
+    return list(default_dummy_model_types().keys()) + list(get_all_classification_model_types().keys())
+
+
+def available_dataset_names_by_datasource(datasource: str):
+    """Return all available dataset variant names by datasource (k10plus or qucosa)."""
+    if datasource == "qucosa":
+        return available_qucosa_dataset_names()
+    if datasource == "k10plus":
+        return available_k10plus_dataset_names()
+    raise ValueError(f"datasource '{datasource}' not supported")

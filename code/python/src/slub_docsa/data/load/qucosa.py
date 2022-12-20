@@ -19,9 +19,10 @@ from lxml import etree  # nosec
 from slub_docsa.common.document import Document
 from slub_docsa.common.sample import Sample
 from slub_docsa.common.subject import SubjectHierarchy
-from slub_docsa.data.load.ddc import ddc_correct_short_keys, ddc_key_to_uri, get_ddc_subject_store, is_valid_ddc_uri
-from slub_docsa.data.load.ddc import extend_ddc_subject_list_with_ancestors
-from slub_docsa.data.load.rvk import get_rvk_subject_store, rvk_notation_to_uri
+from slub_docsa.data.load.subjects.ddc import ddc_notation_to_uri, load_ddc_subject_hierarchy
+from slub_docsa.data.load.subjects.ddc import extend_ddc_subject_list_with_ancestors, is_valid_ddc_uri
+from slub_docsa.data.load.subjects.jskos import load_jskos_subject_hierarchy_from_sqlite
+from slub_docsa.data.load.subjects.rvk import rvk_notation_to_uri, load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.common.paths import get_cache_dir, get_resources_dir
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ def number_of_qucosa_metadata_in_elasticsearch(
 
 def save_qucosa_documents_to_directory(
     qucosa_documents: Iterable[QucosaJsonDocument],
-    directory: str = None,
+    directory: Optional[str] = None,
     max_documents_per_file: int = 100
 ):
     """Save qucosa documents to a directory as gzip compressed jsonl files.
@@ -214,7 +215,7 @@ def save_qucosa_documents_to_directory(
 
 
 def read_qucosa_documents_from_directory(
-    directory: str = None,
+    directory: Optional[str] = None,
     fallback_retrieve_from_elasticsearch: bool = True,
     check_elasticsearch_document_count: bool = False,
 ) -> Iterable[QucosaJsonDocument]:
@@ -290,14 +291,14 @@ def _get_ddc_keys_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
     ddc_dict = list(filter(lambda d: d["type"] == "ddc", classification))[0]
     keys = ddc_dict["keys"]
     if isinstance(keys, str):
-        return list(map(lambda s: ddc_correct_short_keys(s.strip()), keys.split(",")))
+        return list(map(lambda s: s.strip(), keys.split(",")))
     if isinstance(keys, list):
-        return list(map(ddc_correct_short_keys, keys))
+        return keys
     return []
 
 
 def _get_ddc_subjects_from_qucosa_metadata(doc: QucosaJsonDocument) -> List[str]:
-    return [ddc_key_to_uri(k) for k in _get_ddc_keys_from_qucosa_metadata(doc)]
+    return [ddc_notation_to_uri(k) for k in _get_ddc_keys_from_qucosa_metadata(doc)]
 
 
 def _get_document_title_from_qucosa_metadata(
@@ -499,6 +500,7 @@ def _read_qucosa_generic_samples(
     read_subjects_from_doc: Callable[[QucosaJsonDocument], List[str]],
     subject_hierarchy: SubjectHierarchy,
     lang_code: Optional[str] = None,
+    require_subjects: bool = True,
 ) -> Iterator[Sample]:
     """Read qucosa data and extract documents and subjects."""
     logger.debug("read qucosa meta data json")
@@ -506,7 +508,7 @@ def _read_qucosa_generic_samples(
         subjects = read_subjects_from_doc(doc)
         subjects = list(filter(lambda s_uri: s_uri in subject_hierarchy, subjects))
 
-        if len(subjects) < 1:
+        if require_subjects and len(subjects) < 1:
             logger.debug("qucosa document with no known subjects: %s", _get_document_id_from_qucosa_metadate(doc))
             continue
 
@@ -622,7 +624,7 @@ def _make_filtered_complete_doc_generator(make_func: Any):
 
 
 def get_qucosa_ddc_subject_store(
-    ddc_list_filepath: str = None,
+    ddc_list_filepath: Optional[str] = None,
 ) -> SubjectHierarchy:
     """Return the ddc subject hierarchy which contains only subjects present in the qucosa dataset."""
     if ddc_list_filepath is None:
@@ -642,24 +644,15 @@ def get_qucosa_ddc_subject_store(
 
     with gzip.open(ddc_list_filepath, "rb") as file:
         subjects = pickle.load(file)  # nosec
-        return get_ddc_subject_store(subject_uris=subjects)
-
-
-def qucosa_subject_hierarchy_by_subject_schema(
-    subject_schema: Union[Literal["rvk"], Literal["ddc"]],
-) -> SubjectHierarchy:
-    """Return either rvk or ddc subject hierarchy depending on requested subject schema."""
-    return {
-        "rvk": lambda: get_rvk_subject_store(),
-        "ddc": lambda: get_qucosa_ddc_subject_store(),
-    }[subject_schema]()
+        return load_ddc_subject_hierarchy(subject_uris=subjects)
 
 
 def read_qucosa_samples(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
+    qucosa_iterator: Optional[Iterable[QucosaJsonDocument]] = None,
     metadata_variant: str = "titles",
     subject_schema: Union[Literal["rvk"], Literal["ddc"]] = "rvk",
     lang_code: Optional[str] = "de",
+    require_subjects: bool = True,
 ) -> Iterator[Sample]:
     """Read qucosa documents and use only document titles as training data.
 
@@ -697,8 +690,8 @@ def read_qucosa_samples(
     }
 
     _subject_store_func_map = {
-        "rvk": lambda: get_rvk_subject_store(),
-        "ddc": lambda: get_qucosa_ddc_subject_store(),
+        "rvk": lambda: load_rvk_subject_hierarchy_from_sqlite(),
+        "ddc": lambda: load_jskos_subject_hierarchy_from_sqlite("ddc"),
     }
 
     return _read_qucosa_generic_samples(
@@ -707,12 +700,13 @@ def read_qucosa_samples(
         _subject_getter_map[subject_schema],
         _subject_store_func_map[subject_schema](),
         lang_code,
+        require_subjects,
     )
 
 
 def save_qucosa_simple_rvk_training_data_as_annif_tsv(
-    qucosa_iterator: Iterable[QucosaJsonDocument] = None,
-    filepath: str = None,
+    qucosa_iterator: Optional[Iterable[QucosaJsonDocument]] = None,
+    filepath: Optional[str] = None,
 ):
     """Save all qucosa documents as annif tsv file using only the title as text and RVK as subject annotations.
 

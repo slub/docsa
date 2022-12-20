@@ -5,26 +5,36 @@
 import logging
 import os
 import pickle  # nosec
+import gzip
+import re
+import time
 
-from typing import Iterator, Optional, cast
-from itertools import islice
+from typing import Iterable, Iterator, Optional, Any, Sequence, Union, cast
+from itertools import chain, islice
 
 import torch
 import numpy as np
+import tokenizers
+import gensim
 
 from sqlitedict import SqliteDict
-from sklearn.feature_extraction.text import TfidfVectorizer as ScikitTfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer as NativeScikitTfidfVectorizer
 from torch.nn.modules.module import Module
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.models.bert.modeling_bert import BertModel
+from transformers import PreTrainedTokenizerFast, BatchEncoding
 
 from slub_docsa.common.paths import get_cache_dir
+from slub_docsa.data.load.wikipedia import load_wikipedia_cirrus_texts
 from slub_docsa.data.preprocess.document import nltk_snowball_text_stemming_function
 from slub_docsa.data.preprocess.document import persisted_nltk_snowball_text_stemming_function
 from slub_docsa.data.store.array import bytes_to_numpy_array, numpy_array_to_bytes
 from slub_docsa.data.store.document import sha1_hash_from_text
 
 logger = logging.getLogger(__name__)
+
+# disable warning message about parallelism
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class AbstractVectorizer:
@@ -44,7 +54,7 @@ class AbstractVectorizer:
         """
         raise NotImplementedError()
 
-    def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
+    def transform(self, texts: Iterator[str]) -> Union[Iterator[np.ndarray], Iterator[BatchEncoding]]:
         """Return vector representation of texts as array.
 
         Parameters
@@ -54,13 +64,24 @@ class AbstractVectorizer:
 
         Returns
         -------
-        Iterator[np.ndarray]
-            an iterator over the vectorized texts as numpy array
+        Iterator[np.ndarray] | Iterator[BatchEncoding]
+            an iterator over the vectorized texts as numpy array, or an iterator over dictionaries containing the
+            encodings as `transformers.BatchEncoding`
+        """
+        raise NotImplementedError()
+
+    def output_shape(self) -> Sequence[int]:
+        """Return the shape of each matrix returned by the transform method.
+
+        Returns
+        -------
+        Sequence[int]
+            the matrix shape as tuple, e.g. (128,).
         """
         raise NotImplementedError()
 
 
-class PersistableVectorizer(AbstractVectorizer):
+class PersistableVectorizerMixin:
     """Extend a vectorizer to support save/load methods that can be used to persist it."""
 
     def load(self, persist_dir: str):
@@ -84,10 +105,54 @@ class PersistableVectorizer(AbstractVectorizer):
         raise NotImplementedError()
 
 
-class TfidfVectorizer(PersistableVectorizer):
+class GensimTfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
+    """Tfidf Vectorization via Gensim."""
+
+    def __init__(self, max_features=10000):
+        """Initialize the vectorizer."""
+        self.max_features = max_features
+        self.dictionary = None
+        self.vectorizer = None
+        self.num_terms = None
+        self.num_docs = None
+
+    def fit(self, texts: Iterable[str]):
+        """Train the gensim tfidf vectorizer."""
+        self.dictionary = gensim.corpora.HashDictionary(id_range=self.max_features)
+        bow_iterator = (self.dictionary.doc2bow(text.split(" "), allow_update=True) for text in texts)
+        self.vectorizer = gensim.models.TfidfModel(bow_iterator, id2word=self.dictionary, normalize=True)
+        self.num_docs = self.dictionary.num_docs
+        self.num_terms = len(self.dictionary.keys())
+
+    def _doc_to_dense(self, doc):
+        return gensim.matutils.corpus2dense([doc], num_terms=self.num_terms, num_docs=1).T[0]
+
+    def transform(self, texts: Iterable[str]) -> Union[Iterator[np.ndarray], Iterator[BatchEncoding]]:
+        """Return vectorized texts."""
+        bow_iterator = (self.dictionary.doc2bow(text.split(" ")) for text in texts)
+        return (self._doc_to_dense(doc) for doc in self.vectorizer[bow_iterator])
+
+    def output_shape(self) -> Sequence[int]:
+        """Return the size of the matrices returned by transform, typically `(max_features,)`."""
+        return (self.num_terms,)
+
+    def save(self, persist_dir: str):
+        """Save gensim tfidf model to directory."""
+        self.dictionary.save(os.path.join(persist_dir, "dictionary"))
+        self.vectorizer.save(os.path.join(persist_dir, "tfidf_model"))
+
+    def load(self, persist_dir: str):
+        """Load gensim tfidf model from directory."""
+        self.dictionary = gensim.corpora.HashDictionary.load(os.path.join(persist_dir, "dictionary"))
+        self.vectorizer = gensim.models.TfidfModel.load(os.path.join(persist_dir, "tfidf_model"))
+        self.num_docs = self.dictionary.num_docs
+        self.num_terms = len(self.dictionary.keys())
+
+
+class ScikitTfidfVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Vectorizer using Scikit TfidfVectorizer."""
 
-    PERSIST_FILENAME = "tfidf_vectorizer.pickle"
+    PERSIST_FILENAME = "tfidf_vectorizer.pickle.gz"
 
     def __init__(self, max_features=10000, **kwargs):
         """Initialize vectorizer.
@@ -101,10 +166,11 @@ class TfidfVectorizer(PersistableVectorizer):
         """
         self.max_features = max_features
         self.fitted_once = False
-        self.vectorizer = ScikitTfidfVectorizer(max_features=max_features, **kwargs)
+        self.size = None
+        self.vectorizer = NativeScikitTfidfVectorizer(max_features=max_features, **kwargs)
 
     def fit(self, texts: Iterator[str]):
-        """Fit vectorizer."""
+        """Apply the scikit tfidf vectorizer."""
         corpus = list(texts)
         logger.debug("do scikit tfidf vectorization of %d texts and %d features", len(corpus), self.max_features)
         self.vectorizer.fit(corpus)
@@ -114,18 +180,24 @@ class TfidfVectorizer(PersistableVectorizer):
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
-        for row in self.vectorizer.transform(list(texts)).toarray():
+        for row in cast(Any, self.vectorizer.transform(list(texts))).toarray():
+            if self.size is None:
+                self.size = row.shape[0]
             if not np.any(row):
                 # add random value if row is all zero, so cosine distance is well defined
                 row[np.random.randint(0, row.shape[0], size=1)[0]] = np.random.random()
             yield row
+
+    def output_shape(self):
+        """Return the size of the matrices returned by transform, typically `(max_features,)`."""
+        return (self.size,)
 
     def save(self, persist_dir: str):
         """Save tfidf vectorizer to disc using pickle."""
         if not self.fitted_once:
             raise ValueError("can not persist tfidf vectorizer that was not fitted before")
 
-        with open(os.path.join(persist_dir, self.PERSIST_FILENAME), "wb") as file:
+        with gzip.open(os.path.join(persist_dir, self.PERSIST_FILENAME), "wb") as file:
             pickle.dump(self.vectorizer, file)
 
     def load(self, persist_dir: str):
@@ -138,41 +210,40 @@ class TfidfVectorizer(PersistableVectorizer):
         if not os.path.exists(vectorizer_path):
             raise ValueError(f"vectorizer state does not exists at {vectorizer_path}")
 
-        with open(vectorizer_path, "rb") as file:
+        with gzip.open(vectorizer_path, "rb") as file:
             self.vectorizer = pickle.load(file)  # nosec
 
     def __str__(self):
         """Return representative string of vectorizer."""
-        return f"<TfidfVectorizer max_features={self.max_features}>"
+        return f"<ScikitTfidfVectorizer max_features={self.max_features}>"
 
 
-class TfidfStemmingVectorizer(TfidfVectorizer):
-    """Apply nltk stemming and stopword removal before vectorizing with Scikit TfidfVectorizer."""
+class StemmingVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
+    """Apply nltk stemming and stopword removal before vectorizing."""
 
     def __init__(
         self,
+        vectorizer: AbstractVectorizer,
         lang_code: str,
         remove_stopwords: bool = True,
-        max_features=10000,
-        stemming_cache_filepath: str = None,
-        **kwargs
+        stemming_cache_filepath: Optional[str] = None,
     ):
         """Initialize vectorizer.
 
         Parameters
         ----------
+        vectorizer
+            the vectorizer that is used after stemming
         lang_code: str
             Language code of the text (e.g. "en", "de")
         remove_stopwords: bool
             Whether to remove stopwords
-        max_features: int = 10000
-            The maximum number of unique tokens to extract from text during fit.
         stemming_cache_filepath: str = None
             Optional file path to a file that is used to persist stemmed text for caching
         kwargs: Any
             additional arguments that are passed to the scikit tfidf vectorizer
         """
-        super().__init__(max_features=max_features, **kwargs)
+        self.vectorizer = vectorizer
         self.lang_code = lang_code
         self.remove_stopwords = remove_stopwords
         if stemming_cache_filepath is not None:
@@ -187,18 +258,34 @@ class TfidfStemmingVectorizer(TfidfVectorizer):
     def fit(self, texts: Iterator[str]):
         """Fit vectorizer."""
         # logger.debug("do stemming for fitting of tfidf vectorizer")
-        stemmed_texts = [self.stemming(t) for t in texts]
-        super().fit(iter(stemmed_texts))
+        stemmed_texts_iterator = (self.stemming(t) for t in texts)
+        self.vectorizer.fit(stemmed_texts_iterator)
 
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts."""
         # logger.debug("do stemming for transforming with tfidf vectorizer")
-        stemmed_texts = [self.stemming(t) for t in texts]
-        yield from super().transform(iter(stemmed_texts))
+        stemmed_texts_iterator = (self.stemming(t) for t in texts)
+        yield from self.vectorizer.transform(stemmed_texts_iterator)
+
+    def save(self, persist_dir):
+        """Relay save call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
+            raise ValueError("can not persist vectorizer that is not persistable")
+        self.vectorizer.save(persist_dir)
+
+    def load(self, persist_dir):
+        """Relay load call to vectorizer."""
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
+            raise ValueError("can not load vectorizer that is not persistable")
+        self.vectorizer.load(persist_dir)
+
+    def output_shape(self) -> Sequence[int]:
+        """Output shape is defined by provided vectorizer."""
+        return self.vectorizer.output_shape()
 
     def __str__(self):
         """Return representative string of vectorizer."""
-        return f"<TfidfStemmingVectorizer max_features={self.max_features} lang_code={self.lang_code} " + \
+        return f"<ScikitTfidfStemmingVectorizer vectorizer={str(self.vectorizer)} lang_code={self.lang_code} " + \
             f"remove_stopwords={self.remove_stopwords}>"
 
 
@@ -223,12 +310,16 @@ class RandomVectorizer(AbstractVectorizer):
         for row in np.random.random((len(list(texts)), self.size)):
             yield row
 
+    def output_shape(self):
+        """Return the requested size of random features vectors as tuple (size,)."""
+        return (self.size,)
+
     def __str__(self):
         """Return representative string of vectorizer."""
         return "<RandomVectorizer>"
 
 
-class CachedVectorizer(PersistableVectorizer):
+class CachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Caches vectorizations for fast repeated transforms."""
 
     def __init__(self, vectorizer: AbstractVectorizer, batch_size: int = 1000, fit_only_once: bool = False):
@@ -258,6 +349,7 @@ class CachedVectorizer(PersistableVectorizer):
     def transform(self, texts: Iterator[str]) -> Iterator[np.ndarray]:
         """Return vectorized texts from cache or by calling parent vectorizer."""
         total = 0
+        last_log_time = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -279,17 +371,23 @@ class CachedVectorizer(PersistableVectorizer):
                 yield self.store[text_hash]
 
             total += len(texts_chunk)
-            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+            if time.time() - last_log_time > 5.0:
+                logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+                last_log_time = time.time()
+
+    def output_shape(self):
+        """Return the output shape of the cached vectorizer."""
+        return self.vectorizer.output_shape()
 
     def save(self, persist_dir):
         """Relay save call to vectorizer."""
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not persist vectorizer that is not persistable")
         self.vectorizer.save(persist_dir)
 
     def load(self, persist_dir):
         """Relay load call to vectorizer."""
-        if not isinstance(self.vectorizer, PersistableVectorizer):
+        if not isinstance(self.vectorizer, PersistableVectorizerMixin):
             raise ValueError("can not load vectorizer that is not persistable")
         self.vectorizer.load(persist_dir)
 
@@ -298,7 +396,7 @@ class CachedVectorizer(PersistableVectorizer):
         return f"<CachedVectorizer of={str(self.vectorizer)}>"
 
 
-class PersistedCachedVectorizer(PersistableVectorizer):
+class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Stores vectorizations in persistent cache."""
 
     def __init__(self, filepath: str, vectorizer: AbstractVectorizer, batch_size: int = 100):
@@ -326,6 +424,7 @@ class PersistedCachedVectorizer(PersistableVectorizer):
         """Return vectorized texts from cache or by calling parent vectorizer."""
         vectorizer_str = str(self.vectorizer)
         total = 0
+        last_log_time = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -348,18 +447,24 @@ class PersistedCachedVectorizer(PersistableVectorizer):
                 yield bytes_to_numpy_array(self.store[text_hash])
 
             total += len(texts_chunk)
-            logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+            if time.time() - last_log_time > 5.0:
+                logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+                last_log_time = time.time()
+
+    def output_shape(self):
+        """Return the output shape of the cached vectorizer."""
+        return self.vectorizer.output_shape()
 
     def save(self, persist_dir: str):
         """Relay save call to parent vectorizer."""
-        if isinstance(self.vectorizer, PersistableVectorizer):
+        if isinstance(self.vectorizer, PersistableVectorizerMixin):
             self.vectorizer.save(persist_dir)
         else:
             raise ValueError("can not save vectorizer that is not persistable")
 
     def load(self, persist_dir: str):
         """Relay load class to parent vectorizer."""
-        if isinstance(self.vectorizer, PersistableVectorizer):
+        if isinstance(self.vectorizer, PersistableVectorizerMixin):
             self.vectorizer.load(persist_dir)
         else:
             raise ValueError("can not load vectorizer that is not persistable")
@@ -389,7 +494,7 @@ def _extract_subtext_samples(text: str, samples: int) -> Iterator[str]:
         yield sub_text
 
 
-class HuggingfaceBertVectorizer(PersistableVectorizer):
+class HuggingfaceBertVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
     """Evaluates a pre-trained bert model for text vectorization.
 
     Embeddings are extracted as the last hidden states of the first "[CLS]" token, see:
@@ -408,7 +513,7 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         batch_size: int = 4,
         subtext_samples: int = 1,
         hidden_states: int = 1,
-        cache_dir: str = None,
+        cache_dir: Optional[str] = None,
     ):
         """Initialize vectorizer.
 
@@ -442,20 +547,22 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         if self.model is None:
             try:
                 # try offline loading first
-                self.tokenizer = AutoTokenizer.from_pretrained(
+                self.tokenizer = cast(Module, AutoTokenizer.from_pretrained(
                     self.model_identifier,
                     cache_dir=self.cache_dir,
                     local_files_only=True
-                )
-                self.model = BertModel.from_pretrained(
+                ))
+                self.model = cast(Module, BertModel.from_pretrained(
                     self.model_identifier,
                     cache_dir=self.cache_dir,
                     local_files_only=True,
-                )
+                ))
             except OSError:
                 # check online again
-                self.tokenizer = AutoTokenizer.from_pretrained(self.model_identifier, cache_dir=self.cache_dir)
-                self.model = BertModel.from_pretrained(self.model_identifier, cache_dir=self.cache_dir)
+                self.tokenizer = cast(Module, AutoTokenizer.from_pretrained(
+                    self.model_identifier, cache_dir=self.cache_dir
+                ))
+                self.model = cast(Module, BertModel.from_pretrained(self.model_identifier, cache_dir=self.cache_dir))
             self.model.to(self.device)
 
     def fit(self, texts: Iterator[str]):
@@ -473,6 +580,7 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         i = 0
         # total = len(texts)
         total_so_far = 0
+        last_log = time.time()
 
         while True:
             texts_chunk = list(islice(texts, self.batch_size))
@@ -492,10 +600,12 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             )
             encodings.to(self.device)
 
-            logger.debug(
-                "evaluate huggingface model for vectorization of chunk %d, total %d",
-                i, total_so_far
-            )
+            if time.time() - last_log > 5:
+                logger.info(
+                    "evaluate huggingface model for vectorization of chunk %d, total %d",
+                    i, total_so_far
+                )
+                last_log = time.time()
 
             # evaluate model
             with torch.no_grad():
@@ -515,6 +625,10 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
             total_so_far += len(texts_chunk)
             i += 1
 
+    def output_shape(self):
+        """Return the output shape of the pre-trained Huggingface Bert-Vectorizer."""
+        return (768 * self.hidden_states,)
+
     def save(self, persist_dir: str):
         """Bert vectorizer is not stateful and needs no saving."""
         return
@@ -527,3 +641,148 @@ class HuggingfaceBertVectorizer(PersistableVectorizer):
         """Return representative string of vectorizer."""
         return f"<HFaceBertVectorizer model=\"{self.model_identifier}\" batch_size={self.batch_size} " \
             + f"subtext_samples={self.subtext_samples} hidden_states={self.hidden_states}>"
+
+
+class AbstractSequenceVectorizer(AbstractVectorizer):
+    """Encodes text as a sequence vector."""
+
+    def max_sequence_length(self) -> int:
+        """Return the maximum supported length of vectorized sequences.
+
+        Returns
+        -------
+        int
+            the maximum supported length of vectorized sequences
+        """
+        raise NotImplementedError()
+
+
+class WordpieceVectorizer(PersistableVectorizerMixin, AbstractSequenceVectorizer):
+    """Uses the Wordpiece strategy provided by the `tokenizers` library to vectorize texts."""
+
+    FILENAME = "wordpiece_tokenizer.json.gz"
+
+    def __init__(
+        self,
+        language: str,
+        vocabulary_size: int,
+        max_length: int,
+        uncased: bool = True,
+        use_wikipedia_texts: bool = True,
+        wikipedia_texts_limit: int = None,
+        ignore_fit: bool = False,
+    ):
+        """Initialize a wordpiece vectorizer.
+
+        Parameters
+        ----------
+        language : str
+            the language of the input texts
+        vocabulary_size : int
+            the vocabulary size (maximum number of different extracted wordpieces)
+        max_length : int
+            the maximum supported length of the vectorized sequence (longer texts are truncated)
+        uncased : bool, optional
+            whether to convert the input texts to lowercase before vectorization, by default True
+        use_wikipedia_texts : bool, optional
+            whether to load wikipedia texts in the provided language to improve the wordpiece model using those texts,
+            by default True
+        wikipedia_texts_limit: int = None
+            the amount of wikipedia texts to use to generated the Wordpiece vectorizer
+        ignore_fit: bool = False
+            whether to ignore any calls to fit, e.g. after loading an already fitted wordpiece model
+        """
+        self.language = language
+        self.vocabulary_size = vocabulary_size
+        self.max_length = max_length
+        self.uncased = uncased
+        self.use_wikipedia_texts = use_wikipedia_texts
+        self.wikipedia_texts_limit = wikipedia_texts_limit
+        self.ignore_fit = ignore_fit
+        self.tokenizer = None
+        self.encoder = None
+
+    def _fit(self, texts: Iterator[str]):
+        unk_token = "[UNK]"  # nosec
+        spl_tokens = ["[UNK]", "[SEP]", "[MASK]", "[CLS]", "[PAD]"]
+        character_filter = re.compile(r"[\U0000024f-\U0010ffff]")
+
+        self.tokenizer = tokenizers.Tokenizer(tokenizers.models.WordPiece(unk_token=unk_token))
+        self.tokenizer.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+
+        trainer = tokenizers.trainers.WordPieceTrainer(
+            vocab_size=self.vocabulary_size,
+            min_frequency=2,
+            special_tokens=spl_tokens,
+        )
+
+        if self.uncased:
+            text_generator = (character_filter.sub("", text.lower()) for text in texts)
+        else:
+            text_generator = (character_filter.sub("", text) for text in texts)
+
+        self.tokenizer.train_from_iterator(text_generator, trainer=trainer)
+        self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
+
+    def fit(self, texts: Iterator[str]):
+        """Train a wordpiece vectorizer for the provided texts (and possibly additional texts from wikipedia)."""
+        if self.ignore_fit:
+            return
+        if self.use_wikipedia_texts:
+            logger.info("generating wordpiece vectorizer from wikipedia texts, this may take a long time")
+            wiki_texts = load_wikipedia_cirrus_texts(self.language, limit=self.wikipedia_texts_limit)
+            self._fit(chain(wiki_texts, texts))
+        else:
+            self._fit(texts)
+
+    def transform(self, texts: Iterator[str]) -> Iterator[BatchEncoding]:
+        """Return sequence vectors for the provided texts by applying the wordpiece strategy."""
+        if self.tokenizer is None or self.encoder is None:
+            raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
+        for text in texts:
+            processed_text = text.lower() if self.uncased else text
+            features = self.encoder.encode_plus(
+                processed_text, padding="max_length", max_length=self.max_length, truncation=True, return_tensors="np"
+            )
+            features["input_ids"] = features["input_ids"][0]
+            features["attention_mask"] = features["attention_mask"][0]
+            features["token_type_ids"] = features["token_type_ids"][0]
+            yield features
+
+    def max_sequence_length(self) -> int:
+        """Return the maximum supported sequence length."""
+        return self.max_length
+
+    def output_shape(self):
+        """Return the output shape of the feature matrix."""
+        return (self.vocabulary_size,)
+
+    def save(self, persist_dir: str):
+        """Save the generated wordpiece vectorizer to a directory."""
+        if self.tokenizer is None:
+            raise RuntimeError("WordpieceVectorizer needs to be fitted or loaded first")
+        os.makedirs(persist_dir, exist_ok=True)
+        with gzip.open(os.path.join(persist_dir, self.FILENAME), "wt") as file:
+            file.write(self.tokenizer.to_str(pretty=True))
+
+    def load(self, persist_dir: str):
+        """Load a persisted wordpiece vectorizer from a directory."""
+        with gzip.open(os.path.join(persist_dir, self.FILENAME), "rt") as file:
+            self.tokenizer = tokenizers.Tokenizer.from_str(file.read())
+        self.encoder = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer, pad_token="[PAD]")  # nosec
+
+    def __str__(self):
+        """Return representative string of vectorizer."""
+        return f"<WordpieceVectorizer language=\"{self.language}\" vocabulary_size={self.vocabulary_size} " \
+            + f"max_length={self.max_length} uncased={self.uncased} use_wikipedia_texts={self.use_wikipedia_texts}>"
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
+    _texts = ["This is a test", "A test indeed", "Another sentence without common words"]
+
+    _vectorizer = StemmingVectorizer(vectorizer=GensimTfidfVectorizer(), lang_code="en", remove_stopwords=True)
+    _vectorizer.fit(iter(_texts))
+    for vector in _vectorizer.transform(iter(_texts)):
+        print(vector)

@@ -7,45 +7,51 @@ from typing import cast
 
 from sklearn.metrics import f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
-from slub_docsa.common.dataset import dataset_from_samples
 
 from slub_docsa.common.paths import get_annif_dir
-from slub_docsa.data.load.qucosa import read_qucosa_samples, read_qucosa_documents_from_directory
-from slub_docsa.data.load.rvk import get_rvk_subject_store
+from slub_docsa.data.load.subjects.rvk import load_rvk_subject_hierarchy_from_sqlite
 from slub_docsa.data.load.tsv import save_dataset_as_annif_tsv, save_subject_labels_as_annif_tsv
 from slub_docsa.data.preprocess.dataset import filter_subjects_with_insufficient_samples
 from slub_docsa.data.preprocess.skos import subject_hierarchy_to_skos_graph, subject_labels_to_skos_graph
 from slub_docsa.data.preprocess.subject import prune_subject_targets_to_minimum_samples
-from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets, positive_top_k_incidence_decision
-from slub_docsa.evaluation.incidence import unique_subject_order
-from slub_docsa.evaluation.score import absolute_confusion_from_incidence
-from slub_docsa.evaluation.split import scikit_kfold_train_test_split
+from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
+from slub_docsa.evaluation.classification.incidence import unique_subject_order
+from slub_docsa.evaluation.classification.score.common import absolute_confusion_from_incidence
+from slub_docsa.evaluation.classification.split import scikit_kfold_train_test_split
 from slub_docsa.models.classification.natlibfi_annif import AnnifModel
+from slub_docsa.experiments.common.datasets import filter_and_cache_named_datasets
+from slub_docsa.experiments.qucosa.datasets import qucosa_named_sample_generators
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
+    CHECK_QUCOSA_DOWNLOAD = False
     MIN_SAMPLES = 10
     LIMIT = 5
     MODEL_TYPE = "tfidf"
     LANG_CODE = "de"
 
-    # load data
-    dataset = dataset_from_samples(read_qucosa_samples(read_qucosa_documents_from_directory(), "abstracts", "rvk"))
-    rvk_hierarchy = get_rvk_subject_store()
+    logger.info("load dataset")
+    _, dataset, _ = next(filter_and_cache_named_datasets(
+        qucosa_named_sample_generators(CHECK_QUCOSA_DOWNLOAD), ["qucosa_de_titles_rvk"]
+    ))
 
-    # do pruning
+    logger.info("load rvk subjects")
+    rvk_hierarchy = load_rvk_subject_hierarchy_from_sqlite()
+
+    logger.info("do pruning on rvk subjects")
     dataset.subjects = prune_subject_targets_to_minimum_samples(MIN_SAMPLES, dataset.subjects, rvk_hierarchy)
     dataset = filter_subjects_with_insufficient_samples(dataset, MIN_SAMPLES)
 
-    # calculate subject list on whole dataset
+    logger.info("calculate relevant subject list from dataset")
     subject_order = unique_subject_order(dataset.subjects)
-    rvk_labels = {uri: rvk_hierarchy[uri].label for uri in subject_order}
+    rvk_labels = {uri: rvk_hierarchy.subject_labels(uri) for uri in subject_order}
 
-    # create experiment directory
+    logger.info("create annif comparison_experiment directory")
     os.makedirs(os.path.join(get_annif_dir(), "comparison_experiment"), exist_ok=True)
 
     logger.info("save subject list as Annif TSV file")
@@ -103,7 +109,7 @@ if __name__ == "__main__":
     probabilties = model.predict_proba(test_dataset.documents)
 
     logger.info("score results")
-    predicted_incidence_matrix = positive_top_k_incidence_decision(LIMIT)(probabilties)
+    predicted_incidence_matrix = PositiveTopkIncidenceDecision(LIMIT)(probabilties)
     test_incidence_matrix = subject_incidence_matrix_from_targets(test_dataset.subjects, subject_order)
 
     # predicted_incidence_matrix = csr_matrix(predicted_incidence_matrix)
@@ -125,7 +131,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
         print(
@@ -134,7 +140,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
         print(
@@ -143,7 +149,7 @@ if __name__ == "__main__":
                 test_incidence_matrix_sparse,
                 predicted_incidence_matrix_binary,
                 average=average,
-                zero_division=0
+                zero_division=0  # type: ignore
             )
         )
     print("...")

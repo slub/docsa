@@ -36,5 +36,8 @@ WORKDIR /home/slub/workspace
 # create .cache dir required by pylint
 # RUN mkdir /root/.cache
 
-ENTRYPOINT ["/bin/bash"]
+# keep container running for development work
+# (e.g. vscode remote development plugin)
+# don't do this other than for development purposes
+ENTRYPOINT ["tail", "-f", "/dev/null"]
 

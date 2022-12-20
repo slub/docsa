@@ -6,7 +6,7 @@ from slub_docsa.common.paths import get_data_dir
 def test_trivial():
     """Test a trivial assertion."""
     # pylint: disable=comparison-with-itself
-    assert True is True
+    assert True
 
 
 def test_data_dir_not_empty():

@@ -8,19 +8,19 @@ from slub_docsa.data.preprocess.vectorizer import RandomVectorizer
 from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel, RandomModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 
-from slub_docsa.experiments.common.models import NamedClassificationModelTupleList
+from slub_docsa.serve.common import ModelTypeMapping
 
 
-def default_dummy_named_model_list() -> NamedClassificationModelTupleList:
+def default_dummy_model_types() -> ModelTypeMapping:
     """Return a list of common dummy models."""
-    models = [
-        ("random", lambda: RandomModel()),
-        ("nihilistic", lambda: NihilisticModel()),
-        ("stratified", lambda: ScikitClassifier(
+    models = {
+        "random": lambda subject_hierarchy, subject_order: RandomModel(),
+        "nihilistic": lambda subject_hierarchy, subject_order: NihilisticModel(),
+        "stratified": lambda subject_hierarchy, subject_order: ScikitClassifier(
             predictor=DummyClassifier(strategy="stratified"),
             vectorizer=RandomVectorizer(),
-        )),
-        ("oracle", lambda: OracleModel()),
-    ]
+        ),
+        "oracle": lambda subject_hierarchy, subject_order: OracleModel(),
+    }
 
     return models

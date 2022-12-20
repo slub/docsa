@@ -6,11 +6,11 @@ export COMPOSE_CMD="podman-compose"
 # export COMPOSE_CMD="docker-compose"
 
 if [ "$GPU_MODE" == "gpu" ]; then
-    BASE_IMAGE="nvidia/cuda:11.4.2-cudnn8-runtime-ubuntu18.04"
+    BASE_IMAGE="docker.io/nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu20.04"
 fi
 
 if [ "$GPU_MODE" == "cpu" ]; then
-    BASE_IMAGE="python:3.6-slim"
+    BASE_IMAGE="docker.io/python:3.8-slim"
 fi
 
 if [ -z "$BASE_IMAGE" ]; then

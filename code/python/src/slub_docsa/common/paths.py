@@ -58,12 +58,18 @@ DEFAULT_ANNIF_DIR = os.environ.get(
 It can be customized by specifying the environment variable `SLUB_DOCSA_ANNIF_DIR`.
 """
 
+DEFAULT_SERVE_DIR = os.environ.get(
+    "SLUB_DOCSA_SERVE_DIR",
+    os.path.join(DEFAULT_DATA_DIR, "runtime/serve")
+)
+
 DIRECTORIES = {
     "data": DEFAULT_DATA_DIR,
     "resources": DEFAULT_RESOURCES_DIR,
     "cache": DEFAULT_CACHE_DIR,
     "figures": DEFAULT_FIGURES_DIR,
     "annif": DEFAULT_ANNIF_DIR,
+    "serve": DEFAULT_SERVE_DIR,
 }
 
 
@@ -90,3 +96,8 @@ def get_figures_dir():
 def get_annif_dir():
     """Return the main data directory used by Annif."""
     return DIRECTORIES["annif"]
+
+
+def get_serve_dir():
+    """Return the directory used to serve models via a REST service."""
+    return DIRECTORIES["serve"]

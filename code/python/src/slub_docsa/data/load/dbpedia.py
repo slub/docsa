@@ -4,7 +4,7 @@ import logging
 import os
 import bz2
 import re
-from typing import Iterator
+from typing import Iterator, Optional
 import urllib.request
 import urllib.parse
 import shutil
@@ -19,13 +19,17 @@ def _get_dbpedia_download_url(lang_code):
     return f"https://databus.dbpedia.org/dbpedia/text/short-abstracts/2020.07.01/{filename}"
 
 
-def _get_dbpedia_abstracts_filepath(lang_code, dbpedia_resources_dir: str = None):
+def _get_dbpedia_abstracts_filepath(lang_code, dbpedia_resources_dir: Optional[str] = None):
     if dbpedia_resources_dir is None:
         dbpedia_resources_dir = os.path.join(get_resources_dir(), "dbpedia")
     return os.path.join(dbpedia_resources_dir, f"short-abstracts_lang={lang_code}.ttl.bz2")
 
 
-def _download_dbpedia_abstracts(lang_code: str, filepath: str = None, dbpedia_resources_dir: str = None):
+def _download_dbpedia_abstracts(
+    lang_code: str,
+    filepath: Optional[str] = None,
+    dbpedia_resources_dir: Optional[str] = None
+):
     # create resources dir if not exists
     if dbpedia_resources_dir is None:
         dbpedia_resources_dir = os.path.join(get_resources_dir(), "dbpedia")
@@ -41,7 +45,7 @@ def _download_dbpedia_abstracts(lang_code: str, filepath: str = None, dbpedia_re
             shutil.copyfileobj(request, file)
 
 
-def read_dbpedia_abstracts(lang_code: str, limit=None, filepath: str = None) -> Iterator[str]:
+def read_dbpedia_abstracts(lang_code: str, limit=None, filepath: Optional[str] = None) -> Iterator[str]:
     """Return an iteator of dbpedia abstracts.
 
     Parameters

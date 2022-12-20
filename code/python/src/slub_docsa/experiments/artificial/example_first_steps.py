@@ -2,22 +2,23 @@
 
 # pylint: disable=ungrouped-imports
 
+
 if __name__ == "__main__":
 
     from slub_docsa.common.document import Document
 
     documents = [
         Document(uri="uri://document1", title="This is a document title"),
-        Document(uri="uri://document2", title="Document with interesting topics"),
-        Document(uri="uri://document3", title="A boring title"),
+        Document(uri="uri://document2", title="Document with interesting topic"),
+        Document(uri="uri://document3", title="A boring topic"),
     ]
 
     # ------------
 
     subjects = [
-        ["uri://subject1", "uri://subject2"],                    # document 1
-        ["uri://subject1", "uri://subject3", "uri://subject4"],  # document 2
-        ["uri://subject2"],                                      # document 3
+        ["uri://subject1", "uri://subject2"],    # document 1
+        ["uri://subject3"],                      # document 2
+        ["uri://subject3", "uri://subject4"],    # document 3
     ]
 
     # ------------
@@ -28,9 +29,9 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
+    from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer
 
-    vectorizer = TfidfVectorizer()
+    vectorizer = ScikitTfidfVectorizer()
 
     # ------------
 
@@ -44,8 +45,8 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import subject_incidence_matrix_from_targets
-    from slub_docsa.evaluation.incidence import unique_subject_order
+    from slub_docsa.evaluation.classification.incidence import subject_incidence_matrix_from_targets
+    from slub_docsa.evaluation.classification.incidence import unique_subject_order
 
     subject_order = unique_subject_order(dataset.subjects)
     incidence_matrix = subject_incidence_matrix_from_targets(
@@ -64,7 +65,7 @@ if __name__ == "__main__":
 
     new_documents = [
         Document(uri="uri://new_document1", title="Title of the new document"),
-        Document(uri="uri://new_document2", title="Boring subject"),
+        Document(uri="uri://new_document2", title="Another boring topic"),
     ]
 
     predicted_probabilities = model.predict_proba(new_documents)
@@ -72,22 +73,22 @@ if __name__ == "__main__":
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import top_k_incidence_decision
+    from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 
-    incidence_decision_function = top_k_incidence_decision(k=2)
+    incidence_decision_function = ThresholdIncidenceDecision(threshold=0.5)
     predicted_incidence = incidence_decision_function(predicted_probabilities)
     print(predicted_incidence)
 
     # ------------
 
-    from slub_docsa.evaluation.incidence import subject_targets_from_incidence_matrix
+    from slub_docsa.evaluation.classification.incidence import subject_targets_from_incidence_matrix
 
     predicted_subjects = subject_targets_from_incidence_matrix(predicted_incidence, subject_order)
     print(predicted_subjects)
 
     # ------------
 
-    from slub_docsa.evaluation.score import scikit_incidence_metric
+    from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
     from sklearn.metrics import f1_score
 
     true_subjects = [

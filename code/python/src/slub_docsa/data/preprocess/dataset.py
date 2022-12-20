@@ -84,6 +84,7 @@ def filter_subjects_with_insufficient_samples(dataset: Dataset, minimum_samples:
 
     Returns
     -------
+    Dataset
         A new dataset that does not contain subjects that do not meet the required minimum number of samples.
     """
     # count number of samples by subjects

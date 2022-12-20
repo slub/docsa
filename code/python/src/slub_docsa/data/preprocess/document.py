@@ -5,8 +5,9 @@
 import logging
 import os
 import functools
+import time
 
-from typing import Callable, Iterator, List
+from typing import Callable, Iterator, List, Optional
 
 from sqlitedict import SqliteDict
 
@@ -29,8 +30,9 @@ def document_as_concatenated_string(
     skip_title: bool = False,
     skip_authors: bool = False,
     skip_abstract: bool = False,
+    skip_toc: bool = False,
     skip_fulltext: bool = False,
-    max_length: int = None,
+    max_length: Optional[int] = None,
 ) -> str:
     """Convert a document to a string by simple concatenation of all meta data.
 
@@ -44,6 +46,8 @@ def document_as_concatenated_string(
         Whether to skip including the list of authors in the output string
     skip_abstract: bool = False
         Whether to skip including the abstract in the output string
+    skip_toc: bool = False
+        Whether to skip including the table of contents in the output string
     skip_fulltext: bool = False
         Whether to skip including the fulltext in the output string
 
@@ -59,6 +63,8 @@ def document_as_concatenated_string(
         text += "\n" + ", ".join(doc.authors)
     if not skip_abstract and doc.abstract is not None:
         text += "\n" + doc.abstract
+    if not skip_toc and doc.toc is not None:
+        text += "\n" + doc.toc
     if not skip_fulltext and doc.fulltext is not None:
         text += "\n" + doc.fulltext
     if max_length is not None:
@@ -120,6 +126,8 @@ def nltk_snowball_text_stemming_function(
     stemmer = SnowballStemmer(nltk_language)
     tokenize = nltk_word_tokenize_text_function(lang_code)
     stopword_set = set(stopwords.words(nltk_language))
+    last_log_time = time.time()
+    text_count = 0
 
     @functools.lru_cache(maxsize=1000000)
     def stem_func(word):
@@ -129,7 +137,12 @@ def nltk_snowball_text_stemming_function(
         return token in stopword_set
 
     def stem_text(text: str) -> str:
-        logger.debug("stemming text of size %d", len(text))
+        nonlocal last_log_time
+        nonlocal text_count
+        if time.time() - last_log_time > 5.0:
+            logger.debug("stemming text, so far %d", text_count)
+            last_log_time = time.time()
+        text_count += 1
         filtered_tokens = [token for token in tokenize(text) if not remove_stopwords or not is_stopword(token)]
         return " ".join([stem_func(token) for token in filtered_tokens])
 

@@ -1,39 +1,38 @@
 """
-This python package is a library for bibliographic document classification and similarity analysis.
+A python package for bibliographic document classification and similarity analysis.
 
-It provides a selection of methods that support:
+This python package is a library for bibliographic document classification and similarity analysis developed by the
+[Saxon State and University Library Dresden (SLUB)](https://www.slub-dresden.de/). It provides a selection of methods
+that support:
 
 - pre-processing of bibliographic meta data and full-text documents,
 - training of multi-label multi-class classification models,
-- integrating and using hierarchical subject classifications (pruning methods, performance scores),
-- similarity analysis and clustering.
+- integrating hierarchical subject classifications (including pruning methods),
+- evaluating trained classification models with advanced performance scores,
+- publishing models via a simple REST interface, and
+- basic similarity analysis and clustering.
 
 Some important features include:
 
 - a concise API for training and evaluating multi-label multi-class classification models, see `slub_docsa.common`
-- support for many different classification approaches, see `slub_docsa.models`
-- artificial hierarchical random datasets, see `slub_docsa.data.artificial`
-- a performance score that considers hierarchical relations, see `slub_docsa.evaluation.score`
+- support for many different classification approaches, see `slub_docsa.models`, including Artificial Neural Networks
+  based on the transformer architecture like Bert, see `slub_docsa.models.classification.ann`
+- a performance score that considers hierarchical relations between true subject annotations and predicted subjects,
+  see `slub_docsa.evaluation.classification.score.hierarchical`
 
-## Installation
+# Installation
 
-This project requires [Python](https://www.python.org/) v3.6 or above and uses [pip](https://pypi.org/project/pip/)
+This project requires [Python](https://www.python.org/) v3.8 or above and uses [pip](https://pypi.org/project/pip/)
 for dependency management. Besides, this package uses [pyTorch](https://pytorch.org/) to train
 [Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) via GPUs.
 Make sure to install the latest Nvidia graphics drivers and check
-[further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites).
+[further requirements](https://pytorch.org/get-started/locally/#linux-prerequisites) of [pyTorch](https://pytorch.org/).
 
-### Via Python Package Installer (not available yet)
-
-Once published to PyPI (*not available yet*), install via:
-
-- `python3 -m pip install slub_docsa`
-
-### From Source
+## From Source
 
 Download the source code by checking out the repository:
 
- - `git clone https://git.slub-dresden.de/lod/maschinelle-klassifizierung/docsa.git`
+ - `git clone https://github.com/slub/docsa.git`
 
 Use *make* to install python dependencies by executing the following commands:
 
@@ -44,7 +43,7 @@ Use *make* to install python dependencies by executing the following commands:
 - `make docs`
   (generate API documentation, requires test dependencies)
 
-### From Source using Ubuntu 18.04
+## From Source using Ubuntu 20.04
 
 Install essentials like *python3*, *pip* and *make*:
 
@@ -64,32 +63,37 @@ Run *make* commands as provided above:
 - `make install-test`
 - `make test`
 
-## First Steps
+# First Steps
 
 In order to get started, there are two possible approaches: the command line interface, or the Python API.
 
-### Command Line Interface (CLI)
+## Command Line Interface (CLI)
 
 This library provides a single command `slub_docsa`, which supports to both train and evaluate classification and
-clustering algorithms. A detailed description can be found in `slub_docsa.cli`.
+clustering algorithms. A REST service can be started that provides access to trained models. A detailed description
+about each CLI command can be found in `slub_docsa.cli`.
 
-### Python API
+## Python API
 
-Besides the CLI, this library is follows a modular design such that new processing pipelines can be designed via the
+Besides the CLI, this library follows a modular design such that new processing pipelines can be designed via the
 Python API. A list of sub-modules can be found below. The most relevant classes and methods are:
 
-- `slub_docsa.common.document.Document` - represents a document consisting of its title, abstract, fulltext
+- `slub_docsa.common.document.Document`<br />
+  represents a document consisting of its title, abstract, fulltext
   and a list of authors
-- `slub_docsa.common.subject.SubjectNode` - models a hierarchical subject consisting of its URI and label and parent
-  subject
-- `slub_docsa.common.dataset.Dataset` - combines documents and their subject annotations
-- `slub_docsa.common.model.ClassificationModel` - defines how classification models are implemented and can be used
-  for training and prediction, various model implementations can be found in `slub_docsa.models.classification`
-- `slub_docsa.common.model.ClusteringModel` - defines how clustering models are implemented, various implements can be
-  found in `slub_docsa.models.clustering`
-- `slub_docsa.common.paths` - Storage configuration methods, which handle where various data is stored
+- `slub_docsa.common.subject.SubjectHierarchy`<br />
+  models a hierarchy of subjects including labels for each subject
+- `slub_docsa.common.dataset.Dataset`<br />
+  combines documents and their subject annotations
+- `slub_docsa.common.model.ClassificationModel`<br />
+  defines how classification models are implemented and can be used for training and prediction, various model
+  implementations can be found in `slub_docsa.models.classification`
+- `slub_docsa.common.model.ClusteringModel`<br />
+  defines how clustering models are implemented, various implements can be found in `slub_docsa.models.clustering`
+- `slub_docsa.common.paths`<br />
+  Storage configuration methods, which handle where various data is stored
 
-### Example: Train a Model and Predict
+## Example: Train a Model and Predict
 
 Let's look at a simple example. The task is to train a classification model for the following documents:
 
@@ -97,9 +101,9 @@ Let's look at a simple example. The task is to train a classification model for 
 from slub_docsa.common.document import Document
 
 documents = [
-      Document(uri="uri://document1", title="This is a document title"),
-      Document(uri="uri://document2", title="Document with interesting topics"),
-      Document(uri="uri://document3", title="A boring title"),
+    Document(uri="uri://document1", title="This is a document title"),
+    Document(uri="uri://document2", title="Document with interesting topic"),
+    Document(uri="uri://document3", title="A boring topic"),
 ]
 ```
 
@@ -109,13 +113,13 @@ different number of subjects:
 
 ```python
 subjects = [
-      ["uri://subject1", "uri://subject2"],                   # document 1
-      ["uri://subject1", "uri://subject3", "uri://subject4"], # document 2
-      ["uri://subject2"],                                     # document 3
+    ["uri://subject1", "uri://subject2"],    # document 1
+    ["uri://subject3"],                      # document 2
+    ["uri://subject3", "uri://subject4"],    # document 3
 ]
 ```
 
-Not that both lists need to follow the same order, meaning document `documents[i]` is annotated with subjects at
+Note that both lists need to follow the same order, meaning document `documents[i]` is annotated with subjects at
 `subjects[i]`. Together, they form the dataset that is used for training and evaluation:
 
 ```python
@@ -127,14 +131,14 @@ dataset = SimpleDataset(documents=documents, subjects=subjects)
 Many machine learning algorithms operate based on a vector representation instead of text. In this case, a
 vectorization method needs to be selected. Various implementations can be found in
 `slub_docsa.data.preprocess.vectorizer`.
-In this example, we choose the `slub_docsa.data.preprocess.vectorizer.TfidfVectorizer`, which is based on the scikit
-implementation of the same name, see [sklearn.feature_extraction.text.TfidfVectorizer](
+In this example, we choose the `slub_docsa.data.preprocess.vectorizer.ScikitTfidfVectorizer`, which is based on the
+scikit implementation, see [sklearn.feature_extraction.text.TfidfVectorizer](
 https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html).
 
 ```python
-from slub_docsa.data.preprocess.vectorizer import TfidfVectorizer
+from slub_docsa.data.preprocess.vectorizer import ScikitTfidfVectorizer
 
-vectorizer = TfidfVectorizer()
+vectorizer = ScikitTfidfVectorizer()
 ```
 
 As a classification model we can choose from a number of existing implementations, see
@@ -174,10 +178,10 @@ The result will be a fixed ordering of subjects and a matrix that encodes which 
 subject (columns):
 
 ```python
-['uri://subject1', 'uri://subject3', 'uri://subject2', 'uri://subject4']
-[[1. 0. 1. 0.]
- [1. 1. 0. 1.]
- [0. 0. 1. 0.]]
+['uri://subject3', 'uri://subject2', 'uri://subject1', 'uri://subject4']
+[[0 1 1 0]
+ [1 0 0 0]
+ [1 0 0 1]]
 ```
 
 Then, the model can be trained:
@@ -186,12 +190,12 @@ Then, the model can be trained:
 model.fit(dataset.documents, incidence_matrix)
 ```
 
-In order to predict subject for new documents, we can provide a list of yet unknown documents.
+In order to predict subjects for new documents, we can provide a list of yet unknown documents.
 
 ```python
 new_documents = [
     Document(uri="uri://new_document1", title="Title of the new document"),
-    Document(uri="uri://new_document2", title="Boring subject"),
+    Document(uri="uri://new_document2", title="Another boring topic"),
 ]
 
 predicted_probabilities = model.predict_proba(new_documents)
@@ -202,19 +206,19 @@ The result will be a probability matrix, which encodes which of the new document
 to what degree (as a value between 0 and 1):
 
 ```python
-[[0.5 0.  1.  0. ]
- [0.5 0.5 0.5 0.5]]
+[[0.5 0.5 0.5 0. ]
+ [1.  0.  0.  0.5]]
 ```
 
-In order to calculate final prediction decision, a decision strategy needs to be applied to the probability scores,
+In order to calculate the final prediction decision, a decision strategy needs to be applied to the probability scores,
 which binarizes the matrix to an incidence matrix. Several strategies, e.g., based on a threshold or based on choosing
-the top-k subjects are implemented in `slub_docsa.evaluation.incidence`. In this example, we apply the top-2 decision
-strategy, which chooses two subjects with highest probability as the output:
+the top-k subjects are implemented in `slub_docsa.evaluation.incidence`. In this example, we apply the threshold
+decision strategy:
 
 ```python
-from slub_docsa.evaluation.incidence import top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import ThresholdIncidenceDecision
 
-incidence_decision_function = top_k_incidence_decision(k=2)
+incidence_decision_function = ThresholdIncidenceDecision(threshold=0.5)
 predicted_incidence = incidence_decision_function(predicted_probabilities)
 print(predicted_incidence)
 ```
@@ -222,12 +226,9 @@ print(predicted_incidence)
 The result will be a binary incidence matrix:
 
 ```python
-[[1. 0. 1. 0.]
- [0. 0. 1. 1.]]
+[[1 1 1 0]
+ [1 0 0 1]]
 ```
-
-Note that the decision for the second document will be random, since all subjects have equal probability according to
-the k-nearest neighor model.
 
 In order to retrieve the actual subjects represented by this incidence matrix, we can apply the following reverse
 function:
@@ -242,16 +243,16 @@ print(predicted_subjects)
 The output will be:
 
 ```python
-[['uri://subject1', 'uri://subject2'], ['uri://subject2', 'uri://subject4']]
+[['uri://subject3', 'uri://subject2', 'uri://subject1'], ['uri://subject3', 'uri://subject4']]
 ```
 
 Suppose the true subjects for both documents would be known, we can calculate several performance scores given both the
 predicted incidence and true incidence. The most common performance scores are precision, recall and f1-score. Again,
-this library provides an interface `slub_docsa.evaluation.score.scikit_incidence_metric` to the scikit-learn library,
+this library provides an interface `slub_docsa.evaluation.classification.score.scikit` to the scikit-learn library,
 such that scores can be easily calculated:
 
 ```python
-from slub_docsa.evaluation.score import scikit_incidence_metric
+from slub_docsa.evaluation.classification.score.scikit import scikit_incidence_metric
 from sklearn.metrics import f1_score
 
 true_subjects = [
@@ -272,19 +273,21 @@ print("f1 score is", score)
 The output will be:
 
 ```python
-f1 score is 0.8571428571428571
+f1 score is 0.7499999999999999
 ```
 
-### Example: Compare Models and Plot
+## Example: Compare Models and Plot
 
 The following example describes how a single dataset can be evaluate by comparing multiple different models based on
 multiple scores via cross-validation. Similar to before, we first have to define the dataset that is being used.
-In this example, let's use an aritificially generated hierarchical dataset, see
-`slub_docsa.data.artificial.hierarchical`.
+In this example, let's use an artificially generated hierarchical dataset, see
+`slub_docsa.data.artificial.hierarchical`. Artificial datasets allow to compare models based on known (generated)
+correlations between subjects and documents. This helps to better understand the capabilities and properties of a
+classification algorithm.
 
-The dataset is generated based on a selection of tokens (or words). In order to extract common english words, we use
-DBpedia as a resource. We download and iterate over 1000 abstracts from DBpedia to extract common english words via
-`slub_docsa.data.artificial.tokens.token_probabilities_from_dbpedia`.
+The following dataset is generated based on a selection of tokens (or words). In order to extract common english words,
+we use DBpedia as a resource. We download and iterate over 1000 abstracts from DBpedia to extract common english words
+via `slub_docsa.data.artificial.tokens.token_probabilities_from_dbpedia`.
 
 ```python
 from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
@@ -346,7 +349,7 @@ Also, each document is assigned to one or multiple artificial subjects structure
 ```python
 from slub_docsa.common.subject import print_subject_hierarchy
 
-print_subject_hierarchy(subject_hierarchy)
+print_subject_hierarchy("en", subject_hierarchy)
 ```
 
 The output will be:
@@ -398,47 +401,54 @@ Depending on the random generation process, the result may vary. In this case, o
 9
 ```
 
-Next, we need to define multiple classification models that will be evaluated:
+Next, we need to define multiple classification models that will be evaluated. Since they need to be initialized
+multiple times during the evaluation (once for each cross-validation split), a generator function is used.
 
 ```python
 from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel
 from slub_docsa.models.classification.scikit import ScikitClassifier
 from slub_docsa.data.preprocess.vectorizer import TfidfStemmingVectorizer
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import f1_score
 
-models = [
-    OracleModel(),
-    NihilisticModel(),
-    ScikitClassifier(
+model_generators = [
+    OracleModel,
+    NihilisticModel,
+    lambda: ScikitClassifier(
         predictor=KNeighborsClassifier(n_neighbors=1),
-        vectorizer=TfidfStemmingVectorizer("en", max_features=2000),
+        vectorizer=StemmingVectorizer(GensimTfidfVectorizer(max_features=2000), "en"),
     )
 ]
 ```
 
-Since the predictive performance can be evaluated in various ways, we also need to define multiple score functions:
+In order to evaluate the predictive performance of each model, we can define multiple score functions. For large
+datasets, the required probability matrices or incidence matrices (of size `number of documents` x `number of subjects`)
+would require a lot of memory. Therefore, models are evaluated and scored in batches. This library provides a number
+of scores that can be calculated in batches, see `slub_docsa.evaluation.classification.score.batched`, most notably the
+precision, recall and f1 score, as well as a hierarchical loss, see
+`slub_docsa.evaluation.classification.score.hierarchical`. Again, since scores need to be evaluated for multiple
+cross-validation splits, they are defined as generator functions:
 
 ```python
-from slub_docsa.evaluation.score import scikit_metric_for_best_threshold_based_on_f1score
-from slub_docsa.evaluation.score import cesa_bianchi_h_loss, scikit_incidence_metric
-from slub_docsa.evaluation.incidence import positive_top_k_incidence_decision
+from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
+from slub_docsa.evaluation.classification.score.batched import BatchedBestThresholdScore, BatchedF1Score
+from slub_docsa.evaluation.classification.score.batched import BatchedIncidenceDecisionScore
+from slub_docsa.evaluation.classification.score.hierarchical import BatchedCesaBianchiIncidenceLoss
 
-scores = [
+score_generators = [
     # f1 score for best threshold
-    scikit_metric_for_best_threshold_based_on_f1score(
-        f1_score, average="micro", zero_division=0
+    lambda: BatchedBestThresholdScore(
+        score_generator=BatchedF1Score
     ),
     # f1 score for top-3 selection
-    scikit_incidence_metric(
-        positive_top_k_incidence_decision(3),
-        f1_score,
-        average="micro",
-        zero_division=0
+    lambda: BatchedIncidenceDecisionScore(
+        incidence_decision=PositiveTopkIncidenceDecision(3),
+        incidence_score=BatchedF1Score()
     ),
     # hierarchical loss
-    scikit_metric_for_best_threshold_based_on_f1score(
-        cesa_bianchi_h_loss(subject_hierarchy, subject_order, log_factor=1000),
+    lambda: BatchedBestThresholdScore(
+        score_generator=lambda: BatchedCesaBianchiIncidenceLoss(
+            subject_hierarchy, subject_order, log_factor=1000
+        ),
     )
 ]
 ```
@@ -455,19 +465,19 @@ Next, we will trigger an evaluation pipeline, which will train each model multip
 split, and calculate each score function by comparing the model predictions with the test dataset.
 
 ```python
-from slub_docsa.evaluation.pipeline import score_classification_models_for_dataset
-from slub_docsa.evaluation.split import scikit_kfold_splitter
+from slub_docsa.evaluation.classification.pipeline import score_classification_models_for_dataset_with_splits
+from slub_docsa.evaluation.classification.split import scikit_kfold_splitter
 
 n_splits = 10
 split_function = scikit_kfold_splitter(n_splits)
 
-score_matrix, _ = score_classification_models_for_dataset(
+score_matrix, _ = score_classification_models_for_dataset_with_splits(
     n_splits,
-    dataset,
-    subject_order,
-    models,
     split_function,
-    scores,
+    subject_order,
+    dataset,
+    model_generators,
+    score_generators,
     [],
 )
 ```
@@ -475,14 +485,12 @@ score_matrix, _ = score_classification_models_for_dataset(
 The console output will contain a number of status messages reporting the evaluation progress:
 
 ```python
-INFO:slub_docsa.evaluation.pipeline:prepare 1-th cross validation split
-INFO:slub_docsa.evaluation.pipeline:evaluate 1-th cross validation split with 900 training and 100 test samples
-INFO:slub_docsa.evaluation.pipeline:evaluate model <OracleModel> for 1-th split
-INFO:slub_docsa.evaluation.pipeline:do training
-INFO:slub_docsa.evaluation.pipeline:do prediction
-INFO:slub_docsa.evaluation.pipeline:do global scoring
-INFO:slub_docsa.evaluation.pipeline:do per-subject scoring
-INFO:slub_docsa.evaluation.pipeline:overall scores are: [1. 1. 0.]
+INFO:slub_docsa.evaluation.classification.pipeline:prepare 1-th cross validation split
+INFO:slub_docsa.evaluation.classification.pipeline:train and evaluate 1-th split with 900 train and 100 test samples
+INFO:slub_docsa.evaluation.classification.pipeline:train and evaluate model <OracleModel>
+INFO:slub_docsa.evaluation.classification.pipeline:train model <OracleModel>
+INFO:slub_docsa.evaluation.classification.pipeline:scores for model <OracleModel> are [0.999, 0.999, 0.0]
+INFO:slub_docsa.evaluation.classification.pipeline:train and evaluate model <NihilisticModel>
 ...
 ```
 
@@ -518,3 +526,19 @@ The result will be three files that illustrate the performance of each model in 
 - `example_score_matrix.pdf`
 
 """
+
+import os
+import subprocess  # nosec
+
+
+def _git_commit_hash():
+    """Return the shortened git commit hash of this repository or an empty string if not available."""
+    try:
+        return "-" + subprocess.check_output(  # nosec
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__))).strip().decode()
+    except Exception:  # pylint: disable=broad-except
+        return ""
+
+
+__version__ = "0.1.0.dev1" + _git_commit_hash()

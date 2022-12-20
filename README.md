@@ -14,7 +14,7 @@ generated as described below.
 
 ## Installation
 
-This projects requires [Python](https://www.python.org/) v3.6 or above and uses [pip](https://pypi.org/project/pip/) 
+This projects requires [Python](https://www.python.org/) v3.8 or above and uses [pip](https://pypi.org/project/pip/) 
 for dependency management. Besides, this package uses [pyTorch](https://pytorch.org/) to train 
 [Artificial Neural Networks](https://en.wikipedia.org/wiki/Artificial_neural_network) via GPUs. 
 Make sure to install the latest Nvidia graphics drivers and check 
@@ -41,7 +41,7 @@ Use *make* to install python dependencies by executing the following commands:
 - `make docs`  
   (generate API documentation, requires test dependencies)
 
-### From Source using Ubuntu 18.04
+### From Source using Ubuntu 20.04
 
 Install essentials like *python3*, *pip* and *make*:
 
@@ -65,12 +65,13 @@ Run *make* commands as provided above:
 
 Further documentation of this project can be found at the following locations:
 
-- [API documentation](./docs/python/slub_docsa/index.html) needs to be generated via `make docs` and is than provided 
-  in the directory `docs/python/slub_docsa/index.html`.
-- Tutorials and examples are described as part of the [API documentation](./docs/python/slub_docsa/index.html)
+- [API documentation](http://slub.github.io/docsa/) needs to be generated via `make docs` and is than provided 
+  in the directory `docs/python/slub_docsa.html`.
+- Tutorials and examples are included in the [API documentation](http://slub.github.io/docsa/)
 - Developer meeting notes can be found in a separate 
   [Gitlab Wiki](https://git.slub-dresden.de/lod/maschinelle-klassifizierung/docs/-/wikis/home/Protokolle).
-- Results of various experiments related to the [Qucosa](https://www.qucosa.de/) dataset can be found in a separate 
+- Results of various experiments related to the [Qucosa](https://www.qucosa.de/) and 
+  [k10plus](https://wiki.k10plus.de/pages/viewpage.action?pageId=358711298) datasets can be found in a separate 
   [Gitlab repository](https://git.slub-dresden.de/lod/maschinelle-klassifizierung/docs/-/tree/main/experiments).
 
 ## Development
@@ -87,7 +88,7 @@ This will link your local project such that changes to source files are immediat
 ### Container Environment
 
 This project also provides container images for development. You can use [docker](https://docs.docker.com), but also 
-other container runtimes, e.g., [podman`](https://podman.io/).
+other container runtimes, e.g., [podman](https://podman.io/).
 
 Install a Container Runtime
 
@@ -101,18 +102,19 @@ Install a Container Runtime
   - Install the [nvidia container runtime](https://github.com/NVIDIA/nvidia-container-runtime) using the `centos8`
   repositories via `dnf install nvidia-container-runtime`, see
   [installation instructions](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-  - Set `no-cgroups = true` in `/etc/nvidia-container-runtime/config.toml`, which is required since Nvidia does not yet support cgroups v2
+  - Set `no-cgroups = true` in `/etc/nvidia-container-runtime/config.toml`, which is required since Nvidia does not yet 
+    support cgroups v2
   - Check your CUDA version with `nvidia-smi`, e.g., `11.4`
   - Identify the matching cuda docker image, e.g., `nvidia/cuda:11.4.1-base-centos8`
   - Verify gpu support in podman via
-  `podman run --security-opt=label=disable --rm nvidia/cuda:11.4.1-base-centos8 nvidia-smi`
+    `podman run --security-opt=label=disable --rm nvidia/cuda:11.4.1-base-centos8 nvidia-smi`
 
 Setup the Development Environment
 - Docker images for development can be found in the `code/docker/devel` directory.
 - Run `build.sh gpu` to build these docker images with gpu support.
-- Run `shell_python.sh gpu` to start a python container with gpu support.
-- Run `up.sh gpu` and `shell_annif.sh` to start Annif, `down.sh gpu` to stop. 
-  Annif itself does not utilize gpu support though.
+- Run `up.sh gpu` and `down.sh gpu` to start and shutdown the development container.
+- Run `shell_python.sh gpu` to enter the python container with gpu support.
+- Run `shell_annif.sh` to enter the Annif container
 
 Setup [Visual Studio Code](https://code.visualstudio.com/), which supports many useful features during development:
 - [Python Integration](https://code.visualstudio.com/docs/languages/python), including auto complete, linting, debugging

@@ -16,11 +16,11 @@ target subjects of the test dataset. Instead of learning a model it simply retur
 As a result, this model should always outperform any other classification model. This can be useful to determine
 the maximal achievable score in some scenarios where the best score is not known in advance.
 
-For example, when chosing subjects based on the `slub_docsa.evaluation.incidence.positive_top_k_incidence_decision`
-and there are documents that are annotated with more then `k` subjects, even the
-`slub_docsa.models.classification.dummy.OracleModel` will not be able to achieve the maximum `sklearn.metrics.f1_score`
-of `1.0`, since some subjects are not predicted even if their test subject probabilities are correctly predicted as
-`1.0`.
+For example, when chosing subjects based on the
+`slub_docsa.evaluation.classification.incidence.PositiveTopkIncidenceDecision` and there are documents that are
+annotated with more then `k` subjects, even the `slub_docsa.models.classification.dummy.OracleModel` will not be able
+to achieve the maximum f1 score of `1.0`, since some subjects are not predicted even if their test subject
+probabilities are correctly predicted as `1.0`.
 
 ### Nihilistic
 
@@ -32,8 +32,8 @@ predictions.
 The `slub_docsa.models.classification.dummy.RandomModel` returns uniform random subject probabilities between `0.0` and
 `1.0`.
 
-This means, for example, using the `slub_docsa.evaluation.incidence.threshold_incidence_decision` with `threshold=0.5`,
-it will predict on average half of all available subjects.
+This means, for example, using the `slub_docsa.evaluation.classification.incidence.ThresholdIncidenceDecision` with
+`threshold=0.5`, it will predict on average half of all available subjects.
 
 Random predictions can be useful as a minimum baseline and to determine minimum score values. Ideally, non-dummy models
 should outperform the random model.
@@ -68,37 +68,16 @@ strategies with the [`DummyClassifier`](
 https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html). Again, these models can be
 useful as a baseline for comparison, or for testing purposes.
 
-### k-Nearest Neighbor
-
-
-
-### Decision Tree
-
-### Random Forest
-
-### Multi-Layer Perceptron
-
-### Logistic Regression
-
-### Naive Bayes
-
-### Support Vector Machine
-
 ## Annif Models
 
 The following Annif models are supported by this implementation. Their respective name needs to be provided
-as parameter `model_type` to `AnnifModel`. Performance metrics are calculated using an artificial random dataset
-generated via `slub_docsa.data.artificial.hierarchical.generate_hierarchical_random_dataset` with X, Y, Z.
+as parameter `model_type` to `AnnifModel`.
 
 ### Annif Tf-Idf
 
 The `tfidf` model (see [description](https://github.com/NatLibFi/Annif/wiki/Backend%3A-TF-IDF) and
 [implementation](https://github.com/NatLibFi/Annif/blob/master/annif/backend/tfidf.py)) uses the classic
 term-frequency (tf) and inverse-document-frequency (idf) statistics for vectorization of both documents and subjects.
-
-Requirements
-
-- None
 
 Training
 
@@ -118,23 +97,11 @@ Limitations
 
 - Since only similarities are calculated, this model is not able to learn any inter-subject relationships.
 
-Performance
-
-- `Todo` average top-3 f1-score, precision, recall
-
-Literature
-
-- `Todo`
-
 ### Annif Support Vector Classifier
 
 The `svc` model (see [description](https://github.com/NatLibFi/Annif/wiki/Backend%3A-SVC) and
 [implementation](https://github.com/NatLibFi/Annif/blob/master/annif/backend/svc.py)) uses the tf-idf vectorization
 method and learns models using Support Vector Machines (SVM) with a linear kernel.
-
-Requirements
-
-- None
 
 Training
 
@@ -158,14 +125,6 @@ Limitations
   particular document. However, the randomness is not specifically implemented, but relies on the "randomness" of the
   `iter` strategy for the list of subject annotations.
 
-Performance
-
-- `Todo`
-
-Literature
-
-- `Todo`
-
 ### Annif Fasttext
 
 The `fasttext` model (see [description](https://github.com/NatLibFi/Annif/wiki/Backend%3A-fastText) and
@@ -174,48 +133,13 @@ The `fasttext` model (see [description](https://github.com/NatLibFi/Annif/wiki/B
 
 FastText is an alternative vectorization method that uses Artificial Neural Networks to learn word embeddings.
 
-requires pip install
-
-### Annif Omikuji
-
-requires pip install
-
-### Annif vw_multi
-
-requires pip install
-
-### Annif Yake
-
-`yake`
-
-Requirements
-
-- requires skos attribute, uses skos:"prefLabel", but no skos:"broader"
-
 ## Not Yet Supported Models
 
 The following models are not yet supported or not yet tested.
 
-### Annif Maui
-
-### Annif stwfsa
-
-`stwfsa`
-
-Requirements
-
-- requires subjects as rdflib graph, supports using skos:"braoder"
-
-### Annif mllm
-
-Requirements
-
-- requires subjects as rdflib graph, supports skos:"broader"
-- requires subject labels that match terms in documents
-
-### Annif ensemble
-
-### Annif pav
-
-### Annif nn_ensemble
+- Annif Maui
+- Annif stwfsa
+- Annif ensemble
+- Annif pav
+- Annif nn_ensemble
 """

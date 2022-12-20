@@ -2,14 +2,25 @@
     "files.exclude": {
         "**/__pycache__": true
     },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/code/python/build": true,
+    },
     "python.defaultInterpreterPath": "/home/slub/.venv/bin/python",
-    "python.analysis.typeCheckingMode": "basic",
+    "python.autoComplete.extraPaths": [
+        "/home/slub/workspace/code/python/src",
+    ],
+    "python.analysis.exclude": ["/home/slub/workspace/code/python/build"],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.autoSearchPaths": true,
     "python.linting.pylintEnabled": true,
     "python.linting.pylintArgs": ["--max-line-length=120", "--min-similarity-lines=8", "--extension-pkg-whitelist=lxml"],
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Args": ["--max-line-length=120", "--ignore=D301,W503"],
     "python.linting.banditEnabled": true,
-    "python.linting.banditArgs": ["--configfile code/python/bandit.yml"],
+    "python.linting.banditArgs": ["-c", "code/python/.bandit.yaml"],
     "python.linting.enabled": true,
     "files.trimTrailingWhitespace": true,
     "[markdown]": {
@@ -17,4 +28,13 @@
     },
     "editor.rulers": [120],
     "terminal.integrated.scrollback": 10000,
+    "python.testing.pytestArgs": [
+        "code/python/tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "autoDocstring.docstringFormat": "numpy",
+    "python.analysis.extraPaths": [
+        "/home/slub/workspace/code/python/src"
+    ],
 }
