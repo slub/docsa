@@ -123,7 +123,7 @@ def _classify_train_action_generator(datasource: str):
                 model_version="0.0.0",
                 schema_id=named_dataset.schema_id,
                 creation_date=current_date_as_model_creation_date(),
-                supported_languages=[named_dataset.languages],
+                supported_languages=named_dataset.languages,
                 description=f"model trained for dataset variant '{dataset_name}' "
                             + f"with classifiation model '{model_type}'",
                 tags=[],
