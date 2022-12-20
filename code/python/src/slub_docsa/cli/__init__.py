@@ -1,17 +1,18 @@
 """Command Line Interface.
 
 This library provides a basic command line interface to run common tasks, e.g., training and evaluating a
-classification model for Qucosa documents.
+classification model for the Qucosa or k10plus dataset.
 
 # Available Commands
 
 The following commands are implemented:
 
-- **classify [qucosa|k10plus] train** - train a classification model using the Qucosa or k10plus datasets
-- **classify [qucosa|k10plus] predict** - predict subjects for new documents based on a trained model
-- **experiments [qucosa|k10plus] classify_many** - evaluate multiple classification models and generate plots
-- **experiments qucosa cluster_many**- evaluate multiple clustering models and generate plots
-- **experiments qucosa cluster_one** - evaluate a single clustering model and generate plots
+- **classify [dataset] train** - train a classification model using the Qucosa or k10plus datasets
+- **classify [dataset] predict** - predict subjects for new documents based on a trained model
+- **experiments [dataset] classify_many** - evaluate multiple classification models and generate plots
+- **experiments [dataset] cluster_many**- evaluate multiple clustering models and generate plots
+- **experiments [dataset] cluster_one** - evaluate a single clustering model and generate plots
+- **serve** - start the REST service, see `slub_docsa.serve`
 
 Each command supports the following basic arguments:
 
@@ -22,7 +23,7 @@ Each command supports the following basic arguments:
 # Storage Configuration
 
 All commands allow to support common arguments that allow to specify where resources, cached files and figures are
-stored. The following directories are distinguished:
+stored or loaded from. The following directories are distinguished:
 
 - `data_dir` - top-level directory for storing files
 - `resources_dir` - directory used to stored downloaded but unprocessed resources
@@ -41,9 +42,9 @@ set to:
 
 # Train a Classification Model and Predict
 
-## Select a Dataset and Model
+## Select a Dataset Variant and Model
 
-In order to select a Qucosa dataset variant as well as a specific classification model, the help message provides a
+In order to select a dataset variant as well as a specific classification model, the help message provides a
 list of all available datasets and models:
 
 ```
@@ -53,12 +54,13 @@ slub_docsa classify qucosa train -h
 The output will be:
 
 ```
-usage: slub_docsa classify qucosa train [-h] [-v] [-s] [--data_dir DATA_DIR]
-                                        [--resources_dir RESOURCES_DIR]
-                                        [--cache_dir CACHE_DIR]
-                                        [--figures_dir FIGURES_DIR]
-                                        [--dataset DATASET] [--model MODEL]
-                                        [--persist_dir PERSIST] [--limit LIMIT]
+usage: slub_docsa classify qucosa train [-h] [-v] [-s]
+                                        [--data_dir DATA_DIR] [--resources_dir RESOURCES_DIR]
+                                        [--cache_dir CACHE_DIR] [--figures_dir FIGURES_DIR]
+                                        [--serve_dir SERVE_DIR] [--persist_dir PERSIST]
+                                        [--dataset DATASET]
+                                        [--model MODEL]
+                                        [--limit LIMIT]
 ...
 ...
 ...
@@ -89,9 +91,10 @@ usage: slub_docsa classify qucosa train [-h] [-v] [-s] [--data_dir DATA_DIR]
 ```
 
 Note that not all models are supported in combination with this command, since not all models can be saved to disk for
-later re-use, e.g., the `slub_docsa.models.classification.dummy.OracleModel` will not work here.
+later re-use, e.g., the `slub_docsa.models.classification.dummy.OracleModel` can only be used with the `experiments`
+command.
 
-Qucosa dataset variants are distinguished by:
+Dataset variants are usually distinguished by:
 
 - `all` vs `de` - whether documents are filtered based on their provided language information (`all` means no
   filtering, `de` means only german documents)
@@ -99,6 +102,9 @@ Qucosa dataset variants are distinguished by:
   abstracts, titles + fulltexts)
 - `langid` - whether the document language is further checked and filtered using the `langid` python module
 - `rvk` vs `ddc` - which subject annotations are extracted for the documents and used for training and prediction
+
+Additional information about the qucosa and k10plus dataset variants can be found in `slub_docsa.data.load.qucosa` and
+`slub_docsa.data.load.k10plus`.
 
 Model variants are distinguished by:
 
@@ -108,6 +114,8 @@ Model variants are distinguished by:
 - `2k`, `10k`, `40k` - the size of tfidf vectors that are being generated
 - `sts1` vs `sts8` - the number of sub-text samples that are being vectorized using the DBMDZ pre-trained Bert model
 - `knn`, `rforest`, `dtree`, `torch_ann` - which machine learning model is used for training
+
+Additional information about the available models can be found in `slub_docsa.models.classification`.
 
 ## Train a Model
 
@@ -125,18 +133,20 @@ A number of task are performed:
 1. The Qucosa data is being downloaded (if not present already) from the SLUB Elasticsearch server. Make sure to supply
    the username and password via environment variables `SLUB_ELASTICSEARCH_SERVER_USER` and
    `SLUB_ELASTICSEARCH_SERVER_PASSWORD`, see the module `slub_docsa.data.load.qucosa`.
-2. Qucosa documents are parsed, checked for their language, and stored in a database file for easy access later on in
-   the `<cache_dir>`.
+2. Qucosa documents are parsed, checked for their language, and stored in an Sqlite database file for easy access later
+   on in the `<cache_dir>`.
 3. Vectors are generated for each document depending on the chosen model and cached in the `<cache_dir>`.
 4. The machine learning training algorithm is run with all available Qucosa documents.
 5. The vectorization model and classification model are stored in `<persist_dir>`, by default in
-   `<data_dir>/models/<dataset>/<model>/`.
+   `<data_dir>/models/<dataset>__<model>/`.
 
 Note that:
 
 - If pre-processing of the data fails at some point, a number of files might have been generated in `<cache_dir>`.
   A subsequent run might try to load data from these incomplete cached files. Therefore, if in doubt, delete
   `<cache_dir>` until all files are succesfully pre-processed without any problems.
+- The generated classification model can be loaded via the REST service by copying the directory `<persist_dir>` to
+  the directory that is scanned for models by the REST service, meaning `<serve_dir>/classification_models/`.
 
 ## Predict based on Arbitrary Text
 
@@ -164,6 +174,10 @@ prediction results consisting of the score, the subject URI and its label (if av
 8.523816e-05 https://rvk.uni-regensburg.de/api/xml/node/WQ%203600 Pterygota (Fluginsekten), Palaeoptera (Altfl?gler), \
 Neoptera (Neufl?gler), Polyneoptera
 ```
+
+Note that a command line based prediction (as demostrated above) will be very slow, since the full `slub_docsa` library
+as well as the classification model itself is loaded from scratch each time the command is issued. In order to classify
+mulitple documents with decent performance, start the REST service and issue queries to it, see `slub_docsa.serve`.
 
 ## Predict based on A New Qucosa Document
 

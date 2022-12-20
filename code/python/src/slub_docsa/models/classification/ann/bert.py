@@ -12,7 +12,7 @@ from slub_docsa.data.preprocess.vectorizer import AbstractSequenceVectorizer
 from slub_docsa.models.classification.ann.base import AbstractTorchModel
 
 
-class BertModule(torch.nn.Module):
+class _BertModule(torch.nn.Module):
     """Tiny bert module."""
 
     def __init__(
@@ -91,7 +91,7 @@ class TorchBertModel(AbstractTorchModel):
 
     def get_model(self, n_inputs, n_outputs) -> torch.nn.Module:
         """Return the torch module describing the BERT neural network."""
-        return BertModule(
+        return _BertModule(
             vocabulary_size=n_inputs,
             max_length=self.vectorizer.max_sequence_length(),
             number_of_subjects=n_outputs,

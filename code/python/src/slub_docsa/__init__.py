@@ -68,8 +68,8 @@ In order to get started, there are two possible approaches: the command line int
 ## Command Line Interface (CLI)
 
 This library provides a single command `slub_docsa`, which supports to both train and evaluate classification and
-clustering algorithms. Trained models can be loaded by a REST service. A detailed description can be found in
-`slub_docsa.cli`.
+clustering algorithms. A REST service can be started that provides access to trained models. A detailed description
+about each CLI command can be found in `slub_docsa.cli`.
 
 ## Python API
 
@@ -117,7 +117,7 @@ subjects = [
 ]
 ```
 
-Not that both lists need to follow the same order, meaning document `documents[i]` is annotated with subjects at
+Note that both lists need to follow the same order, meaning document `documents[i]` is annotated with subjects at
 `subjects[i]`. Together, they form the dataset that is used for training and evaluation:
 
 ```python
@@ -130,7 +130,7 @@ Many machine learning algorithms operate based on a vector representation instea
 vectorization method needs to be selected. Various implementations can be found in
 `slub_docsa.data.preprocess.vectorizer`.
 In this example, we choose the `slub_docsa.data.preprocess.vectorizer.ScikitTfidfVectorizer`, which is based on the
-scikit implementation of the same name, see [sklearn.feature_extraction.text.TfidfVectorizer](
+scikit implementation, see [sklearn.feature_extraction.text.TfidfVectorizer](
 https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html).
 
 ```python
@@ -188,7 +188,7 @@ Then, the model can be trained:
 model.fit(dataset.documents, incidence_matrix)
 ```
 
-In order to predict subject for new documents, we can provide a list of yet unknown documents.
+In order to predict subjects for new documents, we can provide a list of yet unknown documents.
 
 ```python
 new_documents = [
@@ -208,7 +208,7 @@ to what degree (as a value between 0 and 1):
  [1.  0.  0.  0.5]]
 ```
 
-In order to calculate final prediction decision, a decision strategy needs to be applied to the probability scores,
+In order to calculate the final prediction decision, a decision strategy needs to be applied to the probability scores,
 which binarizes the matrix to an incidence matrix. Several strategies, e.g., based on a threshold or based on choosing
 the top-k subjects are implemented in `slub_docsa.evaluation.incidence`. In this example, we apply the threshold
 decision strategy:
@@ -278,12 +278,14 @@ f1 score is 0.7499999999999999
 
 The following example describes how a single dataset can be evaluate by comparing multiple different models based on
 multiple scores via cross-validation. Similar to before, we first have to define the dataset that is being used.
-In this example, let's use an aritificially generated hierarchical dataset, see
-`slub_docsa.data.artificial.hierarchical`.
+In this example, let's use an artificially generated hierarchical dataset, see
+`slub_docsa.data.artificial.hierarchical`. Artificial datasets allow to compare models based on known (generated)
+correlations between subjects and documents. This helps to better understand the capabilities and properties of a
+classification algorithm.
 
-The dataset is generated based on a selection of tokens (or words). In order to extract common english words, we use
-DBpedia as a resource. We download and iterate over 1000 abstracts from DBpedia to extract common english words via
-`slub_docsa.data.artificial.tokens.token_probabilities_from_dbpedia`.
+The following dataset is generated based on a selection of tokens (or words). In order to extract common english words,
+we use DBpedia as a resource. We download and iterate over 1000 abstracts from DBpedia to extract common english words
+via `slub_docsa.data.artificial.tokens.token_probabilities_from_dbpedia`.
 
 ```python
 from slub_docsa.data.artificial.tokens import token_probabilities_from_dbpedia
@@ -397,7 +399,8 @@ Depending on the random generation process, the result may vary. In this case, o
 9
 ```
 
-Next, we need to define multiple classification models that will be evaluated:
+Next, we need to define multiple classification models that will be evaluated. Since they need to be initialized
+multiple times during the evaluation (once for each cross-validation split), a generator function is used.
 
 ```python
 from slub_docsa.models.classification.dummy import NihilisticModel, OracleModel
@@ -415,7 +418,13 @@ model_generators = [
 ]
 ```
 
-Since the predictive performance can be evaluated in various ways, we also need to define multiple score functions:
+In order to evaluate the predictive performance of each model, we can define multiple score functions. For large
+datasets, the required probability matrices or incidence matrices (of size `number of documents` x `number of subjects`)
+would require a lot of memory. Therefore, models are evaluated and scored in batches. This library provides a number
+of scores that can be calculated in batches, see `slub_docsa.evaluation.classification.score.batched`, most notably the
+precision, recall and f1 score, as well as a hierarchical loss, see
+`slub_docsa.evaluation.classification.score.hierarchical`. Again, since scores need to be evaluated for multiple
+cross-validation splits, they are defined as generator functions:
 
 ```python
 from slub_docsa.evaluation.classification.incidence import PositiveTopkIncidenceDecision
