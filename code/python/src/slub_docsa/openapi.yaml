@@ -206,9 +206,6 @@ paths:
             the total amount of bytes in the request, or the server has an upper
             limit on the number of documents that can be classified as one
             batch
-        429:
-          description: |
-            too many requests (e.g. quota reached)
         500:
           $ref: "#/components/responses/UnexpectedErrorResponse"
 
@@ -347,9 +344,6 @@ paths:
             the total amount of bytes in the request, or the server has an upper
             limit on the number of documents that can be classified as one
             batch
-        429:
-          description: |
-            too many requests (e.g. quota reached)
         500:
           $ref: "#/components/responses/UnexpectedErrorResponse"
 
