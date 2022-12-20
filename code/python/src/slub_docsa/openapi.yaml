@@ -3,21 +3,18 @@ openapi: 3.0.2 # https://spec.openapis.org/oas/v3.0.2
 info:
   title: Bibliographic Classification Service
   description: >
-    This is a <b>description</b>
-    with multiple <br />lines
-  version: 0.0.1-draft
+    This service allows to predict subjects for documents based on different classification models.
+  version: 0.1.0-draft
   contact:
-    name: SLUB Dresden
-    url: https://slub-dresden.de
+    name: slub_docsa (GitHub)
+    url: https://github.com/slub/docsa/
   license:
-    name: License Name
-    url: https://some-url.com
+    name: Apache License 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 
 servers:
   - url: http://localhost:5000/v1
     description: local development server
-  - url: https://docsa.slub-dresden.de/v1
-    description: SLUB server
 
 # -----------------------------------------------------------------------------
 
