@@ -31,7 +31,7 @@ package:
 
 .PHONY: serve
 serve:
-	slub_docsa serve
+	(cd data/ && slub_docsa serve)
 
 .PHONY: lint
 lint:
