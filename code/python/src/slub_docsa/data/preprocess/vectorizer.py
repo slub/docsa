@@ -448,7 +448,7 @@ class PersistedCachedVectorizer(PersistableVectorizerMixin, AbstractVectorizer):
 
             total += len(texts_chunk)
             if time.time() - last_log_time > 5.0:
-                logger.debug("loaded vectorizations or generated vectors for %d texts so far", total)
+                logger.info("loaded vectorizations or generated vectors for %d texts so far", total)
                 last_log_time = time.time()
 
     def output_shape(self):

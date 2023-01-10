@@ -43,7 +43,7 @@ def get_dbmdz_classification_models_map() -> ModelTypeMapping:
         ),
         "dbmdz_bert_sts1_torch_ann": lambda subject_hierarchy, subject_order: TorchBertSequenceClassificationHeadModel(
             max_training_t05_f1=0.85,
-            max_training_time=600,
+            max_training_time=3600,  # 1 hour
             batch_size=64,
             positive_class_weight=20.0,
             positive_class_weight_min=5.0,
