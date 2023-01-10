@@ -1,1 +1,5 @@
 data
+code/python/.pytest_cache
+code/python/build
+code/python/dist
+code/docker/prod/slub_docsa_production.tar.gz
