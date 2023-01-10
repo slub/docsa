@@ -32,9 +32,9 @@ def save_dataset_as_annif_tsv(
         for i, doc in enumerate(dataset.documents):
             text = document_as_concatenated_string(doc)
             text = text.replace("\n", " ").replace("\r", "").replace("\t", " ").replace("  ", " ")
-            labels_list = dataset.subjects[i]
-            labels_str = " ".join(map(lambda l: f"<{l}>", labels_list))
-            f_tsv.write(f"{text}\t{labels_str}\n")
+            subject_uri_list = dataset.subjects[i]
+            subject_uri_str = " ".join(map(lambda uri: f"<{uri}>", subject_uri_list))
+            f_tsv.write(f"{text}\t{subject_uri_str}\n")
 
 
 def save_subject_labels_as_annif_tsv(

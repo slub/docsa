@@ -734,5 +734,5 @@ def save_qucosa_simple_rvk_training_data_as_annif_tsv(
         with open(filepath, "w", encoding="utf8") as f_tsv:
             for doc, subjects in read_qucosa_samples(qucosa_iterator):
                 text = doc.title
-                labels_str = " ".join(map(lambda l: f"<{l}>", subjects))
-                f_tsv.write(f"{text}\t{labels_str}\n")
+                uri_str = " ".join(map(lambda uri: f"<{uri}>", subjects))
+                f_tsv.write(f"{text}\t{uri_str}\n")

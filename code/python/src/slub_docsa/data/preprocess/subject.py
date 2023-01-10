@@ -277,7 +277,10 @@ def prune_subject_targets_to_level(
     SubjectTargets
         A list of subject uri lists, each pruned according to `prune_subject_uris_to_level`
     """
-    return list(map(lambda l: prune_subject_uris_to_level(level, l, subject_hierarchy), subject_target_list))
+    return list(map(
+        lambda subjects: prune_subject_uris_to_level(level, subjects, subject_hierarchy),
+        subject_target_list
+    ))
 
 
 def count_number_of_samples_by_subjects(subject_targets: SubjectTargets) -> Mapping[str, int]:

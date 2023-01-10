@@ -98,7 +98,10 @@ def subject_targets_from_incidence_matrix(
             + f"but subject order has {len(subject_order)} entries"
         )
 
-    return list(map(lambda l: list(map(lambda i: subject_order[i], np.where(l == 1)[0])), incidence_array))
+    return list(map(
+        lambda incidence_vector: list(map(lambda i: subject_order[i], np.where(incidence_vector == 1)[0])),
+        incidence_array
+    ))
 
 
 def subject_idx_from_incidence_matrix(
@@ -118,7 +121,10 @@ def subject_idx_from_incidence_matrix(
         which contains the list of indexes (columns) that equals to 1 for the corresponding element in
         `incidence_matrix`.
     """
-    return list(map(lambda l: list(np.where(np.array(l) == 1)[0]), incidence_matrix))
+    return list(map(
+        lambda incidence_vector: list(np.where(np.array(incidence_vector) == 1)[0]),
+        incidence_matrix
+    ))
 
 
 class ThresholdIncidenceDecision(IncidenceDecisionFunction):
