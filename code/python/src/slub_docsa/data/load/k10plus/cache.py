@@ -149,7 +149,9 @@ def k10plus_read_from_json_cache(
     json_filepaths = [k10plus_json_cache_filepath_from_xml_filepath(fp, json_directory) for fp in xml_filepaths]
 
     # create cache if json files are missing
-    all_json_exist = min(os.path.exists(fp) for fp in json_filepaths)
+    all_json_exist = False
+    if json_filepaths:
+        all_json_exist = min(os.path.exists(fp) for fp in json_filepaths)
     if not all_json_exist:
         k10plus_build_json_cache(xml_directory, json_directory, download, workers, line_batch_size)
 

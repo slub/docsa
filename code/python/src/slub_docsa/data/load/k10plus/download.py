@@ -69,6 +69,7 @@ def k10plus_marc21_xml_files(
     """
     if directory is None:
         directory = os.path.join(get_resources_dir(), "k10plus/marc21/")
+    os.makedirs(directory, exist_ok=True)
     for entry in os.scandir(directory):
         if not entry.is_file():
             continue
